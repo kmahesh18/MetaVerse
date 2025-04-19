@@ -1,0 +1,70 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Company {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  spaces      Space[]
+  users       User[]   @relation("CompanyUsers")
+  rooms       Room[]   @relation("CompanyRooms")
+  createdAt   DateTime @default(now())
+}
+
+model Space {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  company     Company  @relation(fields: [companyId], references: [id])
+  companyId   String
+  rooms       Room[]   @relation("SpaceRooms")
+  createdAt   DateTime @default(now())
+}
+
+model Room {
+  id        String   @id @default(uuid())
+  name      String
+  company   Company  @relation("CompanyRooms", fields: [companyId], references: [id])
+  companyId String
+  space     Space    @relation("SpaceRooms", fields: [spaceId], references: [id])
+  spaceId   String
+  users     User[]   @relation("RoomPlayers")
+  createdAt DateTime @default(now())
+}
+
+model Role {
+  id         String   @id @default(uuid())
+  name       String   @unique
+  spriteUrl  String?
+  users      User[]
+  createdAt  DateTime @default(now())
+}
+
+model User {
+  id        String   @id @default(uuid())
+  account   String   @unique
+  name      String
+  email     String   @unique
+  password  String
+  posX      Float    @default(0)
+  posY      Float    @default(0)
+  room      Room?    @relation("RoomPlayers", fields: [roomId], references: [id])
+  roomId    String?
+  company   Company? @relation("CompanyUsers", fields: [companyId], references: [id])
+  companyId String?
+  role      Role?    @relation(fields: [roleId], references: [id])
+  roleId    String?
+  createdAt DateTime @default(now())
+}
