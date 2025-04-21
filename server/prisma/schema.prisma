@@ -1,8 +1,6 @@
+//schema.prisma
 // This is your Prisma schema file,
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
@@ -10,61 +8,65 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
-}
-
-model Company {
-  id          String   @id @default(uuid())
-  name        String   @unique
-  description String?
-  spaces      Space[]
-  users       User[]   @relation("CompanyUsers")
-  rooms       Room[]   @relation("CompanyRooms")
-  createdAt   DateTime @default(now())
-}
-
-model Space {
-  id          String   @id @default(uuid())
-  name        String
-  description String?
-  company     Company  @relation(fields: [companyId], references: [id])
-  companyId   String
-  rooms       Room[]   @relation("SpaceRooms")
-  createdAt   DateTime @default(now())
-}
-
-model Room {
-  id        String   @id @default(uuid())
-  name      String
-  company   Company  @relation("CompanyRooms", fields: [companyId], references: [id])
-  companyId String
-  space     Space    @relation("SpaceRooms", fields: [spaceId], references: [id])
-  spaceId   String
-  users     User[]   @relation("RoomPlayers")
-  createdAt DateTime @default(now())
-}
-
-model Role {
-  id         String   @id @default(uuid())
-  name       String   @unique
-  spriteUrl  String?
-  users      User[]
-  createdAt  DateTime @default(now())
+  url      = env("DB_URL")
 }
 
 model User {
-  id        String   @id @default(uuid())
-  account   String   @unique
+  id        String   @id @default(uuid()) @unique
   name      String
   email     String   @unique
   password  String
-  posX      Float    @default(0)
-  posY      Float    @default(0)
-  room      Room?    @relation("RoomPlayers", fields: [roomId], references: [id])
-  roomId    String?
-  company   Company? @relation("CompanyUsers", fields: [companyId], references: [id])
-  companyId String?
-  role      Role?    @relation(fields: [roleId], references: [id])
-  roleId    String?
   createdAt DateTime @default(now())
+  
+  // Relationships
+  spaceId   String?  // FK to current space (if any)
+  space     Space?   @relation("ActiveUsers", fields: [spaceId], references: [id])
+  roomId    String?  // FK to current room (if any)
+  room      Room?    @relation(fields: [roomId], references: [id])
+  adminSpaces Space[] @relation("SpaceAdmin")
+  accessibleSpaces Space[] @relation("AccessUsers")
+}
+
+model Space {
+  id          String   @id @default(uuid()) @unique
+  name        String
+  createdAt   DateTime @default(now())
+  
+  // Admin relationship
+  adminId     String
+  admin       User     @relation("SpaceAdmin", fields: [adminId], references: [id])
+  rooms       Room[]
+  
+  // Users in the space
+  activeUsers User[]   @relation("ActiveUsers")
+  accessUsers User[]   @relation("AccessUsers")
+}
+
+model Room {
+  id        String   @id @default(uuid()) @unique
+  name      String
+  createdAt DateTime @default(now())
+  
+  // Space relationship
+  spaceId   String
+  space     Space    @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  
+  // Users currently in this room
+  users     User[]
+  
+  // Assets in this room
+  assets    Asset[]  // Many-to-many relationship with Asset
+  isDefault Boolean  @default(false)
+  sizeX     Int      @default(800) 
+  sizeY     Int      @default(600) 
+}
+
+model Asset {
+  id     String @id @default(uuid()) @unique
+  path   String 
+  posx   Int
+  posy   Int
+  
+  // Basically an asset can exist in multiple rooms
+  rooms  Room[] // Many-to-many relationship with Room
 }

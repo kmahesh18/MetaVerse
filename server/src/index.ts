@@ -1,174 +1,26 @@
 import { WebSocket, WebSocketServer } from "ws";
 import { v4 } from "uuid";
 import * as mediasoup from "mediasoup";
-
-
-// TODO: link everything to prisma
-//TODO: edit schema accordingly 
-//-----------------------------------TYPES-----------------------------------
-interface BaseMessage {
-  type: string;
-}
-
-interface ErrorMessage extends BaseMessage {
-  type: "error";
-  payload: string;
-}
-
-interface RoomIdPayload {
-  roomId: string;
-}
-
-interface SpaceIdPayload {
-  spaceId: string;
-}
-
-interface ClientIdPayload {
-  clientId: string;
-}
-
-interface JoinRoomMessage extends BaseMessage {
-  type: "joinRoom";
-  payload: RoomIdPayload;
-}
-
-interface LeaveRoomMessage extends BaseMessage {
-  type: "leaveRoom";
-  payload: RoomIdPayload;
-}
-
-interface JoinSpaceMessage extends BaseMessage {
-  type: "joinSpace";
-  payload: SpaceIdPayload;
-}
-
-interface LeaveSpaceMessage extends BaseMessage {
-  type: "leaveSpace";
-  payload: SpaceIdPayload;
-}
-
-interface RoomResponseMessage extends BaseMessage {
-  type: "joinedRoom" | "leftRoom";
-  payload: RoomIdPayload;
-}
-
-interface SpaceResponseMessage extends BaseMessage {
-  type: "joinedSpace" | "leftSpace";
-  payload: SpaceIdPayload & { rooms: string[] }; // Include room IDs
-}
-
-interface ClientLeftMessage extends BaseMessage {
-  type: "clientLeft";
-  payload: ClientIdPayload;
-}
-
-interface CreateSpaceMessage extends BaseMessage {
-  type: "createSpace";
-  payload: {
-    numRooms?: number;
-  };
-}
-
-interface SpaceCreatedMessage extends BaseMessage {
-  type: "spaceCreated";
-  payload: SpaceIdPayload & { rooms: string[] };
-}
-
-interface CreateWebRtcTransportMessage extends BaseMessage {
-  type: "createWebRtcTransport";
-  payload: {};
-}
-
-interface WebRtcTransportCreatedMessage extends BaseMessage {
-  type: "webRtcTransportCreated";
-  payload: {
-    id: string;
-    iceParameters: any;
-    iceCandidates: any[];
-    dtlsParameters: any;
-  };
-}
-
-interface ConnectWebRtcTransportMessage extends BaseMessage {
-  type: "connectWebRtcTransport";
-  payload: {
-    transportId: string;
-    dtlsParameters: any;
-  };
-}
-
-interface ProduceDataMessage extends BaseMessage {
-  type: "produceData";
-  payload: {
-    transportId: string;
-    sctpStreamParameters: any;
-    label: string;
-    protocol: string;
-  };
-}
-interface dataProducedMessage extends BaseMessage {
-  type: "dataProduced";
-  payload: {
-    dataProducerId: string;
-  };
-}
-
-interface ConsumeDataMessage extends BaseMessage {
-  type: "consumeData";
-  payload: {
-    producerId: string;
-    transportId: string;
-  };
-}
-
-interface DataConsumerCreatedMessage extends BaseMessage {
-  type: "dataConsumerCreated";
-  payload: {
-    producerId: string;
-    id: string;
-    sctpStreamParameters: any;
-    label: string;
-    protocol: string;
-  };
-}
-
-interface newDataProducerMessage extends BaseMessage {
-  type: "newDataProducer";
-  payload: { producerId: string };
-}
-// Union type for all possible messages
-type Message =
-  | ErrorMessage
-  | JoinRoomMessage
-  | LeaveRoomMessage
-  | JoinSpaceMessage
-  | LeaveSpaceMessage
-  | RoomResponseMessage
-  | SpaceResponseMessage
-  | ClientLeftMessage
-  | CreateSpaceMessage
-  | SpaceCreatedMessage
-  | CreateWebRtcTransportMessage
-  | WebRtcTransportCreatedMessage
-  | ConnectWebRtcTransportMessage
-  | ProduceDataMessage
-  | ConsumeDataMessage
-  | dataProducedMessage
-  | DataConsumerCreatedMessage
-  | newDataProducerMessage;
-
-//-----------------------------------SERVER SHITT-----------------------------------//
+import {
+	addUserToSpace,
+	removeUserFromSpace,
+	addUserToRoom,
+	removeUserFromRoom,
+} from "./services/membershipService";
+import { createUser, getUserById } from "./services/userService"; // Add this import
+import { getRoomById, isRoomInSpace } from "./services/roomService"; // Add this
+import { Message, SpaceIdPayload, RoomIdPayload } from "./types/message.types";
 
 let mediasoupWorker: mediasoup.types.Worker;
 let mediasoupRouter: mediasoup.types.Router;
 
 //function to setup mediasoup
 async function createMediasoupWorker() {
-  mediasoupWorker = await mediasoup.createWorker();
-  mediasoupRouter = await mediasoupWorker.createRouter({
-    mediaCodecs: [],
-  });
-  console.log("mediasoupWorker and router started");
+	mediasoupWorker = await mediasoup.createWorker();
+	mediasoupRouter = await mediasoupWorker.createRouter({
+		mediaCodecs: [],
+	});
+	console.log("mediasoupWorker and router started");
 }
 
 createMediasoupWorker();
@@ -176,566 +28,444 @@ createMediasoupWorker();
 const PORT = Number(process.env.PORT) || 8080;
 const wss = new WebSocketServer({ port: PORT });
 console.log(`WebSocket server is running on ws://localhost:${PORT}`);
-const spaces = new Map<string, Room[]>();
-const roomIndex = new Map<string, { spaceId: string; room: Room }>();
+
+// Keep only this for mediasoup state
+const roomsById = new Map<string, Room>();
 
 class Client {
-  id: string;
-  ws: WebSocket;
-  roomId: string | null;
-  spaceId: string | null; // Track which space the client is in
+	id: string;
+	ws: WebSocket;
+	roomId: string | null;
+	spaceId: string | null; // Track which space the client is in
 
-  constructor(id: string, ws: WebSocket) {
-    this.id = id;
-    this.ws = ws;
-    this.roomId = null;
-    this.spaceId = null;
-  }
+	constructor(id: string, ws: WebSocket) {
+		this.id = id;
+		this.ws = ws;
+		this.roomId = null;
+		this.spaceId = null;
+	}
 
-  sendToSelf(message: Message): void {
-    if (this.ws.readyState === WebSocket.OPEN) {
-      this.ws.send(JSON.stringify(message));
-    }
-  }
+	sendToSelf(message: Message): void {
+		if (this.ws.readyState === WebSocket.OPEN) {
+			this.ws.send(JSON.stringify(message));
+		}
+	}
 }
 
-function createSpace(numRooms: number): string {
-  if (numRooms <= 0) {
-    console.error("Number of rooms must be greater than zero");
-    return "";
-  }
-
-  const spaceId = v4();
-  const spaceRooms: Room[] = [];
-
-  for (let i = 0; i < numRooms; i++) {
-    const roomId = v4();
-    const room = new Room(roomId);
-    spaceRooms.push(room);
-
-    // Index the room for quick lookups
-    roomIndex.set(roomId, { spaceId, room });
-  }
-
-  spaces.set(spaceId, spaceRooms);
-  console.log(`Space created with ID: ${spaceId} containing ${numRooms} rooms`);
-  return spaceId;
-}
-
-//find a room by ID
-function findRoom(roomId: string): Room | undefined {
-  return roomIndex.get(roomId)?.room;
-}
-
-// get spaceId for a room
-function getSpaceIdForRoom(roomId: string): string | undefined {
-  return roomIndex.get(roomId)?.spaceId;
-}
-
-// get all room IDs in a space
-function getRoomIdsInSpace(spaceId: string): string[] {
-  const spaceRooms = spaces.get(spaceId);
-  if (!spaceRooms) return [];
-  return spaceRooms.map((room) => room.id);
-}
-
-// remove a room from a space
-function removeRoomFromSpace(roomId: string): void {
-  const roomInfo = roomIndex.get(roomId);
-  if (roomInfo) {
-    const { spaceId } = roomInfo;
-    const spaceRooms = spaces.get(spaceId);
-
-    if (spaceRooms) {
-      const newRooms = spaceRooms.filter((room) => room.id !== roomId);
-
-      if (newRooms.length === 0) {
-        spaces.delete(spaceId);
-        console.log(`Space ${spaceId} is now empty, removing.`);
-      } else {
-        // remaining rooms
-        spaces.set(spaceId, newRooms);
-      }
-    }
-    roomIndex.delete(roomId);
-  }
-}
-
-// Room related shitt
+// Room related class
 class Room {
-  id: string;
-  clients: Map<string, Client>;
+	id: string;
+	clients: Map<string, Client>;
+	mediasoupTransports: Map<string, mediasoup.types.WebRtcTransport>;
+	dataProducers: Map<string, mediasoup.types.DataProducer>;
+	dataConsumers: Map<string, mediasoup.types.DataConsumer[]>;
 
-  mediasoupTransports: Map<string, mediasoup.types.WebRtcTransport>;
+	constructor(roomId: string) {
+		this.id = roomId;
+		this.clients = new Map<string, Client>();
+		this.mediasoupTransports = new Map();
+		this.dataProducers = new Map();
+		this.dataConsumers = new Map();
+	}
 
-  dataProducers: Map<string, mediasoup.types.DataProducer>;
+	addClient(client: Client): void {
+		this.clients.set(client.id, client);
+		console.log(`Client ${client.id} added to room ${this.id}`);
+	}
 
-  //it's a client : to producer ids he is subscribed to or 
-  //accepted to consume data from 
-  dataConsumers: Map<string, mediasoup.types.DataConsumer[]>;
+	removeClient(clientId: string): boolean {
+		const client = this.clients.get(clientId);
+		if (client) {
+			this.clients.delete(clientId);
+			console.log(`Client ${clientId} removed from room ${this.id}`);
+			return true;
+		}
+		return false;
+	}
 
-  //create a room with mediasoup setup for producing,transporting & consuming data
-  constructor(roomId: string) {
-    this.id = roomId;
-    this.clients = new Map<string, Client>();
-    this.mediasoupTransports = new Map();
-    this.dataProducers = new Map();
-    this.dataConsumers = new Map();
-  }
+	getClient(clientId: string): Client | undefined {
+		return this.clients.get(clientId);
+	}
 
-  addClient(client: Client): void {
-    this.clients.set(client.id, client);
-    console.log(`Client ${client.id} added to room ${this.id}`);
-  }
+	broadcastMessage(senderId: string | null, message: Message): void {
+		const messageString = JSON.stringify(message);
+		this.clients.forEach((client) => {
+			if (
+				(senderId === null || client.id !== senderId) &&
+				client.ws.readyState === WebSocket.OPEN
+			) {
+				client.ws.send(messageString);
+			}
+		});
+	}
 
-  removeClient(clientId: string): boolean {
-    const client = this.clients.get(clientId);
-    if (client) {
-      this.clients.delete(clientId);
-      console.log(`Client ${clientId} removed from room ${this.id}`);
-      return true;
-    }
-    return false;
-  }
+	sendToClient(clientId: string, message: Message): void {
+		const client = this.clients.get(clientId);
+		if (client && client.ws.readyState === WebSocket.OPEN) {
+			client.ws.send(JSON.stringify(message));
+		}
+	}
 
-  getClient(clientId: string): Client | undefined {
-    return this.clients.get(clientId);
-  }
+	isEmpty(): boolean {
+		return this.clients.size === 0;
+	}
+}
 
-  broadcastMessage(senderId: string | null, message: Message): void {
-    const messageString = JSON.stringify(message);
-    this.clients.forEach((client) => {
-      if (
-        (senderId === null || client.id !== senderId) &&
-        client.ws.readyState === WebSocket.OPEN
-      ) {
-        client.ws.send(messageString);
-      }
-    });
-  }
-
-  sendToClient(clientId: string, message: Message): void {
-    const client = this.clients.get(clientId);
-    if (client && client.ws.readyState === WebSocket.OPEN) {
-      client.ws.send(JSON.stringify(message));
-    }
-  }
-
-  isEmpty(): boolean {
-    return this.clients.size === 0;
-  }
+// Helper: load or create the mediasoup Room stub
+function getOrCreateRoom(roomId: string): Room {
+	let r = roomsById.get(roomId);
+	if (!r) {
+		r = new Room(roomId);
+		roomsById.set(roomId, r);
+	}
+	return r;
 }
 
 // WebSocket connection handling stuff
-wss.on("connection", (ws: WebSocket) => {
-  const id = v4();
-  const client = new Client(id, ws);
-  console.log(`New client connected: ${id}`);
+wss.on("connection", async (ws: WebSocket) => {
+	const id = v4();
+	const client = new Client(id, ws);
+	console.log(`New client connected: ${id}`);
 
-  ws.on("message", async (data: Buffer) => {
-    try {
-      // Parse the incoming message
-      const message = JSON.parse(data.toString());
-      console.log(`Received message from ${id}:`, message.type);
-      await handleMessage(client, message);
-    } catch (error) {
-      console.log(`Error handling message from ${id}:`, error);
-      client.sendToSelf({
-        type: "error",
-        payload: "Invalid message format",
-      });
-    }
-  });
+	// Create a temporary user for this connection
+	try {
+		await createUser({
+			id, // Use the client ID as the user ID
+			account: `temp-${id.substring(0, 8)}`,
+			name: `Visitor-${id.substring(0, 5)}`,
+			email: `temp-${id.substring(0, 8)}@example.com`,
+			password: "temporary",
+		});
+		console.log(`Temporary user created for client: ${id}`);
+	} catch (error) {
+		console.error(`Failed to create temporary user: ${error}`);
+	}
 
-  ws.on("close", () => {
-    console.log(`Client connection closed: ${id}`);
-    handleDisconnect(client);
-  });
+	ws.on("message", async (data: Buffer) => {
+		try {
+			// Parse the incoming message
+			const message = JSON.parse(data.toString());
+			console.log(`Received message from ${id}:`, message.type);
+			await handleMessage(client, message);
+		} catch (error) {
+			console.log(`Error handling message from ${id}:`, error);
+			client.sendToSelf({
+				type: "error",
+				payload: "Invalid message format",
+			});
+		}
+	});
 
-  ws.on("error", (err) => {
-    console.error(`WebSocket error for client ${id}:`, err);
-  });
+	ws.on("close", () => {
+		console.log(`Client connection closed: ${id}`);
+		handleDisconnect(client);
+	});
+
+	ws.on("error", (err) => {
+		console.error(`WebSocket error for client ${id}:`, err);
+	});
 });
 
 // Handle incoming messages from clients
 async function handleMessage(client: Client, message: any): Promise<void> {
-  if (!message || typeof message.type !== "string") {
-    console.warn(`Received invalid message from ${client.id}`);
-    client.sendToSelf({
-      type: "error",
-      payload: "Message must have a type field",
-    });
-    return;
-  }
-  const room = findRoom(client.roomId!);
-  switch (message.type) {
-    case "createSpace":
-      const numRooms = message.payload?.numRooms || 1;
-      const spaceId = createSpace(numRooms);
-      client.sendToSelf({
-        type: "spaceCreated",
-        payload: { spaceId, rooms: getRoomIdsInSpace(spaceId) },
-      });
-      break;
+	if (!message || typeof message.type !== "string") {
+		console.warn(`Received invalid message from ${client.id}`);
+		client.sendToSelf({
+			type: "error",
+			payload: "Message must have a type field",
+		});
+		return;
+	}
 
-    case "joinSpace":
-      if (!isValidSpacePayload(message.payload)) {
-        client.sendToSelf({
-          type: "error",
-          payload: "Invalid payload for joinSpace",
-        });
-        return;
-      }
-      handleJoinSpace(client, message.payload);
-      break;
+	try {
+		switch (message.type) {
+			case "joinRoom": {
+				const { roomId } = message.payload;
+				if (!client.spaceId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must join a space before joining a room",
+					});
+				}
 
-    case "leaveSpace":
-      if (!isValidSpacePayload(message.payload)) {
-        client.sendToSelf({
-          type: "error",
-          payload: "Invalid payload for leaveSpace",
-        });
-        return;
-      }
-      handleLeaveSpace(client, message.payload.spaceId);
-      break;
+				const roomBelongsToSpace = await isRoomInSpace(roomId, client.spaceId);
+				if (!roomBelongsToSpace) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Room not in your current space",
+					});
+				}
 
-    case "joinRoom":
-      if (!isValidRoomPayload(message.payload)) {
-        client.sendToSelf({
-          type: "error",
-          payload: "Invalid payload for joinRoom",
-        });
-        return;
-      }
-      handleJoinRoom(client, message.payload);
-      break;
+				// Handle room change if already in a room
+				if (client.roomId) {
+					const oldRoom = roomsById.get(client.roomId);
+					if (oldRoom) {
+						oldRoom.removeClient(client.id);
+					}
+				}
 
-    case "leaveRoom":
-      if (!isValidRoomPayload(message.payload)) {
-        client.sendToSelf({
-          type: "error",
-          payload: "Invalid payload for leaveRoom",
-        });
-        return;
-      }
-      handleLeaveRoom(client, message.payload.roomId);
-      break;
+				// Join the new room
+				await addUserToRoom(client.id, roomId);
+				client.roomId = roomId;
 
-    case "createWebRtcTransport": {
-      const room = findRoom(client.roomId!);
-      if (!room) break;
-      const transport = await mediasoupRouter.createWebRtcTransport({
-        listenIps: [{ ip: "0.0.0.0", announcedIp: "" }],
-        enableTcp: true,
-        enableUdp: true,
-        preferUdp: true,
-      });
-      room.mediasoupTransports.set(transport.id, transport);
-      client.sendToSelf({
-        type: "webRtcTransportCreated",
-        payload: {
-          id: transport.id,
-          iceCandidates: transport.iceCandidates,
-          iceParameters: transport.iceParameters,
-          dtlsParameters: transport.dtlsParameters,
-        },
-      });
-      break;
-    }
+				// Get or create mediasoup room
+				const msRoom = getOrCreateRoom(roomId);
+				msRoom.addClient(client);
+				msRoom.dataConsumers.set(client.id, []);
 
-    case "connectWebRtcTransport": {
-      const { transportId, dtlsParameters } = message.payload;
-      const room = findRoom(client.roomId!);
-      const transport = room?.mediasoupTransports.get(transportId);
-      if (transport) await transport.connect({ dtlsParameters });
-      break;
-    }
+				client.sendToSelf({
+					type: "joinedRoom", // CHANGE FROM "joinRoom" to match RoomResponseMessage
+					payload: { roomId },
+				});
+				break;
+			}
 
-    case "produceData": {
-      const { transportId, sctpStreamParameters, label, protocol } =
-        message.payload;
-      const room = findRoom(client.roomId!);
-      const transport = room?.mediasoupTransports.get(transportId);
-      const dataProducer = await transport?.produceData({
-        sctpStreamParameters,
-        label,
-        protocol,
-      });
-      if (dataProducer) {
-        room?.dataProducers.set(dataProducer.id, dataProducer);
-        client.sendToSelf({
-          type: "dataProduced",
-          payload: {
-            dataProducerId: dataProducer.id,
-          },
-        });
-        //tell others there's a new msg producer
-        room?.broadcastMessage(client.id, {
-          type: "newDataProducer",
-          payload: { producerId: dataProducer.id },
-        });
-      } else {
-        client.sendToSelf({
-          type: "error",
-          payload: "Failed to produce Data",
-        });
-      }
-      break;
-    }
+			case "leaveRoom": {
+				const { roomId } = message.payload;
+				if (client.roomId !== roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: `Not in room ${roomId}`,
+					});
+				}
 
-    case "consumeData": {
-      const { producerId, transportId } = message.payload;
-      const room = findRoom(client.roomId!);
-      const transport = room?.mediasoupTransports.get(transportId);
-      const producer = room?.dataProducers.get(producerId);
-      if (transport && producer) {
-        const consumer = await transport.consumeData({
-          dataProducerId: producerId,
-        });
-        room?.dataConsumers.get(client.id)!.push(consumer);
-        client.sendToSelf({
-          type: "dataConsumerCreated",
-          payload: {
-            producerId,
-            id: consumer.id,
-            sctpStreamParameters: consumer.sctpStreamParameters,
-            label: consumer.label,
-            protocol: consumer.protocol,
-          },
-        });
-      }
-      break;
-    }
+				await removeUserFromRoom(client.id);
+				client.roomId = null;
 
-    default:
-      client.sendToSelf({
-        type: "error",
-        payload: `Unknown message type: ${message.type}`,
-      });
-  }
+				const msRoom = roomsById.get(roomId);
+				if (msRoom) {
+					msRoom.removeClient(client.id);
+					client.sendToSelf({
+						type: "leftRoom",
+						payload: { roomId },
+					});
+				} else {
+					client.sendToSelf({
+						type: "error",
+						payload: `Room ${roomId} not found`,
+					});
+				}
+				break;
+			}
+
+			case "createWebRtcTransport": {
+				if (!client.roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must join a room first",
+					});
+				}
+
+				const msRoom = roomsById.get(client.roomId);
+				if (!msRoom) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Room not found",
+					});
+				}
+
+				const transport = await mediasoupRouter.createWebRtcTransport({
+					listenIps: [{ ip: "0.0.0.0", announcedIp: "" }],
+					enableTcp: true,
+					enableUdp: true,
+					preferUdp: true,
+					enableSctp: true, // Add SCTP support for DataChannels
+					numSctpStreams: {
+						// Configure SCTP streams
+						OS: 1024,
+						MIS: 1024,
+					},
+				});
+
+				msRoom.mediasoupTransports.set(transport.id, transport);
+				client.sendToSelf({
+					type: "webRtcTransportCreated",
+					payload: {
+						id: transport.id,
+						iceCandidates: transport.iceCandidates,
+						iceParameters: transport.iceParameters,
+						dtlsParameters: transport.dtlsParameters,
+					},
+				});
+				break;
+			}
+
+			case "connectWebRtcTransport": {
+				const { transportId, dtlsParameters } = message.payload;
+				if (!client.roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must join a room first",
+					});
+				}
+
+				const msRoom = roomsById.get(client.roomId);
+				const transport = msRoom?.mediasoupTransports.get(transportId);
+
+				if (transport) {
+					await transport.connect({ dtlsParameters });
+					client.sendToSelf({
+						type: "webRtcTransportConnected",
+						payload: { transportId },
+					});
+				} else {
+					client.sendToSelf({
+						type: "error",
+						payload: "Transport not found",
+					});
+				}
+				break;
+			}
+
+			case "produceData": {
+				const { transportId, sctpStreamParameters, label, protocol } =
+					message.payload;
+
+				if (!client.roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must join a room first",
+					});
+				}
+
+				const msRoom = roomsById.get(client.roomId);
+				const transport = msRoom?.mediasoupTransports.get(transportId);
+
+				if (!transport) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Transport not found",
+					});
+				}
+
+				const dataProducer = await transport.produceData({
+					sctpStreamParameters,
+					label,
+					protocol,
+				});
+
+				msRoom!.dataProducers.set(dataProducer.id, dataProducer);
+				client.sendToSelf({
+					type: "dataProduced",
+					payload: {
+						dataProducerId: dataProducer.id,
+					},
+				});
+
+				//tell others there's a new msg producer
+				msRoom!.broadcastMessage(client.id, {
+					type: "newDataProducer",
+					payload: { producerId: dataProducer.id },
+				});
+				break;
+			}
+
+			case "consumeData": {
+				const { producerId, transportId } = message.payload;
+
+				if (!client.roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must join a room first",
+					});
+				}
+
+				const msRoom = roomsById.get(client.roomId);
+				if (!msRoom) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Room not found",
+					});
+				}
+
+				const transport = msRoom.mediasoupTransports.get(transportId);
+				const producer = msRoom.dataProducers.get(producerId);
+
+				if (!transport || !producer) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Transport or producer not found",
+					});
+				}
+
+				const consumer = await transport.consumeData({
+					dataProducerId: producerId,
+				});
+
+				if (!msRoom.dataConsumers.get(client.id)) {
+					msRoom.dataConsumers.set(client.id, []);
+				}
+
+				msRoom.dataConsumers.get(client.id)!.push(consumer);
+				client.sendToSelf({
+					type: "dataConsumerCreated",
+					payload: {
+						producerId,
+						id: consumer.id,
+						sctpStreamParameters: consumer.sctpStreamParameters,
+						label: consumer.label,
+						protocol: consumer.protocol,
+					},
+				});
+				break;
+			}
+
+			default:
+				client.sendToSelf({
+					type: "error",
+					payload: `Unknown message: ${message.type}`,
+				});
+		}
+	} catch (error) {
+		console.error(`Error handling ${message.type}:`, error);
+		client.sendToSelf({
+			type: "error",
+			payload: `Error processing ${message.type}: ${(error as Error).message}`,
+		});
+	}
 }
 
-function handleJoinSpace(client: Client, payload: SpaceIdPayload): void {
-  const { spaceId } = payload;
-  if (client.spaceId) {
-    console.warn(
-      `Client ${client.id} tried to join space ${spaceId} but is already in space ${client.spaceId}`,
-    );
-    client.sendToSelf({
-      type: "error",
-      payload: `Already in space ${client.spaceId}`,
-    });
-    return;
-  }
+async function handleDisconnect(client: Client): Promise<void> {
+	if (!client) return;
 
-  // Check if space exists
-  const spaceRooms = spaces.get(spaceId);
-  if (!spaceRooms) {
-    client.sendToSelf({
-      type: "error",
-      payload: `Space ${spaceId} not found`,
-    });
-    console.warn(
-      `Client ${client.id} tried to join space ${spaceId}, but it was not found.`,
-    );
-    return;
-  }
+	console.log(`Handling disconnect for client: ${client.id}`);
 
-  // Join the space
-  client.spaceId = spaceId;
-  console.log(`Client ${client.id} joined space ${spaceId}`);
+	// Update DB first
+	if (client.roomId) {
+		await removeUserFromRoom(client.id);
+		// Clean up mediasoup
+		const msRoom = roomsById.get(client.roomId);
+		if (msRoom) {
+			msRoom.removeClient(client.id);
+		}
+	}
 
-  //by default throw him into the first room
-  const rooms = getRoomIdsInSpace(spaceId);
-  client.roomId = rooms[0] || null;
-}
+	if (client.spaceId) {
+		await removeUserFromSpace(client.id);
+	}
 
-function handleLeaveSpace(client: Client, spaceId: string): void {
-  // Check if client is in this space
-  if (client.spaceId !== spaceId) {
-    client.sendToSelf({
-      type: "error",
-      payload: `Not in space ${spaceId}`,
-    });
-    return;
-  }
-
-  // If client is in a room, leave it first
-  if (client.roomId) {
-    handleLeaveRoom(client, client.roomId);
-  }
-
-  // Leave the space
-  client.spaceId = null;
-  client.sendToSelf({
-    type: "leftSpace",
-    payload: {
-      spaceId,
-      rooms: [],
-    },
-  });
-  console.log(`Client ${client.id} left space ${spaceId}`);
-}
-
-//Change room
-function changeroom(client: Client, roomId1: string, roomId2: string) {
-  const room1 = findRoom(roomId1);
-  const room2 = findRoom(roomId2);
-  if (!room1 || !room2) {
-    client.sendToSelf({
-      type: "error",
-      payload: `One or both rooms not found`,
-    });
-    return;
-  }
-  handleLeaveRoom(client, roomId1);
-  handleJoinRoom(client, { roomId: roomId2 });
-}
-
-function handleJoinRoom(client: Client, payload: RoomIdPayload): void {
-  const { roomId } = payload;
-  if (!client.spaceId) {
-    console.warn(
-      `Client ${client.id} tried to join room ${roomId} without joining a space first`,
-    );
-    client.sendToSelf({
-      type: "error",
-      payload: "Must join a space before joining a room",
-    });
-    return;
-  }
-
-  const room = findRoom(roomId);
-  if (!room) {
-    client.sendToSelf({
-      type: "error",
-      payload: `Room ${roomId} not found`,
-    });
-    console.warn(
-      `Client ${client.id} tried to join room ${roomId}, but it was not found.`,
-    );
-    return;
-  }
-
-  // access check
-  const roomSpaceId = getSpaceIdForRoom(roomId);
-  if (roomSpaceId !== client.spaceId) {
-    client.sendToSelf({
-      type: "error",
-      payload: `Room ${roomId} is not in your current space`,
-    });
-    console.warn(
-      `Client ${client.id} tried to join room ${roomId} which isn't in their space ${client.spaceId}`,
-    );
-    return;
-  }
-
-  //change room logic
-  if (client.roomId) {
-    const room1 = findRoom(client.roomId);
-    const room2 = findRoom(roomId);
-    if (room1 && room2) {
-      changeroom(client, client.roomId, roomId);
-      return;
-    }
-    console.log("One of the rooms not found");
-  }
-
-  //new join logic
-  client.roomId = roomId;
-  room.addClient(client);
-  room.dataConsumers.set(client.id, []);
-
-  client.sendToSelf({
-    type: "joinedRoom",
-    payload: { roomId },
-  });
-  console.log(`Client ${client.id} joined room ${roomId}`);
-}
-
-function handleLeaveRoom(client: Client, roomId: string): void {
-  if (client.roomId !== roomId) {
-    client.sendToSelf({
-      type: "error",
-      payload: `Not in room ${roomId}`,
-    });
-    return;
-  }
-
-  const room = findRoom(roomId);
-
-  if (room) {
-    room.removeClient(client.id);
-    client.roomId = null;
-    client.sendToSelf({
-      type: "leftRoom",
-      payload: { roomId },
-    });
-    console.log(`Client ${client.id} left room ${roomId}`);
-  } else {
-    client.sendToSelf({
-      type: "error",
-      payload: `Room ${roomId} not found`,
-    });
-    console.warn(
-      `Client ${client.id} tried to leave room ${roomId}, but it was not found.`,
-    );
-  }
-}
-
-//Can be ignored shitt
-//<------------Handling bunch of things gracecfully(basically extra stuff---------------------->
-
-function handleDisconnect(client: Client): void {
-  if (!client) return;
-
-  console.log(`Handling disconnect for client: ${client.id}`);
-
-  // Leave room if in one
-  if (client.roomId) {
-    const room = findRoom(client.roomId);
-    if (room) {
-      room.removeClient(client.id);
-      console.log(`Client ${client.id} removed from room ${client.roomId}`);
-
-      room.broadcastMessage(null, {
-        type: "clientLeft",
-        payload: { clientId: client.id },
-      });
-
-      if (room.isEmpty()) {
-        console.log(`Room ${client.roomId} is now empty, removing.`);
-        removeRoomFromSpace(client.roomId);
-      }
-    }
-  }
-
-  // Clear space membership
-  client.spaceId = null;
-
-  // Ensure WebSocket is closed if not already
-  if (
-    client.ws.readyState !== WebSocket.CLOSED &&
-    client.ws.readyState !== WebSocket.CLOSING
-  ) {
-    client.ws.terminate();
-  }
+	// Close socket if needed
+	if (
+		client.ws.readyState !== WebSocket.CLOSED &&
+		client.ws.readyState !== WebSocket.CLOSING
+	) {
+		client.ws.terminate();
+	}
 }
 
 // Type guards
 function isValidRoomPayload(payload: any): payload is RoomIdPayload {
-  return (
-    typeof payload === "object" &&
-    payload !== null &&
-    typeof payload.roomId === "string"
-  );
+	return (
+		typeof payload === "object" &&
+		payload !== null &&
+		typeof payload.roomId === "string"
+	);
 }
 
 function isValidSpacePayload(payload: any): payload is SpaceIdPayload {
-  return (
-    typeof payload === "object" &&
-    payload !== null &&
-    typeof payload.spaceId === "string"
-  );
+	return (
+		typeof payload === "object" &&
+		payload !== null &&
+		typeof payload.spaceId === "string"
+	);
 }
