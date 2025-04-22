@@ -147,8 +147,20 @@ interface WebRtcTransportConnectedMessage extends BaseMessage {
 	};
 }
 
+interface AuthenticateMessage extends BaseMessage {
+	type: "authenticate";
+	payload: { userId: string }; // Or potentially a token to be verified
+}
+
+interface AuthenticatedMessage extends BaseMessage {
+	type: "authenticated";
+	payload: { userId: string };
+}
+
 // Union type for all possible messages
 type Message =
+	| AuthenticateMessage
+	| AuthenticatedMessage
 	| CreateCompanyMessage
 	| CompanyCreatedMessage
 	| ErrorMessage
@@ -172,6 +184,8 @@ type Message =
 	| DataConsumerCreatedMessage;
 
 export type {
+	AuthenticateMessage,
+	AuthenticatedMessage,
 	ErrorMessage,
 	JoinRoomMessage,
 	LeaveRoomMessage,

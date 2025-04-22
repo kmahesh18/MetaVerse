@@ -9,7 +9,12 @@ import {
 } from "./services/membershipService";
 import { createUser, getUserById } from "./services/userService"; // Add this import
 import { getRoomById, isRoomInSpace } from "./services/roomService"; // Add this
-import { Message, SpaceIdPayload, RoomIdPayload } from "./types/message.types";
+import {
+	Message,
+	SpaceIdPayload,
+	RoomIdPayload,
+	AuthenticateMessage, // Import new type
+} from "./types/message.types";
 
 let mediasoupWorker: mediasoup.types.Worker;
 let mediasoupRouter: mediasoup.types.Router;
@@ -33,16 +38,20 @@ console.log(`WebSocket server is running on ws://localhost:${PORT}`);
 const roomsById = new Map<string, Room>();
 
 class Client {
-	id: string;
+	id: string; // Unique ID for this specific connection instance
 	ws: WebSocket;
 	roomId: string | null;
 	spaceId: string | null; // Track which space the client is in
+	userId: string | null; // The actual User ID from your database
+	isAuthenticated: boolean; // Flag to check if user ID has been validated
 
 	constructor(id: string, ws: WebSocket) {
-		this.id = id;
+		this.id = id; // This is the temporary connection ID
 		this.ws = ws;
 		this.roomId = null;
 		this.spaceId = null;
+		this.userId = null; // Starts as null
+		this.isAuthenticated = false; // Starts as false
 	}
 
 	sendToSelf(message: Message): void {
@@ -123,32 +132,28 @@ function getOrCreateRoom(roomId: string): Room {
 
 // WebSocket connection handling stuff
 wss.on("connection", async (ws: WebSocket) => {
-	const id = v4();
-	const client = new Client(id, ws);
-	console.log(`New client connected: ${id}`);
-
-	// Create a temporary user for this connection
-	try {
-		await createUser({
-			id, // Use the client ID as the user ID
-			account: `temp-${id.substring(0, 8)}`,
-			name: `Visitor-${id.substring(0, 5)}`,
-			email: `temp-${id.substring(0, 8)}@example.com`,
-			password: "temporary",
-		});
-		console.log(`Temporary user created for client: ${id}`);
-	} catch (error) {
-		console.error(`Failed to create temporary user: ${error}`);
-	}
+	const connectionId = v4(); // Temporary ID for this connection
+	const client = new Client(connectionId, ws);
+	console.log(`New client connected: ${connectionId}`);
 
 	ws.on("message", async (data: Buffer) => {
 		try {
-			// Parse the incoming message
 			const message = JSON.parse(data.toString());
-			console.log(`Received message from ${id}:`, message.type);
+			// Log received message type, distinguish between authenticated/unauthenticated
+			if (client.isAuthenticated) {
+				console.log(
+					`Received message from user ${client.userId} (conn: ${client.id}):`,
+					message.type
+				);
+			} else {
+				console.log(
+					`Received message from unauthenticated connection ${client.id}:`,
+					message.type
+				);
+			}
 			await handleMessage(client, message);
 		} catch (error) {
-			console.log(`Error handling message from ${id}:`, error);
+			console.log(`Error handling message from ${client.id}:`, error);
 			client.sendToSelf({
 				type: "error",
 				payload: "Invalid message format",
@@ -157,12 +162,12 @@ wss.on("connection", async (ws: WebSocket) => {
 	});
 
 	ws.on("close", () => {
-		console.log(`Client connection closed: ${id}`);
-		handleDisconnect(client);
+		console.log(`Client connection closed: ${client.id}`);
+		handleDisconnect(client); // Pass the client object
 	});
 
 	ws.on("error", (err) => {
-		console.error(`WebSocket error for client ${id}:`, err);
+		console.error(`WebSocket error for client ${connectionId}:`, err);
 	});
 });
 
@@ -177,9 +182,71 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 		return;
 	}
 
+	// If client is not authenticated, only allow 'authenticate' message
+	if (!client.isAuthenticated && message.type !== "authenticate") {
+		console.warn(
+			`Connection ${client.id} tried action '${message.type}' before authenticating.`
+		);
+		client.sendToSelf({ type: "error", payload: "Authentication required" });
+		// Optionally close the connection for security
+		// client.ws.close();
+		return;
+	}
+
 	try {
 		switch (message.type) {
+			case "authenticate": {
+				// This case should only run if client is NOT already authenticated
+				if (client.isAuthenticated) {
+					console.warn(
+						`Client ${client.userId} sent authenticate message again.`
+					);
+					return; // Or send an error
+				}
+
+				const { userId } = (message as AuthenticateMessage).payload;
+				if (!userId || typeof userId !== "string") {
+					client.sendToSelf({
+						type: "error",
+						payload: "Invalid authentication payload",
+					});
+					return;
+				}
+
+				// Validate the user ID against the database
+				const user = await getUserById(userId);
+				if (user) {
+					client.userId = user.id; // Store the validated user ID
+					client.isAuthenticated = true;
+					console.log(
+						`Connection ${client.id} authenticated as user ${client.userId}`
+					);
+					client.sendToSelf({
+						type: "authenticated",
+						payload: { userId: client.userId },
+					});
+					// You might want to load user's current space/room here if needed
+					// client.spaceId = user.spaceId;
+					// client.roomId = user.roomId;
+				} else {
+					console.warn(
+						`Authentication failed for connection ${client.id}: User ${userId} not found.`
+					);
+					client.sendToSelf({
+						type: "error",
+						payload: "Authentication failed: User not found",
+					});
+					// Optionally close the connection
+					// client.ws.close();
+				}
+				break;
+			}
+
 			case "joinRoom": {
+				// Authentication check (already implicitly done by the check at the function start)
+				// Ensure client.userId is not null (TypeScript might need explicit check)
+				if (!client.userId) return; // Should not happen if isAuthenticated is true
+
 				const { roomId } = message.payload;
 				if (!client.spaceId) {
 					return client.sendToSelf({
@@ -204,8 +271,8 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 					}
 				}
 
-				// Join the new room
-				await addUserToRoom(client.id, roomId);
+				// Join the new room using the authenticated userId
+				await addUserToRoom(client.userId, roomId); // Use client.userId
 				client.roomId = roomId;
 
 				// Get or create mediasoup room
@@ -221,6 +288,9 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 			}
 
 			case "leaveRoom": {
+				// Authentication check
+				if (!client.userId) return;
+
 				const { roomId } = message.payload;
 				if (client.roomId !== roomId) {
 					return client.sendToSelf({
@@ -229,7 +299,7 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 					});
 				}
 
-				await removeUserFromRoom(client.id);
+				await removeUserFromRoom(client.userId); // Use client.userId
 				client.roomId = null;
 
 				const msRoom = roomsById.get(roomId);
@@ -249,10 +319,11 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 			}
 
 			case "createWebRtcTransport": {
-				if (!client.roomId) {
+				// Authentication check
+				if (!client.userId || !client.roomId) {
 					return client.sendToSelf({
 						type: "error",
-						payload: "Must join a room first",
+						payload: "Must be authenticated and in a room first",
 					});
 				}
 
@@ -291,14 +362,15 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 			}
 
 			case "connectWebRtcTransport": {
-				const { transportId, dtlsParameters } = message.payload;
-				if (!client.roomId) {
+				// Authentication check
+				if (!client.userId || !client.roomId) {
 					return client.sendToSelf({
 						type: "error",
-						payload: "Must join a room first",
+						payload: "Must be authenticated and in a room first",
 					});
 				}
 
+				const { transportId, dtlsParameters } = message.payload;
 				const msRoom = roomsById.get(client.roomId);
 				const transport = msRoom?.mediasoupTransports.get(transportId);
 
@@ -318,15 +390,16 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 			}
 
 			case "produceData": {
-				const { transportId, sctpStreamParameters, label, protocol } =
-					message.payload;
-
-				if (!client.roomId) {
+				// Authentication check
+				if (!client.userId || !client.roomId) {
 					return client.sendToSelf({
 						type: "error",
-						payload: "Must join a room first",
+						payload: "Must be authenticated and in a room first",
 					});
 				}
+
+				const { transportId, sctpStreamParameters, label, protocol } =
+					message.payload;
 
 				const msRoom = roomsById.get(client.roomId);
 				const transport = msRoom?.mediasoupTransports.get(transportId);
@@ -361,14 +434,15 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 			}
 
 			case "consumeData": {
-				const { producerId, transportId } = message.payload;
-
-				if (!client.roomId) {
+				// Authentication check
+				if (!client.userId || !client.roomId) {
 					return client.sendToSelf({
 						type: "error",
-						payload: "Must join a room first",
+						payload: "Must be authenticated and in a room first",
 					});
 				}
+
+				const { producerId, transportId } = message.payload;
 
 				const msRoom = roomsById.get(client.roomId);
 				if (!msRoom) {
@@ -410,6 +484,8 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 				break;
 			}
 
+			// Add similar authentication checks for other relevant message types like joinSpace, leaveSpace etc.
+
 			default:
 				client.sendToSelf({
 					type: "error",
@@ -428,44 +504,45 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 async function handleDisconnect(client: Client): Promise<void> {
 	if (!client) return;
 
-	console.log(`Handling disconnect for client: ${client.id}`);
+	// Perform DB cleanup only if the client was authenticated
+	if (client.isAuthenticated && client.userId) {
+		console.log(
+			`Handling disconnect for authenticated user: ${client.userId} (connection: ${client.id})`
+		);
 
-	// Update DB first
-	if (client.roomId) {
-		await removeUserFromRoom(client.id);
-		// Clean up mediasoup
-		const msRoom = roomsById.get(client.roomId);
-		if (msRoom) {
-			msRoom.removeClient(client.id);
+		// Update DB first using the actual userId
+		if (client.roomId) {
+			await removeUserFromRoom(client.userId); // Use actual userId
+			// Clean up mediasoup state associated with this connection
+			const msRoom = roomsById.get(client.roomId);
+			if (msRoom) {
+				// Close consumers associated with this client's connection ID
+				const consumers = msRoom.dataConsumers.get(client.id);
+				consumers?.forEach((consumer) => consumer.close());
+				msRoom.dataConsumers.delete(client.id);
+				msRoom.removeClient(client.id); // Use connection ID here
+				msRoom.broadcastMessage(null, {
+					type: "clientLeft",
+					payload: { clientId: client.userId },
+				});
+
+				// If room is empty, remove it from memory map
+				if (msRoom.isEmpty()) {
+					roomsById.delete(client.roomId);
+					console.log(`Removed empty room ${client.roomId} from memory.`);
+				}
+			}
 		}
+
+		if (client.spaceId) {
+			await removeUserFromSpace(client.userId); // Use actual userId
+			// Add space-level cleanup if necessary
+		}
+	} else {
+		console.log(
+			`Handling disconnect for unauthenticated connection: ${client.id}`
+		);
+		// No DB cleanup needed if they never authenticated
+		// Potentially clean up any temporary resources associated only with the connection ID if applicable
 	}
-
-	if (client.spaceId) {
-		await removeUserFromSpace(client.id);
-	}
-
-	// Close socket if needed
-	if (
-		client.ws.readyState !== WebSocket.CLOSED &&
-		client.ws.readyState !== WebSocket.CLOSING
-	) {
-		client.ws.terminate();
-	}
-}
-
-// Type guards
-function isValidRoomPayload(payload: any): payload is RoomIdPayload {
-	return (
-		typeof payload === "object" &&
-		payload !== null &&
-		typeof payload.roomId === "string"
-	);
-}
-
-function isValidSpacePayload(payload: any): payload is SpaceIdPayload {
-	return (
-		typeof payload === "object" &&
-		payload !== null &&
-		typeof payload.spaceId === "string"
-	);
 }
