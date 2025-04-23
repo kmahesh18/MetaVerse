@@ -3,8 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import { connectDB } from "./db";
 import { userRouter } from "./api/userRouter";
-import { avatarRouter } from "./api/avatarRouter";
-import { spacesRouter } from "./api/spacesRouter";
+import { avatarRouter } from "./api/assetRouter";
 
 // Load environment variables
 dotenv.config();
@@ -18,12 +17,11 @@ app.use(express.json());
 // Routes
 app.use("/api/users", userRouter);
 app.use("/api/avatars", avatarRouter);
-app.use("/api/spaces", spacesRouter);
 
 // Health check route
 app.get("/", (_req, res) => res.send("Server running"));
 
-const PORT = process.env.PORT || 8080;
+const PORT = process.env.PORT || 5000;
 
 // Connect to DB and start server
 connectDB().then(() => {
