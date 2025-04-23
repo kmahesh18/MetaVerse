@@ -13,70 +13,85 @@ exports.addUserToSpace = addUserToSpace;
 exports.removeUserFromSpace = removeUserFromSpace;
 exports.addUserToRoom = addUserToRoom;
 exports.removeUserFromRoom = removeUserFromRoom;
-const prisma_1 = require("../prisma");
-const userService_1 = require("./userService");
+const User_1 = require("../models/User");
+const Space_1 = require("../models/Space");
+const Room_1 = require("../models/Room");
 function addUserToSpace(userId, spaceId) {
     return __awaiter(this, void 0, void 0, function* () {
-        // Check if user exists first
-        const user = yield (0, userService_1.getUserById)(userId);
-        if (!user) {
-            console.log(`No user found with ID ${userId}, creating temporary record`);
-            // Get the space to find its company
-            const space = yield prisma_1.prisma.space.findUnique({
-                where: { id: spaceId },
-                select: { companyId: true },
-            });
+        try {
+            const user = yield User_1.User.findById(userId);
+            const space = yield Space_1.Space.findById(spaceId);
             if (!space) {
                 throw new Error(`Space ${spaceId} not found`);
             }
-            // Create user with createUser function from userService
-            const newUser = yield (0, userService_1.createUser)({
-                id: userId,
-                account: `temp-${userId.substring(0, 8)}`,
-                name: `Visitor-${userId.substring(0, 5)}`,
-                email: `temp-${userId.substring(0, 8)}@example.com`,
-                password: "temporary",
+            if (!user) {
+                // Create temporary user if needed
+                const tempUser = yield User_1.User.create({
+                    name: `Visitor-${userId.substring(0, 5)}`,
+                    email: `temp-${userId.substring(0, 8)}@example.com`,
+                    password: "temporary",
+                });
+                userId = tempUser._id;
+            }
+            // Update user's space and add to activeUsers
+            yield User_1.User.findByIdAndUpdate(userId, { spaceId });
+            yield Space_1.Space.findByIdAndUpdate(spaceId, {
+                $addToSet: { activeUsers: userId }
             });
-            // Then connect to space and company
-            return prisma_1.prisma.user.update({
-                where: { id: userId },
-                data: {
-                    spaceId,
-                    companyId: space.companyId,
-                },
-            });
+            return User_1.User.findById(userId);
         }
-        return prisma_1.prisma.user.update({
-            where: { id: userId },
-            data: { spaceId },
-        });
+        catch (error) {
+            console.error('Error in addUserToSpace:', error);
+            throw error;
+        }
     });
 }
 function removeUserFromSpace(userId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.update({
-            where: { id: userId },
-            data: { spaceId: null },
-        });
+        try {
+            const user = yield User_1.User.findById(userId);
+            if (user === null || user === void 0 ? void 0 : user.spaceId) {
+                yield Space_1.Space.findByIdAndUpdate(user.spaceId, {
+                    $pull: { activeUsers: userId }
+                });
+            }
+            return User_1.User.findByIdAndUpdate(userId, { $unset: { spaceId: 1 } }, { new: true });
+        }
+        catch (error) {
+            console.error('Error in removeUserFromSpace:', error);
+            throw error;
+        }
     });
 }
 function addUserToRoom(userId, roomId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.update({
-            where: { id: userId },
-            data: {
-                room: { connect: { id: roomId } },
-            },
-        });
+        try {
+            yield User_1.User.findByIdAndUpdate(userId, { roomId });
+            yield Room_1.Room.findByIdAndUpdate(roomId, {
+                $addToSet: { users: userId }
+            });
+            return User_1.User.findById(userId);
+        }
+        catch (error) {
+            console.error('Error in addUserToRoom:', error);
+            throw error;
+        }
     });
 }
 function removeUserFromRoom(userId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.update({
-            where: { id: userId },
-            data: {
-                room: { disconnect: true },
-            },
-        });
+        try {
+            const user = yield User_1.User.findById(userId);
+            if (user === null || user === void 0 ? void 0 : user.roomId) {
+                yield Room_1.Room.findByIdAndUpdate(user.roomId, {
+                    $pull: { users: userId }
+                });
+            }
+            return User_1.User.findByIdAndUpdate(userId, { $unset: { roomId: 1 } }, { new: true });
+        }
+        catch (error) {
+            console.error('Error in removeUserFromRoom:', error);
+            throw error;
+        }
     });
 }

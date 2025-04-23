@@ -151,6 +151,13 @@ interface AuthenticateMessage extends BaseMessage {
 	type: "authenticate";
 	payload: { userId: string }; // Or potentially a token to be verified
 }
+interface BroadcastPlayerPos extends BaseMessage {
+	type:"broadcastPlayerPos";
+	payload: {
+		userId: string;
+		position: { x: number; y: number };
+	};
+}
 
 interface AuthenticatedMessage extends BaseMessage {
 	type: "authenticated";
@@ -181,9 +188,11 @@ type Message =
 	| NewDataProducerMessage
 	| DataProducedMessage
 	| ConsumeDataMessage
-	| DataConsumerCreatedMessage;
+	| DataConsumerCreatedMessage
+	| BroadcastPlayerPos;
 
 export type {
+	BroadcastPlayerPos,
 	AuthenticateMessage,
 	AuthenticatedMessage,
 	ErrorMessage,

@@ -1,0 +1,50 @@
+import { MongoClient, Db, ServerApiVersion } from "mongodb";
+import dotenv from "dotenv";
+
+dotenv.config();
+
+let db: Db;
+let client: MongoClient;
+
+export async function connectDB() {
+  if (db) return db;
+  
+  const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/metaverse";
+  
+  client = new MongoClient(uri, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  });
+  
+  try {
+    await client.connect();
+    db = client.db("metaverse");
+    console.log("Connected to MongoDB");
+    
+    // Ping to confirm connection
+    await db.command({ ping: 1 });
+    console.log("Database connection verified");
+    
+    return db;
+  } catch (error) {
+    console.error("Error connecting to database:", error);
+    throw error;
+  }
+}
+
+export async function getDB() {
+  if (!db) {
+    await connectDB();
+  }
+  return db;
+}
+
+export async function closeDB() {
+  if (client) {
+    await client.close();
+    console.log("Database connection closed");
+  }
+}

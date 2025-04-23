@@ -9,34 +9,44 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.createUser = createUser;
-exports.getUsers = getUsers;
-exports.getUserById = getUserById;
-exports.updateUser = updateUser;
-exports.deleteUser = deleteUser;
-const prisma_1 = require("../prisma");
-function createUser(data) {
+exports.getUserByClerkId = getUserByClerkId;
+exports.createOrUpdateUser = createOrUpdateUser;
+exports.hasSelectedAvatar = hasSelectedAvatar;
+const db_1 = require("../db");
+function getUserByClerkId(clerkId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.create({ data });
+        const db = yield (0, db_1.getDB)();
+        return db.collection("users").findOne({ clerkId });
     });
 }
-function getUsers() {
+function createOrUpdateUser(clerkId, avatarId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.findMany();
+        const db = yield (0, db_1.getDB)();
+        const now = new Date();
+        // Check if user exists
+        const existingUser = yield getUserByClerkId(clerkId);
+        if (existingUser) {
+            // Only update if avatarId is provided or different
+            if (avatarId && existingUser.avatarId !== avatarId) {
+                const update = {
+                    avatarId,
+                    updatedAt: now
+                };
+                return db.collection("users").findOneAndUpdate({ clerkId }, { $set: update }, { returnDocument: "after" });
+            }
+            return { value: existingUser };
+        }
+        else {
+            // Create new user
+            const newUser = Object.assign(Object.assign({ clerkId }, (avatarId ? { avatarId } : {})), { createdAt: now, updatedAt: now });
+            yield db.collection("users").insertOne(newUser);
+            return { value: newUser };
+        }
     });
 }
-function getUserById(id) {
+function hasSelectedAvatar(clerkId) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.findUnique({ where: { id } });
-    });
-}
-function updateUser(id, data) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.update({ where: { id }, data });
-    });
-}
-function deleteUser(id) {
-    return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.user.delete({ where: { id } });
+        const user = yield getUserByClerkId(clerkId);
+        return user !== null && !!user.avatarId;
     });
 }

@@ -7,10 +7,11 @@ import {
 	addUserToRoom,
 	removeUserFromRoom,
 } from "./services/membershipService";
-import { createUser, getUserById } from "./services/userService"; // Add this import
+import { createOrUpdateUser, getUserById } from "./services/userService"; // Add this import
 import { getRoomById, isRoomInSpace } from "./services/roomService"; // Add this
 import {
 	Message,
+	BroadcastPlayerPos,
 	SpaceIdPayload,
 	RoomIdPayload,
 	AuthenticateMessage, // Import new type
@@ -66,8 +67,8 @@ class Room {
 	id: string;
 	clients: Map<string, Client>;
 	mediasoupTransports: Map<string, mediasoup.types.WebRtcTransport>;
-	dataProducers: Map<string, mediasoup.types.DataProducer>;
-	dataConsumers: Map<string, mediasoup.types.DataConsumer[]>;
+	dataProducers: Map<string, mediasoup.types.DataProducer>; //client to room pipeline
+	dataConsumers: Map<string, mediasoup.types.DataConsumer[]>; //room to subscribed client's pipelines
 
 	constructor(roomId: string) {
 		this.id = roomId;
@@ -171,6 +172,14 @@ wss.on("connection", async (ws: WebSocket) => {
 	});
 });
 
+// Map to track player positions
+const playerPositions = new Map<string, { posX: number; posY: number }>();
+
+// Function to get the current player positions map
+function getPlayerPositions(): Map<string, { posX: number; posY: number }> {
+	return playerPositions;
+}
+
 // Handle incoming messages from clients
 async function handleMessage(client: Client, message: any): Promise<void> {
 	if (!message || typeof message.type !== "string") {
@@ -221,10 +230,18 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 					console.log(
 						`Connection ${client.id} authenticated as user ${client.userId}`
 					);
-					client.sendToSelf({
-						type: "authenticated",
-						payload: { userId: client.userId },
-					});
+
+					if (client.userId) {
+						client.sendToSelf({
+							type: "authenticated",
+							payload: { userId: client.userId },
+						});
+					} else {
+						client.sendToSelf({
+							type: "error",
+							payload: "Authentication failed: User ID is null",
+						});
+					}
 					// You might want to load user's current space/room here if needed
 					// client.spaceId = user.spaceId;
 					// client.roomId = user.roomId;
@@ -279,7 +296,6 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 				const msRoom = getOrCreateRoom(roomId);
 				msRoom.addClient(client);
 				msRoom.dataConsumers.set(client.id, []);
-
 				client.sendToSelf({
 					type: "joinedRoom", // CHANGE FROM "joinRoom" to match RoomResponseMessage
 					payload: { roomId },
@@ -484,6 +500,42 @@ async function handleMessage(client: Client, message: any): Promise<void> {
 				break;
 			}
 
+			case "playerPosUpdate": {
+				// Authentication check
+				if (!client.userId || !client.roomId) {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Must be authenticated and in a room first",
+					});
+				}
+
+				const { posX, posY } = message.payload;
+
+				if (typeof posX !== "number" || typeof posY !== "number") {
+					return client.sendToSelf({
+						type: "error",
+						payload: "Invalid position data",
+					});
+				}
+
+				// Update the player's position in the map
+				playerPositions.set(client.userId, { posX, posY });
+
+				// Broadcast the updated position to other clients in the room
+				const msRoom = roomsById.get(client.roomId);
+				if (msRoom) {
+					msRoom.broadcastMessage(client.id, {
+						type: "broadcastPlayerPos",
+						payload: {
+							userId: client.userId,
+							position: { x: posX, y: posY }
+						},
+					});
+				}
+
+				break;
+			}
+
 			// Add similar authentication checks for other relevant message types like joinSpace, leaveSpace etc.
 
 			default:
@@ -545,4 +597,87 @@ async function handleDisconnect(client: Client): Promise<void> {
 		// No DB cleanup needed if they never authenticated
 		// Potentially clean up any temporary resources associated only with the connection ID if applicable
 	}
+}
+
+
+async function fullyJoinRoom(client: Client, roomId: string, dtlsParameters: any, sctpStreamParameters: any, label: string, protocol: string) {
+    // 1. Add client to room
+    const msRoom = getOrCreateRoom(roomId);
+    msRoom.addClient(client);
+
+    // 2. Create WebRTC transport for this client
+    const transport = await mediasoupRouter.createWebRtcTransport({
+        listenIps: [{ ip: "0.0.0.0", announcedIp: "" }],
+        enableTcp: true,
+        enableUdp: true,
+        preferUdp: true,
+        enableSctp: true,
+        numSctpStreams: { OS: 1024, MIS: 1024 },
+    });
+    msRoom.mediasoupTransports.set(transport.id, transport);
+
+    // 3. Connect transport
+    await transport.connect({ dtlsParameters });
+
+    // 4. Produce data (create DataProducer)
+    const dataProducer = await transport.produceData({
+        sctpStreamParameters,
+        label,
+        protocol,
+    });
+    msRoom.dataProducers.set(dataProducer.id, dataProducer);
+
+    // 5. Notify everyone in the room about the new player
+    // msRoom.broadcastMessage(null, {
+    //     type: "playerJoined",
+    //     payload: { userId: client.userId, clientId: client.id, dataProducerId: dataProducer.id },
+    // });
+
+    // 6. Consume data from all existing producers (except self)
+    for (const [producerId, producer] of msRoom.dataProducers.entries()) {
+        if (producerId === dataProducer.id) continue; // skip own producer
+        const dataConsumer = await transport.consumeData({ dataProducerId: producerId });
+        if (!msRoom.dataConsumers.get(client.id)) msRoom.dataConsumers.set(client.id, []);
+        msRoom.dataConsumers.get(client.id)!.push(dataConsumer);
+
+        // Notify client about the new data consumer
+        client.sendToSelf({
+            type: "dataConsumerCreated",
+            payload: {
+                producerId,
+                id: dataConsumer.id,
+                sctpStreamParameters: dataConsumer.sctpStreamParameters,
+                label: dataConsumer.label,
+                protocol: dataConsumer.protocol,
+            },
+        });
+    }
+
+    // 7. For all other clients, consume the new producer
+    for (const [otherClientId, otherClient] of msRoom.clients.entries()) {
+        if (otherClientId === client.id) continue;
+        const otherTransport = msRoom.mediasoupTransports.values().next().value; // You may want to track which transport belongs to which client
+        if (!otherTransport) continue;
+        const dataConsumer = await otherTransport.consumeData({ dataProducerId: dataProducer.id });
+        if (!msRoom.dataConsumers.get(otherClientId)) msRoom.dataConsumers.set(otherClientId, []);
+        msRoom.dataConsumers.get(otherClientId)!.push(dataConsumer);
+
+        // Notify other client about the new data consumer
+        otherClient.sendToSelf({
+            type: "dataConsumerCreated",
+            payload: {
+                producerId: dataProducer.id,
+                id: dataConsumer.id,
+                sctpStreamParameters: dataConsumer.sctpStreamParameters,
+                label: dataConsumer.label,
+                protocol: dataConsumer.protocol,
+            },
+        });
+    }
+
+    // 8. Notify the joining client about their own producer
+    client.sendToSelf({
+        type: "dataProduced",
+        payload: { dataProducerId: dataProducer.id },
+    });
 }
