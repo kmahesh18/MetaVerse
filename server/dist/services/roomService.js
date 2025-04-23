@@ -11,22 +11,30 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getRoomById = getRoomById;
 exports.isRoomInSpace = isRoomInSpace;
-const prisma_1 = require("../prisma");
+const Room_1 = require("../models/Room");
 function getRoomById(id) {
     return __awaiter(this, void 0, void 0, function* () {
-        return prisma_1.prisma.room.findUnique({
-            where: { id },
-        });
+        try {
+            return Room_1.Room.findById(id);
+        }
+        catch (error) {
+            console.error('Error in getRoomById:', error);
+            throw error;
+        }
     });
 }
 function isRoomInSpace(roomId, spaceId) {
     return __awaiter(this, void 0, void 0, function* () {
-        const room = yield prisma_1.prisma.room.findFirst({
-            where: {
-                id: roomId,
-                spaceId,
-            },
-        });
-        return !!room;
+        try {
+            const room = yield Room_1.Room.findOne({
+                _id: roomId,
+                spaceId: spaceId
+            });
+            return !!room;
+        }
+        catch (error) {
+            console.error('Error in isRoomInSpace:', error);
+            throw error;
+        }
     });
 }

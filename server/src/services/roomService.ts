@@ -1,20 +1,32 @@
-import { prisma } from "../prisma";
+import { ObjectId } from "mongodb";
+import { getDB } from "../db";
+import { IRoom, ROOMS_COLLECTION } from "../models/RoomModel";
 
-export async function getRoomById(id: string) {
-	return prisma.room.findUnique({
-		where: { id },
-	});
+// Get which space a room belongs to
+export async function getSpaceIdByRoomId(roomId: string): Promise<string | null> {
+  const db = await getDB();
+  const id = ObjectId.isValid(roomId) ? new ObjectId(roomId) : roomId;
+  
+  const room = await db.collection(ROOMS_COLLECTION).findOne(
+    { id: id },
+    { projection: { spaceId: 1 } }
+  );
+  
+  return room ? room.spaceId : null;
 }
 
-export async function isRoomInSpace(
-	roomId: string,
-	spaceId: string
-): Promise<boolean> {
-	const room = await prisma.room.findFirst({
-		where: {
-			id: roomId,
-			spaceId,
-		},
-	});
-	return !!room;
+// Get assets for a room
+export async function getRoomAssets(roomId: string): Promise<any[]> {
+  const db = await getDB();
+  const roomid = ObjectId.isValid(roomId) ? new ObjectId(roomId) : roomId;
+  
+  const room = await db.collection(ROOMS_COLLECTION).findOne({ id: roomid });
+  if (!room) return [];
+  
+  // Fetch the roomType to get its assets
+  const roomType = await db.collection("roomType").findOne(
+    { _id: ObjectId.isValid(room.roomTypeId) ? new ObjectId(room.roomTypeId) : room.roomTypeId }
+  );
+  
+  return roomType?.assets || [];
 }
