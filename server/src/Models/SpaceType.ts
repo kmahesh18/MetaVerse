@@ -4,8 +4,8 @@ export interface ISpace extends Document {
   _id?: string | ObjectId;
   roomids: string[];
   adminid: string;
-  currentuserids: string[];
-  accesibleuserids: string[];
+  activeuserids: string[];
+  accessibleuserids: string[];
 }
 
 export const Space_Collection = "spaces";
