@@ -16,7 +16,7 @@ export function AvatarSelection() {
     const fetchAvatars = async () => {
       try {
         console.log("Fetching avatars...");
-        const response = await fetch(`http://localhost:${process.env.BKPORT}/api/assets`);
+        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/assets`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("Failed to fetch avatars:", errorData);
@@ -51,7 +51,7 @@ export function AvatarSelection() {
         avatarId: selectedAvatarId
       });
 
-      const userResponse = await fetch(`http://localhost:${process.env.BKPORT}/api/user`, {
+      const userResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json'

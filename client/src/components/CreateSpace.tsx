@@ -61,7 +61,7 @@ export function CreateSpace() {
     
     try {
       // Check if the spacesRouter is registered in server.ts
-      const response = await fetch(`http://localhost:${process.env.BKPORT}/api/spaces`, {
+      const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

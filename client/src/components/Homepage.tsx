@@ -15,13 +15,13 @@ export function Homepage() {
         try {
           console.log("User ID:", user.id);
           // Check if user exists in our backend
-          const response = await fetch(`http://localhost:${process.env.BKPORT}/api/user/${user.id}`);
+          const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${user.id}`);
           
           if (!response.ok) {
             console.log("User not found, response status:", response.status);
             
             // User doesn't exist, create them in our backend
-            const createResponse = await fetch(`http://localhost:${process.env.BKPORT}/api/user`, {
+            const createResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`, {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json'

@@ -18,7 +18,7 @@ export function Dashboard() {
     const fetchUserDataAndSpaces = async () => {
       try {
         // Fetch user data
-        const response = await fetch(`http://localhost:5000/api/user/${user.id}`);
+        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${user.id}`);
         
         if (response.status === 404) {
           // If user not found, redirect to avatar selection
@@ -41,7 +41,7 @@ export function Dashboard() {
         // Fetch spaces for the user
         try {
           // This endpoint should be implemented on the backend to return spaces for a user
-          const spacesRes = await fetch(`http://localhost:5000/api/spaces?userId=${user.id}`);
+          const spacesRes = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces?userId=${user.id}`);
           
           if (spacesRes.status === 501 || spacesRes.status === 404) {
             console.warn("Spaces API not fully implemented yet");
