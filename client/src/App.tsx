@@ -4,16 +4,26 @@ import { SignedIn, SignedOut, UserButton, RedirectToSignIn } from "@clerk/clerk-
 import { Homepage } from "./components/Homepage";
 import { AvatarSelection } from "./components/AvatarSelection";
 import { Dashboard } from "./components/Dashboard";
+import { CreateSpace } from "./components/CreateSpace";
 import "./App.css";
 import "./styles/theme.css";
 
 function App() {
   return (
     <>
-      <nav className="container-2d">
+      <nav className="container-2d" style={{ 
+        display: 'flex', 
+        justifyContent: 'space-between', 
+        alignItems: 'center',
+        background: 'var(--secondary)',
+        marginBottom: '20px'
+      }}>
         <Link to="/" className="btn-2d">Home</Link>
         <SignedIn>
-          <UserButton afterSignOutUrl="/" />
+          <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+            <Link to="/dashboard" className="btn-2d">Dashboard</Link>
+            <UserButton afterSignOutUrl="/" />
+          </div>
         </SignedIn>
       </nav>
 
@@ -35,7 +45,14 @@ function App() {
             </SignedIn>
           }
         />
-        <Route path="/create-space" element={<SignedIn><div>Coming Soon</div></SignedIn>} />
+        <Route 
+          path="/create-space" 
+          element={
+            <SignedIn>
+              <CreateSpace />
+            </SignedIn>
+          } 
+        />
         <Route path="/join-space" element={<SignedIn><div>Coming Soon</div></SignedIn>} />
         <Route path="/space/:id" element={<SignedIn><div>Coming Soon</div></SignedIn>} />
       </Routes>

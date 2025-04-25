@@ -12,7 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.userRouter = void 0;
 const express_1 = require("express");
 const userService_1 = require("../services/userService");
-const avatarService_1 = require("../services/avatarService");
+const assetService_1 = require("../services/assetService");
 const mongodb_1 = require("mongodb");
 exports.userRouter = (0, express_1.Router)();
 // Get user by Clerk ID
@@ -50,7 +50,7 @@ exports.userRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, fun
             if (!mongodb_1.ObjectId.isValid(avatarId)) {
                 return res.status(400).json({ error: "Invalid avatar ID format" });
             }
-            const avatar = yield (0, avatarService_1.getAvatarById)(avatarId);
+            const avatar = yield (0, assetService_1.getAssetById)(avatarId);
             if (!avatar) {
                 return res.status(404).json({ error: "Avatar not found" });
             }
@@ -78,7 +78,7 @@ exports.userRouter.patch("/:clerkId/avatar", (req, res) => __awaiter(void 0, voi
         if (!mongodb_1.ObjectId.isValid(avatarId)) {
             return res.status(400).json({ error: "Invalid avatar ID format" });
         }
-        const avatar = yield (0, avatarService_1.getAvatarById)(avatarId);
+        const avatar = yield (0, assetService_1.getAssetById)(avatarId);
         if (!avatar) {
             return res.status(404).json({ error: "Avatar not found" });
         }

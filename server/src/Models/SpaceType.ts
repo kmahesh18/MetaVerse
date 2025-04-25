@@ -1,7 +1,8 @@
 import { ObjectId, Document } from "mongodb";
 
 export interface ISpace extends Document {
-  _id?: string | ObjectId;
+  _id?: string;
+  id: string; //room id by uuid
   roomids: string[];
   adminid: string;
   activeuserids: string[];

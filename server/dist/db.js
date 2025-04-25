@@ -24,13 +24,11 @@ function connectDB() {
     return __awaiter(this, void 0, void 0, function* () {
         if (db)
             return db;
-        const uri = process.env.MONGODB_URI || "mongodb://localhost:27017/metaverse";
+        const uri = process.env.MONGODB_URI || "";
         client = new mongodb_1.MongoClient(uri, {
-            serverApi: {
-                version: mongodb_1.ServerApiVersion.v1,
-                strict: true,
-                deprecationErrors: true,
-            }
+            ssl: true,
+            tls: true,
+            tlsAllowInvalidCertificates: false,
         });
         try {
             yield client.connect();

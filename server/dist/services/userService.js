@@ -13,18 +13,13 @@ exports.getUserByClerkId = getUserByClerkId;
 exports.createOrUpdateUser = createOrUpdateUser;
 exports.hasSelectedAvatar = hasSelectedAvatar;
 const db_1 = require("../db");
-<<<<<<< HEAD
+const UserModel_1 = require("../Models/UserModel");
 function getUserByClerkId(clerkId) {
     return __awaiter(this, void 0, void 0, function* () {
         const db = yield (0, db_1.getDB)();
-        return db.collection("users").findOne({ clerkId });
-=======
-const UserModel_1 = require("../models/UserModel");
-function getUserByClerkId(clerkId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        const db = yield (0, db_1.getDB)();
-        return db.collection(UserModel_1.USERS_COLLECTION).findOne({ clerkId });
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
+        return db
+            .collection(UserModel_1.USERS_COLLECTION)
+            .findOne({ clerkId });
     });
 }
 function createOrUpdateUser(clerkId, avatarId) {
@@ -38,24 +33,18 @@ function createOrUpdateUser(clerkId, avatarId) {
             if (avatarId && existingUser.avatarId !== avatarId) {
                 const update = {
                     avatarId,
-                    updatedAt: now
+                    updatedAt: now,
                 };
-<<<<<<< HEAD
-                return db.collection("users").findOneAndUpdate({ clerkId }, { $set: update }, { returnDocument: "after" });
-=======
-                return db.collection(UserModel_1.USERS_COLLECTION).findOneAndUpdate({ clerkId }, { $set: update }, { returnDocument: "after" });
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
+                return db
+                    .collection(UserModel_1.USERS_COLLECTION)
+                    .findOneAndUpdate({ clerkId }, { $set: update }, { returnDocument: "after" });
             }
             return { value: existingUser };
         }
         else {
             // Create new user
             const newUser = Object.assign(Object.assign({ clerkId }, (avatarId ? { avatarId } : {})), { createdAt: now, updatedAt: now });
-<<<<<<< HEAD
-            yield db.collection("users").insertOne(newUser);
-=======
             yield db.collection(UserModel_1.USERS_COLLECTION).insertOne(newUser);
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
             return { value: newUser };
         }
     });

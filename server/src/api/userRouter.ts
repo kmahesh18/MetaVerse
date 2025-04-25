@@ -1,10 +1,6 @@
 import { Router } from "express";
 import { getUserByClerkId, createOrUpdateUser, hasSelectedAvatar } from "../services/userService";
-<<<<<<< HEAD
-import { getAvatarById } from "../services/avatarService";
-=======
 import { getAssetById } from "../services/assetService";
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
 import { ObjectId } from "mongodb";
 
 export const userRouter = Router();
@@ -46,11 +42,7 @@ userRouter.post("/", async (req, res) => {
         return res.status(400).json({ error: "Invalid avatar ID format" });
       }
       
-<<<<<<< HEAD
-      const avatar = await getAvatarById(avatarId);
-=======
       const avatar = await getAssetById(avatarId);
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
       if (!avatar) {
         return res.status(404).json({ error: "Avatar not found" });
       }
@@ -81,11 +73,7 @@ userRouter.patch("/:clerkId/avatar", async (req, res) => {
       return res.status(400).json({ error: "Invalid avatar ID format" });
     }
     
-<<<<<<< HEAD
-    const avatar = await getAvatarById(avatarId);
-=======
     const avatar = await getAssetById(avatarId);
->>>>>>> 4410ea2acdac28177a285241b07c4a11c5962382
     if (!avatar) {
       return res.status(404).json({ error: "Avatar not found" });
     }

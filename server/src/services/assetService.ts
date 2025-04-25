@@ -9,7 +9,7 @@ export async function getAssets(): Promise<IAsset[]> {
 
 export async function getAssetById(id: string): Promise<IAsset | null> {
   if (!ObjectId.isValid(id)) {
-    throw new Error("Invalid avatar ID format");
+    throw new Error("Invalid asset ID format");
   }
   
   const db = await getDB();

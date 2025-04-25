@@ -2,7 +2,8 @@ import { ObjectId, Document } from "mongodb";
 import { IAsset } from "./AssetModel";
 
 export interface IRoomType extends Document {
-  _id?: string | ObjectId; //UUID
+  _id?: ObjectId;
+  id: string;
   assets: IAsset[];
 }
 
