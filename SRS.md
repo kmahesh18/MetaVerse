@@ -388,103 +388,32 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 
 ### 10.4 Activity Diagram for Space Creation and Usage
 
-```
-+---------------------------------------------------------------------+
-|                                                                     |
-|  +----------+                                                       |
-|  |  Start   |                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  | Login/   |                                                       |
-|  | Register |                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       v                                                             |
-|  +----------+        No        +----------+                         |
-|  | Avatar   |------------------>| Select   |                        |
-|  | Selected?|                  | Avatar   |                         |
-|  +----------+                  +----------+                         |
-|       |                              |                              |
-|       | Yes                          |                              |
-|       v                              |                              |
-|  +----------+                        |                              |
-|  | View     |<-----------------------+                              |
-|  | Dashboard|                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  | Action   |                                                       |
-|  | Choice   |                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       |--------------------+--------------------+                   |
-|       |                    |                    |                   |
-|       v                    v                    v                   |
-|  +----------+        +----------+        +----------+              |
-|  | Create   |        | Join     |        | Enter    |              |
-|  | Space    |        | Space    |        | Existing |              |
-|  +----------+        +----------+        | Space    |              |
-|       |                    |                    |                   |
-|       v                    |                    |                   |
-|  +----------+              |                    |                   |
-|  | Select   |              |                    |                   |
-|  | Room     |              |                    |                   |
-|  | Types    |              |                    |                   |
-|  +----------+              |                    |                   |
-|       |                    |                    |                   |
-|       v                    v                    v                   |
-|  +----------+        +----------+        +----------+              |
-|  | Set Room |        | Space    |        | Enter    |              |
-|  | Count    |        | List     |        | Room     |              |
-|  +----------+        +----------+        +----------+              |
-|       |                    |                    |                   |
-|       v                    v                    |                   |
-|  +----------+        +----------+              |                   |
-|  | Create   |        | Select   |              |                   |
-|  | Space    |        | Space    |              |                   |
-|  +----------+        +----------+              |                   |
-|       |                    |                    |                   |
-|       +--------------------+--------------------+                   |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  | Navigate |                                                       |
-|  | to Room  |                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  | Interact |<-----------------+                                    |
-|  | in Room  |                  |                                    |
-|  +----------+                  |                                    |
-|       |                        |                                    |
-|       |--------------------+   |                                    |
-|       |                    |   |                                    |
-|       v                    v   |                                    |
-|  +----------+        +----------+                                   |
-|  | Change   |        | Interact |                                   |
-|  | Room     |        | with     |                                   |
-|  +----------+        | Users    |                                   |
-|       |               +----------+                                  |
-|       |                    |                                        |
-|       |                    |                                        |
-|       +--------------------+                                        |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  | Leave    |                                                       |
-|  | Space    |                                                       |
-|  +----------+                                                       |
-|       |                                                             |
-|       v                                                             |
-|  +----------+                                                       |
-|  |   End    |                                                       |
-|  +----------+                                                       |
-|                                                                     |
-+---------------------------------------------------------------------+
+```mermaid
+flowchart TD
+    Start([Start]) --> Login[Login/Register]
+    Login --> AvatarCheck{Avatar Selected?}
+    AvatarCheck -- No --> SelectAvatar[Select Avatar]
+    SelectAvatar --> Dashboard
+    AvatarCheck -- Yes --> Dashboard[View Dashboard]
+    Dashboard --> ActionChoice{Action Choice}
+    ActionChoice --> CreateSpace[Create Space]
+    ActionChoice --> JoinSpace[Join Space]
+    ActionChoice --> EnterExisting[Enter Existing Space]
+    CreateSpace --> SelectRoomTypes[Select Room Types]
+    SelectRoomTypes --> SetRoomCount[Set Room Count]
+    JoinSpace --> SpaceList[Space List]
+    SpaceList --> SelectSpace[Select Space]
+    SetRoomCount --> CreateSpaceAction[Create Space]
+    CreateSpaceAction --> NavigateRoom
+    SelectSpace --> NavigateRoom
+    EnterExisting --> NavigateRoom[Navigate to Room]
+    NavigateRoom --> InteractRoom[Interact in Room]
+    InteractRoom --> ChangeRoom[Change Room]
+    InteractRoom --> InteractUsers[Interact with Users]
+    ChangeRoom --> InteractRoom
+    InteractUsers --> InteractRoom
+    InteractRoom --> LeaveSpace[Leave Space]
+    LeaveSpace --> End([End])
 ```
 
 ### 10.5 Communication Diagram for User Interaction
@@ -544,13 +473,12 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 |           Client Device              |      |             Server                   |
 |                                      |      |                                      |
 | +----------------------------------+ |      | +----------------------------------+ |
-| |                                  | |      | |                                  | |
-| |        Web Browser               | |      | |       Node.js Server             | |
-| |                                  | |      | |                                  | |
-| | +------------------------------+ | |      | | +-------------+ +-------------+ | |
-| | |                              | | |      | | | Express API | | WebSocket   | | |
-| | |     React Application        | | |      | | |             | | Server      | | |
-| | |                              | | |      | | |             | |             | | |
+| |                                  | |      | |       Node.js Server             | |
+| |        Web Browser               | |      | |                                  | |
+| |                                  | |      | | +-------------+ +-------------+ | |
+| | +------------------------------+ | |      | | | Express API | | WebSocket   | | |
+| | |                              | | |      | | |             | | Server      | | |
+| | |     React Application        | | |      | | |             | |             | | |
 | | | +--------------------------+ | | |      | | +-------------+ +-------------+ | |
 | | | |                          | | | |      | | |             | |             | | |
 | | | |      Phaser Game         | | | |      | | | Express API | | WebSocket   | | |
@@ -723,26 +651,82 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 
 ### 12.2 API Endpoints
 
-| Endpoint        | Method | Description        | Request Body           | Response                |
-| --------------- | ------ | ------------------ | ---------------------- | ----------------------- |
-| /api/users      | GET    | Get all users      | -                      | Array of user objects   |
-| /api/users/:id  | GET    | Get specific user  | -                      | User object             |
-| /api/users      | POST   | Create user        | User data              | Created user            |
-| /api/spaces     | GET    | Get all spaces     | -                      | Array of space objects  |
-| /api/spaces     | POST   | Create space       | Space data, room types | Created space with ID   |
-| /api/spaces/:id | GET    | Get space by ID    | -                      | Space object with rooms |
-| /api/roomtypes  | GET    | Get all room types | -                      | Array of room types     |
-| /api/rooms/:id  | GET    | Get room by ID     | -                      | Room object with assets |
+| Endpoint          | Method | Description        | Request Body           | Response                |
+| ----------------- | ------ | ------------------ | ---------------------- | ----------------------- |
+| /api/users        | GET    | Get all users      | -                      | Array of user objects   |
+| /api/users/:id    | GET    | Get specific user  | -                      | User object             |
+| /api/users        | POST   | Create user        | User data              | Created user            |
+| /api/spaces       | GET    | Get all spaces     | -                      | Array of space objects  |
+| /api/spaces       | POST   | Create space       | Space data, room types | Created space with ID   |
+| /api/spaces/:id   | GET    | Get space by ID    | -                      | Space object with rooms |
+| /api/roomtypes    | GET    | Get all room types | -                      | Array of room types     |
+| /api/rooms/:id    | GET    | Get room by ID     | -                      | Room object with assets |
+| /api/assets       | GET    | Get all assets     | -                      | Array of asset objects  |
+| /api/assets/:id   | GET    | Get asset by ID    | -                      | Asset object            |
+| /api/users/me     | GET    | Get current user   | -                      | User profile            |
+| /api/spaces/join  | POST   | Join a space       | {spaceId}              | Updated space object    |
+| /api/spaces/leave | POST   | Leave a space      | {spaceId}              | Success message         |
+
+#### API Response Formats:
+
+**Success Response Format:**
+
+```json
+{
+  "success": true,
+  "data": {
+    /* Response data */
+  },
+  "message": "Operation successful"
+}
+```
+
+**Error Response Format:**
+
+```json
+{
+  "success": false,
+  "error": "Error code",
+  "message": "Human readable error message"
+}
+```
+
+**Common HTTP Status Codes:**
+
+- 200: OK - Request succeeded
+- 201: Created - Resource successfully created
+- 400: Bad Request - Invalid input
+- 401: Unauthorized - Authentication required
+- 403: Forbidden - Lacking permissions
+- 404: Not Found - Resource not found
+- 500: Server Error - Internal server error
 
 ### 12.3 Frontend Routes
 
-| Route          | Description           | Access Level                   |
-| -------------- | --------------------- | ------------------------------ |
-| /              | Landing page          | Public                         |
-| /login         | Login/registration    | Public                         |
-| /avatar        | Avatar selection      | Authenticated                  |
-| /dashboard     | User dashboard        | Authenticated                  |
-| /spaces/create | Create space          | Authenticated                  |
-| /spaces/:id    | View space            | Authenticated, Access Required |
-| /rooms/:id     | Room view with Phaser | Authenticated, Access Required |
-| /admin         | Admin panel           | Admin Only                     |
+| Route          | Description           | Access Level                   | Component       | Data Requirements                        |
+| -------------- | --------------------- | ------------------------------ | --------------- | ---------------------------------------- |
+| /              | Landing page          | Public                         | LandingPage     | Basic site information                   |
+| /login         | Login/registration    | Public                         | AuthPage        | Clerk SDK integration                    |
+| /avatar        | Avatar selection      | Authenticated                  | AvatarSelection | Available avatars from database          |
+| /dashboard     | User dashboard        | Authenticated                  | Dashboard       | User profile, accessible spaces          |
+| /spaces/create | Create space          | Authenticated                  | SpaceCreation   | Available room types, asset options      |
+| /spaces/:id    | View space            | Authenticated, Access Required | SpaceDetail     | Space data, rooms, members               |
+| /rooms/:id     | Room view with Phaser | Authenticated, Access Required | RoomPhaser      | Room assets, other users, collision data |
+| /admin         | Admin panel           | Admin Only                     | AdminPanel      | User management, room type data          |
+
+#### Navigation Flow:
+
+1. **Authentication Flow:**
+
+   - Landing Page → Login → Avatar Selection → Dashboard
+
+2. **Space Creation Flow:**
+
+   - Dashboard → Create Space → Configure Rooms → View Created Space
+
+3. **Space Usage Flow:**
+
+   - Dashboard → Select Space → View Space Details → Enter Room → Interact
+
+4. **Admin Flow:**
+   - Dashboard → Admin Panel → Manage Users/Room Types/Assets
