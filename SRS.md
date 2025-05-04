@@ -221,6 +221,14 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
                     |                +----------------+                |
                     |                        |                         |
                     |                +----------------+                |
+                    |                | View Dashboard |                |
+                    |                +----------------+                |
+                    |                        |                         |
+                    |                +----------------+                |
+                    |                | Create Space   |<---------------+
+                    |                +----------------+                |
+                    |                        |                         |
+                    |                +----------------+                |
                     |                | Join Space     |                |
                     |                +----------------+                |
                     |                        |                         |
@@ -239,15 +247,16 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
                     +--------------------------------------------------+
                     |                                                  |
                     |                +----------------+                |
-                    |                | Create Space   |<---------------+
-                    |                +----------------+                |
-                    |                        |                         |
-                    |                +----------------+                |
                     |                | Manage Rooms   |<---------------+
                     |                +----------------+                |
                     |                        |                         |
                     |                +----------------+                |
                     |                | Invite Users   |<---------------+
+                    |                +----------------+                |
+                    |                        |                         |
+                    |                +----------------+                |
+                    |                | Modify Space   |<---------------+
+                    |                | Settings       |                |
                     |                +----------------+                |
                     |                                                  |
                     +--------------------------------------------------+
@@ -264,9 +273,9 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 | avatarId: string  |       | roomids: string[] |       | spaceId: string   |
 | emailId: string   |       | adminid: string   |       | roomTypeId: string|
 | accessibleSpaces[]|       | activeuserids[]   |       | createdAt: Date   |
-| roomId: string    |       | accessibleuserids[]       +-------------------+
-| spaceId: string   |       +-------------------+               ^
-| createdAt: Date   |                ^                          |
+| roomId: string    |       | accessibleuserids[]       | updatedAt: Date   |
+| spaceId: string   |       +-------------------+       +-------------------+
+| createdAt: Date   |                ^                          ^
 | updatedAt: Date   |                |                          |
 +-------------------+                |                          |
         ^                            |                          |
@@ -317,6 +326,9 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
     |------------------>|                   |                   |                   |
     |                   | Update User       |                   |                   |
     |                   |------------------>|                   |                   |
+    |                   |                   |                   |                   |
+    |                   | Confirmation      |                   |                   |
+    |                   |<------------------|                   |                   |
     |                   |                   |                   |                   |
     | View Spaces       |                   |                   |                   |
     |------------------>|                   |                   |                   |
@@ -504,7 +516,7 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
             +----------------+    +----------------+     10.Accept     +----------------+
                     ^  |                  |
                     |  |                  |
-              5.Update|  |6.Broadcast     |4.Enter
+               14.Update|  |6.Broadcast     |4.Enter
                     |  |                  |
                     |  v                  v
             +----------------+    +----------------+      11.Interact  +----------------+
@@ -584,17 +596,10 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 |      Frontend             |  |       Backend             |  |   Database       |
 |                           |  |                           |  |                  |
 | +---------------------+   |  | +---------------------+   |  | +-------------+ |
-| |                     |   |  | |                     |   |  | |             | |
-| |    React App        |   |  | |    Express Server   |   |  | |   MongoDB   | |
+| |                     |   |  | |                     |   |  | |   MongoDB   | |
+| |    React App        |   |  | |    Express Server   |   |  | |             | |
 | |                     |   |  | |                     |   |  | |             | |
 | +---------------------+   |  | +---------------------+   |  | +-------------+ |
-|           |               |  |           |               |  |        |        |
-|           v               |  |           v               |  |        |        |
-| +---------------------+   |  | +---------------------+   |  |        |        |
-| |                     |   |  | |                     |   |  |        |        |
-| |    Clerk Auth       |   |  | |   API Routes        |   |  |        |        |
-| |                     |   |  | |                     |   |  |        |        |
-| +---------------------+   |  | +---------------------+   |  |        |        |
 |           |               |  |           |               |  |        |        |
 |           v               |  |           v               |  |        |        |
 | +---------------------+   |  | +---------------------+   |  |        |        |
@@ -613,6 +618,13 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 |           v               |  |           v               |  |        |        |
 | +---------------------+   |  | +---------------------+   |  |        |        |
 | |                     |   |  | |                     |   |  |        |        |
+| |    Clerk Auth       |   |  | |   API Routes        |   |  |        |        |
+| |                     |   |  | |                     |   |  |        |        |
+| +---------------------+   |  | +---------------------+   |  |        |        |
+|           |               |  |           |               |  |        |        |
+|           v               |  |           v               |  |        |        |
+| +---------------------+   |  | +---------------------+   |  |        |        |
+| |                     |   |  | |                     |   |  |        |        |
 | |    API Client       |------------> Data Models     |----------->   |        |
 | |                     |   |  | |                     |   |  |        |        |
 | +---------------------+   |  | +---------------------+   |  +--------------->+|
@@ -620,7 +632,7 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 +---------------------------+  +---------------------------+  +------------------+
 ```
 
-## 10.8 Diagram Explanations
+### 10.8 Diagram Explanations
 
 1. **Use Case Diagram**: Shows the interactions between different user types (Guest, Registered User, Admin) and system functions.
 
@@ -635,3 +647,102 @@ MetaVerse is a full-stack web application with a React + Vite frontend and a Nod
 6. **Deployment Diagram**: Illustrates the physical deployment of the system across client devices, server infrastructure, and database.
 
 7. **Component Diagram**: Shows the major software components of the system and their interactions, organized by Frontend, Backend, and Database layers.
+
+---
+
+## 11. Test Cases
+
+### 11.1 User Authentication Tests
+
+| ID         | Test Case                  | Description                                | Prerequisites                      | Test Steps                                                                                                         | Expected Results                                                          | Status |
+| ---------- | -------------------------- | ------------------------------------------ | ---------------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------------------------- | ------ |
+| TC-AUTH-01 | User Registration          | Verify a new user can register using Clerk | Access to application, valid email | 1. Navigate to landing page<br>2. Click "Sign Up"<br>3. Enter email<br>4. Complete verification<br>5. Set password | User account created successfully and user redirected to avatar selection | -      |
+| TC-AUTH-02 | User Login                 | Verify registered user can login           | Existing user account              | 1. Navigate to landing page<br>2. Click "Sign In"<br>3. Enter credentials<br>4. Submit login form                  | User successfully logged in and redirected to dashboard                   | -      |
+| TC-AUTH-03 | Authentication Persistence | Verify session persists on refresh         | Logged in user                     | 1. Login<br>2. Navigate to dashboard<br>3. Refresh page                                                            | User remains logged in                                                    | -      |
+| TC-AUTH-04 | Logout                     | Verify user can log out                    | Logged in user                     | 1. Click profile/logout button<br>2. Confirm logout                                                                | User logged out and redirected to landing page                            | -      |
+
+### 11.2 Avatar Management Tests
+
+| ID        | Test Case          | Description                             | Prerequisites             | Test Steps                                                                                          | Expected Results                                      | Status |
+| --------- | ------------------ | --------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------- | ----------------------------------------------------- | ------ |
+| TC-AVT-01 | Avatar Selection   | Verify user can select an avatar        | Logged in user            | 1. Navigate to avatar selection<br>2. Browse avatars<br>3. Select an avatar<br>4. Confirm selection | Avatar successfully selected and associated with user | -      |
+| TC-AVT-02 | Avatar Persistence | Verify avatar persists between sessions | User with selected avatar | 1. Login<br>2. Verify avatar is displayed correctly<br>3. Logout and login again                    | Avatar selection remains associated with user         | -      |
+
+### 11.3 Space Management Tests
+
+| ID        | Test Case          | Description                            | Prerequisites                              | Test Steps                                                                                                     | Expected Results                                        | Status |
+| --------- | ------------------ | -------------------------------------- | ------------------------------------------ | -------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------- | ------ |
+| TC-SPC-01 | Create Space       | Verify user can create a new space     | Logged in user with avatar                 | 1. Navigate to dashboard<br>2. Click "Create Space"<br>3. Select room types<br>4. Set room counts<br>5. Submit | Space created successfully and appears in user's spaces | -      |
+| TC-SPC-02 | Join Space         | Verify user can join an existing space | Logged in user with avatar, existing space | 1. Navigate to dashboard<br>2. View available spaces<br>3. Select a space<br>4. Click "Join"                   | User successfully joins space and can enter it          | -      |
+| TC-SPC-03 | View Space Details | Verify user can view space details     | Logged in user with access to a space      | 1. Navigate to dashboard<br>2. Select a space<br>3. View details                                               | Space details displayed correctly                       | -      |
+| TC-SPC-04 | Leave Space        | Verify user can leave a space          | User in a space                            | 1. Navigate to space details<br>2. Click "Leave Space"<br>3. Confirm action                                    | User removed from space access list                     | -      |
+
+### 11.4 Room Interaction Tests
+
+| ID       | Test Case           | Description                        | Prerequisites                        | Test Steps                                                            | Expected Results                                     | Status |
+| -------- | ------------------- | ---------------------------------- | ------------------------------------ | --------------------------------------------------------------------- | ---------------------------------------------------- | ------ |
+| TC-RM-01 | Enter Room          | Verify user can enter a room       | User in a space                      | 1. Navigate to space<br>2. Select a room<br>3. Click "Enter"          | Room loads with user avatar displayed                | -      |
+| TC-RM-02 | Avatar Movement     | Verify avatar movement in room     | User in a room                       | 1. Use arrow keys/controls<br>2. Move in different directions         | Avatar moves as directed with correct animations     | -      |
+| TC-RM-03 | Multiple Users      | Verify multiple users in room      | Multiple users in same room          | 1. Have multiple users enter same room<br>2. Move avatars             | All users can see each other's avatars and movements | -      |
+| TC-RM-04 | Collision Detection | Verify collision with room objects | User in room with collidable objects | 1. Move avatar toward collidable object<br>2. Attempt to move through | Avatar cannot move through collidable objects        | -      |
+
+### 11.5 Admin Tests
+
+| ID        | Test Case            | Description                          | Prerequisites                | Test Steps                                                                               | Expected Results                | Status |
+| --------- | -------------------- | ------------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------- | ------------------------------- | ------ |
+| TC-ADM-01 | Room Type Management | Verify admin can manage room types   | Admin user                   | 1. Navigate to admin panel<br>2. Access room type management<br>3. Add/modify room types | Room types successfully updated | -      |
+| TC-ADM-02 | User Access Control  | Verify admin can control user access | Admin user, space with users | 1. Navigate to space management<br>2. Modify user access<br>3. Save changes              | User access permissions updated | -      |
+
+### 11.6 Performance Tests
+
+| ID         | Test Case        | Description                                | Prerequisites                        | Test Steps                                                                         | Expected Results                                           | Status |
+| ---------- | ---------------- | ------------------------------------------ | ------------------------------------ | ---------------------------------------------------------------------------------- | ---------------------------------------------------------- | ------ |
+| TC-PERF-01 | Concurrent Users | Test system with multiple concurrent users | Test environment with multiple users | 1. Have multiple users (20+) connect simultaneously<br>2. Perform standard actions | System remains responsive with acceptable latency (<500ms) | -      |
+| TC-PERF-02 | Room Scaling     | Test room with maximum users               | Test room                            | 1. Have maximum allowed users join room<br>2. All users move and interact          | Room maintains performance, all users visible              | -      |
+
+### 11.7 API Integration Tests
+
+| ID        | Test Case          | Description                       | Prerequisites               | Test Steps                                                               | Expected Results                  | Status |
+| --------- | ------------------ | --------------------------------- | --------------------------- | ------------------------------------------------------------------------ | --------------------------------- | ------ |
+| TC-API-01 | Room Types API     | Verify roomtypes API returns data | Backend running             | 1. Make GET request to /api/roomtypes<br>2. Parse response               | API returns valid room types data | -      |
+| TC-API-02 | Space Creation API | Verify space creation API works   | Backend running, auth token | 1. Make POST request to /api/spaces with valid data<br>2. Parse response | API creates space and returns ID  | -      |
+
+---
+
+## 12. Implementation Notes
+
+### 12.1 Database Setup
+
+1. MongoDB connection setup via environment variables
+2. Initial collections:
+   - users
+   - spaces
+   - rooms
+   - roomtypes
+   - assets
+
+### 12.2 API Endpoints
+
+| Endpoint        | Method | Description        | Request Body           | Response                |
+| --------------- | ------ | ------------------ | ---------------------- | ----------------------- |
+| /api/users      | GET    | Get all users      | -                      | Array of user objects   |
+| /api/users/:id  | GET    | Get specific user  | -                      | User object             |
+| /api/users      | POST   | Create user        | User data              | Created user            |
+| /api/spaces     | GET    | Get all spaces     | -                      | Array of space objects  |
+| /api/spaces     | POST   | Create space       | Space data, room types | Created space with ID   |
+| /api/spaces/:id | GET    | Get space by ID    | -                      | Space object with rooms |
+| /api/roomtypes  | GET    | Get all room types | -                      | Array of room types     |
+| /api/rooms/:id  | GET    | Get room by ID     | -                      | Room object with assets |
+
+### 12.3 Frontend Routes
+
+| Route          | Description           | Access Level                   |
+| -------------- | --------------------- | ------------------------------ |
+| /              | Landing page          | Public                         |
+| /login         | Login/registration    | Public                         |
+| /avatar        | Avatar selection      | Authenticated                  |
+| /dashboard     | User dashboard        | Authenticated                  |
+| /spaces/create | Create space          | Authenticated                  |
+| /spaces/:id    | View space            | Authenticated, Access Required |
+| /rooms/:id     | Room view with Phaser | Authenticated, Access Required |
+| /admin         | Admin panel           | Admin Only                     |
