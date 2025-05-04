@@ -15,8 +15,9 @@ export function AvatarSelection() {
   useEffect(() => {
     const fetchAvatars = async () => {
       try {
-        console.log("Fetching avatars...");
-        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/assets`);
+        console.log("Fetching avatar assets!");
+        // Change the endpoint to fetch only avatar assets
+        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/assets/avatars`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("Failed to fetch avatars:", errorData);
@@ -27,10 +28,7 @@ export function AvatarSelection() {
         setAvatars(data);
       } catch (err) {
         console.error('Avatar fetch error:', err);
-        setError((err as Error).message);
-        
-        // In development - don't use mock data
-        // The real data should come from the database
+        setError(err instanceof Error ? err.message : String(err));
       } finally {
         setIsLoading(false);
       }
@@ -47,17 +45,16 @@ export function AvatarSelection() {
       setError(null);
 
       console.log("Submitting with:", {
-        clerkId: user.id,
         avatarId: selectedAvatarId
       });
 
-      const userResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`, {
-        method: 'POST',
+      // Use the PATCH endpoint to update the avatar
+      const userResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${user.id}/avatar`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
-          clerkId: user.id,
           avatarId: selectedAvatarId
         })
       });
@@ -65,16 +62,14 @@ export function AvatarSelection() {
       if (!userResponse.ok) {
         const errorData = await userResponse.json().catch(() => ({}));
         console.error("Failed to save avatar selection:", errorData);
-        throw new Error(errorData.error || `Failed to save avatar selection: ${userResponse.status}`);
+        throw new Error(errorData.message || `Failed to save avatar selection: ${userResponse.status}`);
       }
 
-      const userData = await userResponse.json();
-      console.log("User updated successfully:", userData);
-
+      // Success - navigate to dashboard
       navigate("/dashboard");
     } catch (err) {
       console.error("Avatar selection error:", err);
-      setError((err as Error).message);
+      setError(err instanceof Error ? err.message : String(err));
     } finally {
       setIsUpdating(false);
     }

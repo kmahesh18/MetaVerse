@@ -5,6 +5,8 @@ import { connectDB } from "./db";
 import { userRouter } from "./api/userRouter";
 import { assetRouter as assetRouter } from "./api/assetRouter";
 import { roomRouter } from "./api/roomRouter";
+import { spacesRouter } from "./api/spacesRouter";
+import { roomTypesRouter } from "./api/roomTypesRouter";
 
 // Load environment variables
 dotenv.config();
@@ -19,6 +21,8 @@ app.use(express.json());
 app.use("/api/user", userRouter);
 app.use("/api/assets", assetRouter);
 app.use("/api/rooms", roomRouter);
+app.use("/api/spaces", spacesRouter);
+app.use("/api/roomtypes", roomTypesRouter);
 
 // Health check route
 app.get("/", (_req, res) => res.send("Server running"));

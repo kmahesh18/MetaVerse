@@ -1,51 +1,97 @@
 import { Router } from "express";
-import { getRoomAssets, getSpaceIdByRoomId } from "../services/roomService";
-import { ObjectId } from "mongodb";
-import { v4 } from "uuid";
+import { getRoomAssets, getSpaceIdByRoomId, createRoom, getRoomTypeId } from "../services/roomService";
+import { ObjectId } from "mongodb"; // Keep if needed for other routes, otherwise remove
+
 export const roomRouter = Router();
-import { getDB } from "../db";
-import { createRoom } from "../services/roomService";
-import { ROOMS_COLLECTION } from "../Models/RoomModel";
-//create a room
-roomRouter.post("/roomId", async (req, res) => {
+
+// Create a room (Note: Usually rooms are created via space creation)
+// This endpoint might be for specific use cases or testing.
+roomRouter.post("/", async (req, res) => { 
   try {
     const { roomTypeId, spaceId } = req.body;
-    const roomid = await createRoom(roomTypeId, spaceId);
-    console.log("Room created succesfully.Roomid: ", roomid);
-    res.status(200).json({ message: "room created successsfully" });
-  } catch (Error) {
-    console.log("Error occured while creating rooms", Error);
+    if (!roomTypeId || !spaceId) {
+        return res.status(400).json({ message: "Missing roomTypeId or spaceId" });
+    }
+    const roomId = await createRoom(roomTypeId, spaceId);
+    // Return the ID of the created room
+    res.status(201).json({ id: roomId }); 
+  } catch (error: any) {
+    console.error("POST /api/rooms - Error:", error.message);
+    res.status(500).json({ message: error.message || "Error creating room" });
   }
 });
 
-// Get all avatars
+// Get room details (including assets and type)
 roomRouter.get("/:roomId", async (req, res) => {
   try {
     const { roomId } = req.params;
-    const roomAssets = await getRoomAssets(roomId);
-    res.json(roomAssets);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+    
+    // Fetch details in parallel
+    const [assets, spaceId, roomTypeId] = await Promise.all([
+        getRoomAssets(roomId),
+        getSpaceIdByRoomId(roomId),
+        getRoomTypeId(roomId)
+    ]);
+
+    // Check if the room exists (e.g., by checking if spaceId was found)
+    if (!spaceId || !roomTypeId) {
+      return res.status(404).json({ message: "Room not found" });
+    }
+
+    res.json({ 
+        id: roomId, 
+        spaceId: spaceId, 
+        roomTypeId: roomTypeId,
+        assets: assets 
+    });
+
+  } catch (err: any) {
+    console.error(`GET /api/rooms/${req.params.roomId} - Error:`, err.message);
+    res.status(500).json({ error: err.message || "Error retrieving room details" });
   }
 });
 
-// Get avatar by ID
-roomRouter.get("/:id", async (req, res) => {
+
+// --- Deprecated/Redundant Routes? ---
+
+// Get space by roomID (Redundant: GET /:roomId now includes spaceId)
+/* 
+roomRouter.get("/:id/space", async (req, res) => { // Changed path slightly to avoid conflict
   try {
     const { id } = req.params;
 
-    if (!ObjectId.isValid(id)) {
-      return res.status(400).json({ error: "Invalid avatar ID format" });
+    // Basic ID format check (optional, depending on ID format)
+    // if (!ObjectId.isValid(id)) { 
+    //   return res.status(400).json({ error: "Invalid room ID format" });
+    // }
+
+    const spaceId = await getSpaceIdByRoomId(id);
+
+    if (!spaceId) {
+      return res.status404).json({ error: "Room not found or space association missing" });
     }
 
-    const space = await getSpaceIdByRoomId(id);
+    // Consider fetching full space details if needed, or just return the ID
+    res.json({ spaceId: spaceId }); 
 
-    if (!space) {
-      return res.status(404).json({ error: "Avatar not found" });
-    }
-
-    res.json(space);
-  } catch (err) {
-    res.status(500).json({ error: (err as Error).message });
+  } catch (err: any) {
+    console.error(`GET /api/rooms/${req.params.id}/space - Error:`, err.message);
+    res.status(500).json({ error: err.message || "Error retrieving space for room" });
   }
 });
+*/
+
+// Get all assets of a room (Redundant: GET /:roomId now includes assets)
+/*
+roomRouter.get("/:roomId/assets", async (req, res) => { // Changed path slightly
+  try {
+    const { roomId } = req.params;
+    const roomAssets = await getRoomAssets(roomId);
+    // getRoomAssets handles not found case by returning []
+    res.json(roomAssets);
+  } catch (err: any) {
+    console.error(`GET /api/rooms/${req.params.roomId}/assets - Error:`, err.message);
+    res.status(500).json({ error: err.message || "Error retrieving room assets" });
+  }
+});
+*/

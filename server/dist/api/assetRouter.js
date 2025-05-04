@@ -9,35 +9,46 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
     });
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.avatarRouter = void 0;
+exports.assetRouter = void 0;
 const express_1 = require("express");
 const assetService_1 = require("../services/assetService");
 const mongodb_1 = require("mongodb");
-exports.avatarRouter = (0, express_1.Router)();
+exports.assetRouter = (0, express_1.Router)();
 // Get all avatars
-exports.avatarRouter.get("/", (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.assetRouter.get("/", (_req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const avatars = yield (0, assetService_1.getAssets)();
-        res.json(avatars);
+        const assets = yield (0, assetService_1.getAssets)();
+        res.json(assets);
     }
     catch (err) {
         res.status(500).json({ error: err.message });
     }
 }));
 // Get avatar by ID
-exports.avatarRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.assetRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         if (!mongodb_1.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid avatar ID format" });
+            return res.status(400).json({ error: "Invalid asset ID format" });
         }
-        const avatar = yield (0, assetService_1.getAssetById)(id);
-        if (!avatar) {
-            return res.status(404).json({ error: "Avatar not found" });
+        const asset = yield (0, assetService_1.getAssetById)(id);
+        if (!asset) {
+            return res.status(404).json({ error: "Asset not found" });
         }
-        res.json(avatar);
+        res.json(asset);
     }
     catch (err) {
         res.status(500).json({ error: err.message });
+    }
+}));
+// Get avatar assets
+exports.assetRouter.get("/avatars", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const avatarAssets = yield (0, assetService_1.getAvatarAssets)();
+        res.json(avatarAssets);
+    }
+    catch (error) {
+        console.error("GET /api/roomtypes/avatars - Error:", error.message);
+        res.status(500).json({ message: error.message || "Error fetching avatar assets" });
     }
 }));

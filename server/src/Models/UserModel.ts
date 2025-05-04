@@ -2,11 +2,12 @@ import { Document, ObjectId } from "mongodb";
 
 export interface IUser extends Document {
   _id?: string | ObjectId;
-  id: string; // UUID string or MongoDB ObjectId
   clerkId: string;
   avatarId?: string;
-  roomId?: string;
-  spaceId?: string;
+  emailId?: string | null;
+  accessibleSpaces: string[];
+  roomId?: string | null;
+  spaceId?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }

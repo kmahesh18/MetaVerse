@@ -9,6 +9,9 @@ const dotenv_1 = __importDefault(require("dotenv"));
 const db_1 = require("./db");
 const userRouter_1 = require("./api/userRouter");
 const assetRouter_1 = require("./api/assetRouter");
+const roomRouter_1 = require("./api/roomRouter");
+const spacesRouter_1 = require("./api/spacesRouter");
+const roomTypesRouter_1 = require("./api/roomTypesRouter");
 // Load environment variables
 dotenv_1.default.config();
 const app = (0, express_1.default)();
@@ -16,8 +19,11 @@ const app = (0, express_1.default)();
 app.use((0, cors_1.default)({ origin: process.env.CLIENT_URL || "*", credentials: true }));
 app.use(express_1.default.json());
 // Routes
-app.use("/api/users", userRouter_1.userRouter);
-app.use("/api/avatars", assetRouter_1.avatarRouter);
+app.use("/api/user", userRouter_1.userRouter);
+app.use("/api/assets", assetRouter_1.assetRouter);
+app.use("/api/rooms", roomRouter_1.roomRouter);
+app.use("/api/spaces", spacesRouter_1.spacesRouter);
+app.use("/api/roomtypes", roomTypesRouter_1.roomTypesRouter);
 // Health check route
 app.get("/", (_req, res) => res.send("Server running"));
 const PORT = process.env.PORT || 5001;

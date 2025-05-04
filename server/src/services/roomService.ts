@@ -1,80 +1,78 @@
-import { ObjectId } from "mongodb";
+import { v4 } from "uuid";
 import { getDB } from "../db";
 import { IRoom, ROOMS_COLLECTION } from "../Models/RoomModel";
+import { RoomType_Collection, IRoomType } from "../Models/RoomType";
 import { IAsset } from "../Models/AssetModel";
-import { RoomType_Collection } from "../Models/RoomType";
-import { UpdateFilter } from "mongodb";
-import { ISpace } from "../Models/SpaceType";
-import { Space_Collection } from "../Models/SpaceType";
-import { v4 } from "uuid";
-//create Room
-export async function createRoom(roomTypeId: string, spaceId: string) {
+
+// Create Room
+export async function createRoom(roomTypeId: string, spaceId: string): Promise<string> {
   try {
     const db = await getDB();
     const id = v4();
     const createdAt = new Date();
-
-    // 1. Create the room
-    const data = {
-      id: id,
-      spaceId: spaceId,
-      roomTypeId: roomTypeId,
-      createdAt: createdAt,
+    const roomData: IRoom = {
+      id,
+      spaceId,
+      roomTypeId,
+      createdAt,
     };
-    await db.collection(ROOMS_COLLECTION).insertOne(data);
-    const updateFilter: UpdateFilter<ISpace> = {
-      $push: { roomids: id } as any,
-    };
-    // 2. Update the space document - FIXED $push syntax
-    await db.collection(Space_Collection).updateOne(
-      { id: spaceId },
-      updateFilter, // Correct $push operator syntax
-    );
-
-    console.log("Room creation successful");
+    
+    const insertResult = await db.collection<IRoom>(ROOMS_COLLECTION).insertOne(roomData);
+    if (!insertResult.insertedId) {
+      throw new Error("DB insertion failed: No insertedId returned.");
+    }
+    console.log(`Room ${id} (type: ${roomTypeId}) created successfully for space ${spaceId}`);
     return id;
-  } catch (error) {
-    console.log("Room creation Failed due to", error);
-    throw error;
+  } catch (error: any) {
+    console.error(`Error creating room (type: ${roomTypeId}, space: ${spaceId}):`, error);
+    throw new Error(`Failed to create room: ${error.message}`); // Re-throw simplified error
   }
 }
 
 // Get which space a room belongs to
-export async function getSpaceIdByRoomId(
-  roomId: string,
-): Promise<string | null> {
-  const db = await getDB();
-  const id = ObjectId.isValid(roomId) ? new ObjectId(roomId) : roomId;
-
-  const room = await db
-    .collection(ROOMS_COLLECTION)
-    .findOne({ id: id }, { projection: { spaceId: 1 } });
-
-  return room ? room.spaceId : null;
+export async function getSpaceIdByRoomId(roomId: string): Promise<string | null> {
+  try {
+    const db = await getDB();
+    const room = await db
+      .collection<IRoom>(ROOMS_COLLECTION)
+      .findOne({ id: roomId }, { projection: { spaceId: 1 } });
+    return room?.spaceId || null;
+  } catch (error: any) {
+      console.error(`Error fetching spaceId for room ${roomId}:`, error);
+      throw error; // Re-throw original error
+  }
 }
 
-// Get assets for a room
+// Get assets for a room based on its type
 export async function getRoomAssets(roomId: string): Promise<IAsset[]> {
-  const db = await getDB();
-  const roomid = ObjectId.isValid(roomId) ? new ObjectId(roomId) : roomId;
+  try {
+    const db = await getDB();
+    const room = await db.collection<IRoom>(ROOMS_COLLECTION).findOne({ id: roomId }, { projection: { roomTypeId: 1 } });
+    
+    if (!room?.roomTypeId) {
+      console.warn(`Room ${roomId} not found or has no roomTypeId.`);
+      return [];
+    }
 
-  const room = await db.collection(ROOMS_COLLECTION).findOne({ id: roomid });
-  const roomtypeid = room?.roomTypeId;
-  if (!room) return [];
+    const roomType = await db
+      .collection<IRoomType>(RoomType_Collection)
+      .findOne({ id: room.roomTypeId }, { projection: { assets: 1 } });
 
-  const res = await db
-    .collection(RoomType_Collection)
-    .findOne({ id: roomtypeid });
-  const assets: IAsset[] = res?.assets;
-
-  // Fetch the roomType to get its assets
-
-  return assets;
+    return roomType?.assets || [];
+  } catch (error: any) {
+      console.error(`Error fetching assets for room ${roomId}:`, error);
+      throw error; // Re-throw original error
+  }
 }
 
-export async function getRoomTypeId(roomId: string): Promise<string> {
-  const db = await getDB();
-  const room = await db.collection(ROOMS_COLLECTION).findOne({ id: roomId });
-  const roomTypeId = room?.roomTypeId;
-  return roomTypeId;
+// Get room type ID for a room
+export async function getRoomTypeId(roomId: string): Promise<string | null> {
+  try {
+    const db = await getDB();
+    const room = await db.collection(ROOMS_COLLECTION).findOne({ id: roomId });
+    return room?.roomTypeId || null;
+  } catch (error) {
+    console.log("Error in getRoomTypeId:", error);
+    throw error;
+  }
 }

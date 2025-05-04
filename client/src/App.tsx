@@ -5,6 +5,8 @@ import { Homepage } from "./components/Homepage";
 import { AvatarSelection } from "./components/AvatarSelection";
 import { Dashboard } from "./components/Dashboard";
 import { CreateSpace } from "./components/CreateSpace";
+import { JoinSpace } from "./components/JoinSpace";
+import { InviteUser } from "./components/InviteUser";
 import "./App.css";
 import "./styles/theme.css";
 
@@ -53,7 +55,22 @@ function App() {
             </SignedIn>
           } 
         />
-        <Route path="/join-space" element={<SignedIn><div>Coming Soon</div></SignedIn>} />
+        <Route 
+          path="/join-space" 
+          element={
+            <SignedIn>
+              <JoinSpace />
+            </SignedIn>
+          } 
+        />
+        <Route 
+          path="/invite-user/:spaceId" 
+          element={
+            <SignedIn>
+              <InviteUser />
+            </SignedIn>
+          } 
+        />
         <Route path="/space/:id" element={<SignedIn><div>Coming Soon</div></SignedIn>} />
       </Routes>
     </>

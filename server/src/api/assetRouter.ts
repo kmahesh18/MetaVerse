@@ -1,6 +1,7 @@
 import { Router } from "express";
-import { getAssetById, getAssets } from "../services/assetService";
+import { getAssetById, getAssets, getAvatarAssets } from "../services/assetService";
 import { ObjectId } from "mongodb";
+import { ASSET_COLLECTION, IAsset } from "../Models/AssetModel";
 
 export const assetRouter = Router();
 
@@ -34,3 +35,18 @@ assetRouter.get("/:id", async (req, res) => {
     res.status(500).json({ error: (err as Error).message });
   }
 });
+
+
+// Get avatar assets
+assetRouter.get("/avatars", async (req, res) => {
+  try {
+    const avatarAssets = await getAvatarAssets();
+    res.json(avatarAssets);
+  } catch (error: any) {
+    console.error("GET /api/roomtypes/avatars - Error:", error.message);
+    res.status(500).json({ message: error.message || "Error fetching avatar assets" });
+  }
+});
+
+
+

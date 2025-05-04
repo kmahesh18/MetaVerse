@@ -11,6 +11,7 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAssets = getAssets;
 exports.getAssetById = getAssetById;
+exports.getAvatarAssets = getAvatarAssets;
 const mongodb_1 = require("mongodb");
 const db_1 = require("../db");
 const AssetModel_1 = require("../Models/AssetModel");
@@ -23,9 +24,27 @@ function getAssets() {
 function getAssetById(id) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!mongodb_1.ObjectId.isValid(id)) {
-            throw new Error("Invalid avatar ID format");
+            throw new Error("Invalid asset ID format");
         }
         const db = yield (0, db_1.getDB)();
         return db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ _id: new mongodb_1.ObjectId(id) });
+    });
+}
+// Fetch avatar assets for avatar selection
+function getAvatarAssets() {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const db = yield (0, db_1.getDB)();
+            return yield db
+                .collection(AssetModel_1.ASSET_COLLECTION)
+                .find({
+                name: { $in: ["ch1_idle", "ch2_idle", "ch3_idle", "ch4_idle"] }
+            })
+                .toArray();
+        }
+        catch (error) {
+            console.error("Error fetching avatar assets:", error);
+            throw new Error(`Failed to fetch avatar assets: ${error}`);
+        }
     });
 }

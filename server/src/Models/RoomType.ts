@@ -3,6 +3,8 @@ import { IAsset } from "./AssetModel";
 
 export interface IRoomType extends Document {
   _id?: ObjectId;
+  name: string;
+  description:string;
   id: string;
   assets: IAsset[];
 }

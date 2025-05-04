@@ -1,12 +1,15 @@
 import { Document, ObjectId } from "mongodb";
 
 export interface IAsset extends Document {
-  _id?: ObjectId;
-  id: string; // UUID
   assetId: string;
   name: string;
   previewUrl: string;
-  createdAt: Date;
+  collidable: boolean;
+  interactable: boolean;
+  posX?: number | null;
+  posY?: number | null;
+  scale?: number;
+  zindex?: number;
 }
 
 // Collection name for reference
