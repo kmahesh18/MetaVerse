@@ -46,7 +46,7 @@ function getAccessibleSpaces(clerkId) {
         return accessibleSpaces;
     });
 }
-function createOrUpdateUser(clerkId, avatarId) {
+function createOrUpdateUser(clerkId, avatarId, emailId) {
     return __awaiter(this, void 0, void 0, function* () {
         const db = yield (0, db_1.getDB)();
         const now = new Date();
@@ -66,12 +66,9 @@ function createOrUpdateUser(clerkId, avatarId) {
             return { value: existingUser };
         }
         else {
-            // Create new user
-            const emailobj = yield getEmail(clerkId);
-            const email = emailobj.toString();
             const newUser = {
                 clerkId: clerkId,
-                emailId: email,
+                emailId: emailId,
                 accessibleSpaces: [],
                 createdAt: new Date(),
                 updatedAt: new Date(),

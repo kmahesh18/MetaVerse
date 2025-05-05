@@ -27,7 +27,9 @@ export function Homepage() {
                 'Content-Type': 'application/json'
               },
               body: JSON.stringify({
-                clerkId: user.id
+                clerkId: user.id,
+                avatarId:"",
+                emailId: user.emailAddresses[0].emailAddress
               })
             });
             

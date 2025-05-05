@@ -20,12 +20,14 @@ export async function getAssetById(id: string): Promise<IAsset | null> {
 export async function getAvatarAssets(): Promise<IAsset[]> {
   try {
     const db = await getDB();
-    return await db
-      .collection<IAsset>(ASSET_COLLECTION)
+    const avatars=await db
+      .collection(ASSET_COLLECTION)
       .find({
-        name: { $in: ["ch1_idle", "ch2_idle", "ch3_idle", "ch4_idle"] }
+        assetId: { $in: ["ch1_idle", "ch2_idle", "ch3_idle", "ch4_idle"] }
       })
-      .toArray();
+      .toArray() as unknown as IAsset[];
+      console.log(avatars)
+    return avatars;
   } catch (error) {
     console.error("Error fetching avatar assets:", error);
     throw new Error(`Failed to fetch avatar assets: ${error}`);

@@ -1,2 +1,8 @@
 #GET
 http://localhost:5000/api/roomtypes
+
+
+### 
+
+#GET
+http://localhost:5000/api/assets/avatars

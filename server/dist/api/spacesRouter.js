@@ -119,17 +119,11 @@ exports.spacesRouter.post("/:id/leave", (req, res) => __awaiter(void 0, void 0, 
         res.status(500).json({ message: error.message || "Error leaving space" });
     }
 }));
-// Get rooms in a space (Redundant? Space details already include roomIds)
-// Consider removing if GET /:id provides sufficient info
 exports.spacesRouter.get("/:id/rooms", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const spaceId = req.params.id;
         const roomIds = yield (0, spaceServices_1.getRoomIds)(spaceId);
-        // Check if space exists implicitly by checking if getRoomIds returned null/undefined before array conversion
-        // The service function now returns [], so check length or rely on GET /:id for existence check
-        // A dedicated check might be better: const spaceExists = await getAdminid(spaceId);
-        // if (!spaceExists) return res.status(404)... 
-        res.json(roomIds); // Returns [] if space not found or has no rooms
+        res.json(roomIds);
     }
     catch (error) {
         console.error(`GET /api/spaces/${req.params.id}/rooms - Error:`, error.message);

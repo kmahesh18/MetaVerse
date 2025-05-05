@@ -58,13 +58,13 @@ userRouter.get("/:clerkId/has-avatar", async (req, res) => {
 // Create a new user
 userRouter.post("/", async (req, res) => {
   try {
-    const { clerkId, avatarId } = req.body;
+    const { clerkId, avatarId ,emailId} = req.body;
     
     if (!clerkId) {
       return res.status(400).json({ message: "Clerk ID is required" });
     }
     
-    const result = await createOrUpdateUser(clerkId, avatarId);
+    const result = await createOrUpdateUser(clerkId, avatarId,emailId);
     
     if (result && result.value) {
       res.status(201).json(result.value);

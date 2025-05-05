@@ -61,11 +61,11 @@ exports.userRouter.get("/:clerkId/has-avatar", (req, res) => __awaiter(void 0, v
 // Create a new user
 exports.userRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { clerkId, avatarId } = req.body;
+        const { clerkId, avatarId, emailId } = req.body;
         if (!clerkId) {
             return res.status(400).json({ message: "Clerk ID is required" });
         }
-        const result = yield (0, userService_1.createOrUpdateUser)(clerkId, avatarId);
+        const result = yield (0, userService_1.createOrUpdateUser)(clerkId, avatarId, emailId);
         if (result && result.value) {
             res.status(201).json(result.value);
         }

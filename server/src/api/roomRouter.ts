@@ -52,26 +52,13 @@ roomRouter.get("/:roomId", async (req, res) => {
 });
 
 
-// --- Deprecated/Redundant Routes? ---
-
-// Get space by roomID (Redundant: GET /:roomId now includes spaceId)
-/* 
 roomRouter.get("/:id/space", async (req, res) => { // Changed path slightly to avoid conflict
   try {
     const { id } = req.params;
-
-    // Basic ID format check (optional, depending on ID format)
-    // if (!ObjectId.isValid(id)) { 
-    //   return res.status(400).json({ error: "Invalid room ID format" });
-    // }
-
     const spaceId = await getSpaceIdByRoomId(id);
-
     if (!spaceId) {
-      return res.status404).json({ error: "Room not found or space association missing" });
+      return res.status(404).json({ error: "Room not found or space association missing" });
     }
-
-    // Consider fetching full space details if needed, or just return the ID
     res.json({ spaceId: spaceId }); 
 
   } catch (err: any) {
@@ -79,10 +66,7 @@ roomRouter.get("/:id/space", async (req, res) => { // Changed path slightly to a
     res.status(500).json({ error: err.message || "Error retrieving space for room" });
   }
 });
-*/
 
-// Get all assets of a room (Redundant: GET /:roomId now includes assets)
-/*
 roomRouter.get("/:roomId/assets", async (req, res) => { // Changed path slightly
   try {
     const { roomId } = req.params;
@@ -94,4 +78,3 @@ roomRouter.get("/:roomId/assets", async (req, res) => { // Changed path slightly
     res.status(500).json({ error: err.message || "Error retrieving room assets" });
   }
 });
-*/

@@ -35,12 +35,14 @@ function getAvatarAssets() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const db = yield (0, db_1.getDB)();
-            return yield db
+            const avatars = yield db
                 .collection(AssetModel_1.ASSET_COLLECTION)
                 .find({
-                name: { $in: ["ch1_idle", "ch2_idle", "ch3_idle", "ch4_idle"] }
+                assetId: { $in: ["ch1_idle", "ch2_idle", "ch3_idle", "ch4_idle"] }
             })
                 .toArray();
+            console.log(avatars);
+            return avatars;
         }
         catch (error) {
             console.error("Error fetching avatar assets:", error);

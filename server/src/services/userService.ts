@@ -30,7 +30,7 @@ export async function getAccessibleSpaces(
   return accessibleSpaces;
 }
 
-export async function createOrUpdateUser(clerkId: string, avatarId?: string) {
+export async function createOrUpdateUser(clerkId: string, avatarId?: string,emailId?:string) {
   const db = await getDB();
   const now = new Date();
 
@@ -55,12 +55,9 @@ export async function createOrUpdateUser(clerkId: string, avatarId?: string) {
     }
     return { value: existingUser };
   } else {
-    // Create new user
-    const emailobj = await getEmail(clerkId);
-    const email = emailobj.toString();
     const newUser: IUser = {
       clerkId: clerkId,
-      emailId: email,
+      emailId: emailId,
       accessibleSpaces: [],
       createdAt: new Date(),
       updatedAt: new Date(),

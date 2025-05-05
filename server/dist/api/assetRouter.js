@@ -24,12 +24,24 @@ exports.assetRouter.get("/", (_req, res) => __awaiter(void 0, void 0, void 0, fu
         res.status(500).json({ error: err.message });
     }
 }));
+// Get avatar assets
+exports.assetRouter.get("/avatars", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const avatarAssets = yield (0, assetService_1.getAvatarAssets)();
+        console.log(avatarAssets);
+        res.json(avatarAssets);
+    }
+    catch (error) {
+        console.error("GET /api/roomtypes/avatars - Error:", error.message);
+        res.status(500).json({ message: error.message || "Error fetching avatar assets" });
+    }
+}));
 // Get avatar by ID
 exports.assetRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         if (!mongodb_1.ObjectId.isValid(id)) {
-            return res.status(400).json({ error: "Invalid asset ID format" });
+            return res.status(400).json({ error: "Invalid asset ID formatssss" });
         }
         const asset = yield (0, assetService_1.getAssetById)(id);
         if (!asset) {
@@ -39,16 +51,5 @@ exports.assetRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, 
     }
     catch (err) {
         res.status(500).json({ error: err.message });
-    }
-}));
-// Get avatar assets
-exports.assetRouter.get("/avatars", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
-    try {
-        const avatarAssets = yield (0, assetService_1.getAvatarAssets)();
-        res.json(avatarAssets);
-    }
-    catch (error) {
-        console.error("GET /api/roomtypes/avatars - Error:", error.message);
-        res.status(500).json({ message: error.message || "Error fetching avatar assets" });
     }
 }));
