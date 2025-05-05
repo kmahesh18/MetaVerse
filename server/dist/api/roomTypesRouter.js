@@ -16,7 +16,13 @@ exports.roomTypesRouter = (0, express_1.Router)();
 // Get all room types
 exports.roomTypesRouter.get("/", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const roomTypes = (0, roomTypeService_1.getAllRoomTypes)();
+        console.log("Fetching room types...");
+        const roomTypes = yield (0, roomTypeService_1.getAllRoomTypes)();
+        console.log(`Successfully retrieved ${roomTypes.length} room types`);
+        if (!roomTypes || roomTypes.length === 0) {
+            console.log("No room types found, returning empty array");
+            return res.json([]);
+        }
         res.json(roomTypes);
     }
     catch (error) {

@@ -7,6 +7,7 @@ import { assetRouter as assetRouter } from "./api/assetRouter";
 import { roomRouter } from "./api/roomRouter";
 import { spacesRouter } from "./api/spacesRouter";
 import { roomTypesRouter } from "./api/roomTypesRouter";
+import { getAllRoomTypes } from "./services/roomTypeService";
 
 // Load environment variables
 dotenv.config();

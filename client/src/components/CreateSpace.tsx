@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { IRoomType } from "../../../server/src/Models/RoomType";
+import axios from "axios";
 
 interface RoomCountMap { [key: string]: number; }
 
@@ -18,22 +19,16 @@ export function CreateSpace() {
     const fetchRoomTypes = async () => {
       try {
         setLoading(true);
-        // Using fetch instead of axios
-        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/roomtypes`);
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! Status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        console.log("Room types response:", data);
+        // Update to use the backend port from environment variables
+        const response = await axios.get(`http://localhost:${import.meta.env.VITE_BKPORT}/api/roomtypes`);
+        console.log("Room types response:", response.data);
         
         // Make sure we're getting an array back
-        if (Array.isArray(data)) {
-          setRoomTypes(data);
+        if (Array.isArray(response.data)) {
+          setRoomTypes(response.data);
         } else {
           // If not an array, check if there's a specific property that contains the array
-          console.error("Unexpected data format:", data);
+          console.error("Unexpected data format:", response.data);
           setError("Received invalid room types data from server");
         }
       } catch (err) {
@@ -73,25 +68,12 @@ export function CreateSpace() {
     setError(null);
 
     try {
-      // Using fetch instead of axios for POST request
-      const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          adminid: user.id,
-          selectedRoomTypes: selectedRoomTypes
-        })
+      const response = await axios.post(`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces`, {
+        adminid: user.id,
+        selectedRoomTypes: selectedRoomTypes
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `HTTP error! Status: ${response.status}`);
-      }
-
-      const data = await response.json();
-      const newSpaceId = data.id;
+      const newSpaceId = response.data.id;
       
       navigate('/dashboard', { 
         state: { 
@@ -100,11 +82,11 @@ export function CreateSpace() {
         } 
       });
 
-    } catch (err: any) {
+    } catch (err) {
       console.error("Error creating space:", err);
       let errorMessage = "An unexpected error occurred while creating the space.";
-      if (err instanceof Error) {
-        errorMessage = err.message || errorMessage;
+      if (axios.isAxiosError(err)) {
+        errorMessage = err.response?.data?.message || err.message || errorMessage;
       }
       setError(errorMessage);
     } finally {

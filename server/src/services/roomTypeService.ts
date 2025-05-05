@@ -2,7 +2,7 @@ import { getDB } from "../db";
 import { IRoomType, RoomType_Collection } from "../Models/RoomType";
 
 // Fetch all room types
-export async function getAllRoomTypes(): Promise<IRoomType[]> {
+export async function getAllRoomTypes() : Promise<IRoomType[]> {
   try {
     const db = await getDB();
     const roomTypes = await db.collection<IRoomType>(RoomType_Collection).find({}).toArray();

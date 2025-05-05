@@ -17,10 +17,8 @@ function getAllRoomTypes() {
     return __awaiter(this, void 0, void 0, function* () {
         try {
             const db = yield (0, db_1.getDB)();
-            const roomTypes = yield db
-                .collection(RoomType_1.RoomType_Collection)
-                .find({})
-                .toArray();
+            const roomTypes = yield db.collection(RoomType_1.RoomType_Collection).find({}).toArray();
+            console.log("Room types retrieved successfully:", roomTypes);
             return roomTypes;
         }
         catch (error) {
