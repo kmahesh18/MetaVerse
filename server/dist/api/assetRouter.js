@@ -37,7 +37,7 @@ exports.assetRouter.get("/avatars", (req, res) => __awaiter(void 0, void 0, void
     }
 }));
 // Get avatar by ID
-exports.assetRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+exports.assetRouter.get("/id/:id", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { id } = req.params;
         if (!mongodb_1.ObjectId.isValid(id)) {

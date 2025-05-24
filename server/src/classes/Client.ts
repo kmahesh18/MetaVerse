@@ -1,6 +1,5 @@
-import { Message } from "../types/message.types";
 import * as mediasoup from "mediasoup"
-
+import { WebSocket } from "ws";
 export class Client {
 	id: string; // Unique ID for this specific connection instance
 	ws: WebSocket;
@@ -18,9 +17,10 @@ export class Client {
 		this.spaceId = null;
 		this.userId = null; // Starts as null
 		this.isAuthenticated = false; // Starts as false
+    console.log("Clientid:", id);
 	}
 
-	sendToSelf(message: Message): void {
+	sendToSelf(message:any): void {
 		if (this.ws.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(message));
 		}

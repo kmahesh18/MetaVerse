@@ -21,7 +21,6 @@ export function CreateSpace() {
         setLoading(true);
         // Update to use the backend port from environment variables
         const response = await axios.get(`http://localhost:${import.meta.env.VITE_BKPORT}/api/roomtypes`);
-        console.log("Room types response:", response.data);
         
         // Make sure we're getting an array back
         if (Array.isArray(response.data)) {

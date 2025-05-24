@@ -13,10 +13,14 @@ exports.createRoom = createRoom;
 exports.getSpaceIdByRoomId = getSpaceIdByRoomId;
 exports.getRoomAssets = getRoomAssets;
 exports.getRoomTypeId = getRoomTypeId;
+exports.getRoomPlayersAvatars = getRoomPlayersAvatars;
 const uuid_1 = require("uuid");
 const db_1 = require("../db");
 const RoomModel_1 = require("../Models/RoomModel");
 const RoomType_1 = require("../Models/RoomType");
+const AssetModel_1 = require("../Models/AssetModel");
+const roomHandler_1 = require("../handlers/roomHandler");
+const UserModel_1 = require("../Models/UserModel");
 // Create Room
 function createRoom(roomTypeId, spaceId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -91,6 +95,31 @@ function getRoomTypeId(roomId) {
         catch (error) {
             console.log("Error in getRoomTypeId:", error);
             throw error;
+        }
+    });
+}
+function getRoomPlayersAvatars(roomId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const db = yield (0, db_1.getDB)();
+            const room = (0, roomHandler_1.getOrCreateRoom)(roomId);
+            const clients = room.clients;
+            const clientAvatars = new Map();
+            clients.forEach((client) => __awaiter(this, void 0, void 0, function* () {
+                const userId = client.userId;
+                console.log("userId", userId);
+                const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ id: userId });
+                console.log("user", user);
+                const avatarId = user === null || user === void 0 ? void 0 : user.avatarId;
+                const avatar = yield db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ id: avatarId });
+                console.log("avatar", avatarId);
+                clientAvatars.set(client.id, avatar === null || avatar === void 0 ? void 0 : avatar.previewUrl);
+            }));
+            console.log("Client Avatars previewUrl", clientAvatars);
+            return clientAvatars;
+        }
+        catch (error) {
+            console.log("error occured in room ssevices while getting room Players avatars");
         }
     });
 }

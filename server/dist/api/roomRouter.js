@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.roomRouter = void 0;
 const express_1 = require("express");
 const roomService_1 = require("../services/roomService");
+const state_1 = require("../state/state");
 exports.roomRouter = (0, express_1.Router)();
 // Create a room (Note: Usually rooms are created via space creation)
 // This endpoint might be for specific use cases or testing.
@@ -81,4 +82,23 @@ exports.roomRouter.get("/:roomId/assets", (req, res) => __awaiter(void 0, void 0
         console.error(`GET /api/rooms/${req.params.roomId}/assets - Error:`, err.message);
         res.status(500).json({ error: err.message || "Error retrieving room assets" });
     }
+}));
+exports.roomRouter.get("/:roomId/players", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    try {
+        const { roomId } = req.params;
+        const room = state_1.roomsById.get(roomId);
+        const positionsObject = (room === null || room === void 0 ? void 0 : room.playerPositions) ?
+            Object.fromEntries(room.playerPositions) : {};
+        res.json(positionsObject);
+    }
+    catch (error) {
+        console.log("Error at getting players in room router", error);
+    }
+}));
+//get useravatars for all clients from a room;
+exports.roomRouter.get("/:roomId/userAvatars", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    const { roomId } = req.params;
+    const clientAvatarsMap = yield (0, roomService_1.getRoomPlayersAvatars)(roomId);
+    const clientAvatars = Object.fromEntries(clientAvatarsMap || new Map());
+    res.json(clientAvatars);
 }));

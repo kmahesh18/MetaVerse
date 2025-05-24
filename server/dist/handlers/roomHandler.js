@@ -27,35 +27,38 @@ function getOrCreateRoom(roomId) {
     }
     return r;
 }
+function cleanupRoom(roomId) {
+    const room = state_1.roomsById.get(roomId);
+    if (room && room.isEmpty()) {
+        state_1.roomsById.delete(roomId);
+        console.log(`Room ${roomId} deleted (was empty)`);
+    }
+}
 function handleJoinRoom(client, message) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!client.userId)
             return; // Should not happen if isAuthenticated is true
         const { roomId } = message.payload;
-        if (!client.spaceId) {
-            return client.sendToSelf({
-                type: "error",
-                payload: "Must join a space before joining a room",
-            });
-        }
         // Handle room change if already in a room
         if (client.roomId) {
             const oldRoom = state_1.roomsById.get(client.roomId);
             if (oldRoom) {
-                oldRoom.removeClient(client.id);
+                oldRoom.removeClient(client);
             }
         }
         // Join the new room using the authenticated userId
-        yield (0, userService_1.JoinRoom)(client.userId, roomId); // Use client.userId
-        client.roomId = roomId;
+        yield (0, userService_1.JoinRoom)(client, roomId); // Use client.userId
         // Get or create mediasoup room
         const msRoom = getOrCreateRoom(roomId);
-        msRoom.addClient(client);
+        if (!msRoom.clients.has(client.id)) {
+            msRoom.addClient(client);
+        }
         msRoom.dataConsumers.set(client.id, []);
         client.sendToSelf({
             type: "joinedRoom", // CHANGE FROM "joinRoom" to match RoomResponseMessage
             payload: { roomId },
         });
+        return roomId;
     });
 }
 function handleLeaveRoom(client, message) {
@@ -69,11 +72,12 @@ function handleLeaveRoom(client, message) {
                 payload: `Not in room ${roomId}`,
             });
         }
-        yield (0, userService_2.LeaveRoom)(client.userId); // Use client.userId
+        yield (0, userService_2.LeaveRoom)(client, roomId); // Use client.userId
         client.roomId = null;
         const msRoom = state_1.roomsById.get(roomId);
         if (msRoom) {
-            msRoom.removeClient(client.id);
+            msRoom.removeClient(client);
+            cleanupRoom(roomId);
             client.sendToSelf({
                 type: "leftRoom",
                 payload: { roomId },

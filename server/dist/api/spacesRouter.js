@@ -18,7 +18,9 @@ exports.spacesRouter.post("/", (req, res) => __awaiter(void 0, void 0, void 0, f
     try {
         const { selectedRoomTypes, adminid } = req.body;
         if (!adminid || !selectedRoomTypes) {
-            return res.status(400).json({ message: "Missing adminid or selectedRoomTypes" });
+            return res
+                .status(400)
+                .json({ message: "Missing adminid or selectedRoomTypes" });
         }
         const spaceId = yield (0, spaceServices_1.createSpace)(adminid, selectedRoomTypes);
         // Return the ID of the created space
@@ -38,7 +40,7 @@ exports.spacesRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0,
             (0, spaceServices_1.getAdminid)(spaceId),
             (0, spaceServices_1.getAccessibleUserids)(spaceId),
             (0, spaceServices_1.getActiveUserIds)(spaceId),
-            (0, spaceServices_1.getRoomIds)(spaceId)
+            (0, spaceServices_1.getRoomIds)(spaceId),
         ]);
         // Check if the space exists (e.g., by checking if adminId was found)
         if (!adminId) {
@@ -49,12 +51,14 @@ exports.spacesRouter.get("/:id", (req, res) => __awaiter(void 0, void 0, void 0,
             adminid: adminId,
             accessibleuserids: accessibleUsers,
             activeuserids: activeUsers,
-            roomids: roomIds
+            roomids: roomIds,
         });
     }
     catch (error) {
         console.error(`GET /api/spaces/${req.params.id} - Error:`, error.message);
-        res.status(500).json({ message: error.message || "Error retrieving space details" });
+        res
+            .status(500)
+            .json({ message: error.message || "Error retrieving space details" });
     }
 }));
 // Give user access to space (Invite)
@@ -63,7 +67,11 @@ exports.spacesRouter.post("/:id/access", (req, res) => __awaiter(void 0, void 0,
         const { adminId, emailId } = req.body;
         const spaceId = req.params.id;
         if (!adminId || !emailId || !spaceId) {
-            return res.status(400).json({ message: "Missing required fields: adminId, emailId, spaceId" });
+            return res
+                .status(400)
+                .json({
+                message: "Missing required fields: adminId, emailId, spaceId",
+            });
         }
         const invitedClerkId = yield (0, spaceServices_1.giveUserAccesToSpace)(adminId, spaceId, emailId);
         res.json({ message: "User invited successfully", clerkId: invitedClerkId });
@@ -72,7 +80,9 @@ exports.spacesRouter.post("/:id/access", (req, res) => __awaiter(void 0, void 0,
         console.error(`POST /api/spaces/${req.params.id}/access - Error:`, error.message);
         // Handle specific known errors from the service layer if needed
         if (error.message.includes("not the admin")) {
-            return res.status(403).json({ message: "Admin privileges required to invite users." });
+            return res
+                .status(403)
+                .json({ message: "Admin privileges required to invite users." });
         }
         if (error.message.includes("not found")) {
             return res.status(404).json({ message: error.message }); // e.g., "User not found", "Space not found"
@@ -83,13 +93,16 @@ exports.spacesRouter.post("/:id/access", (req, res) => __awaiter(void 0, void 0,
 // Join space (Mark user as active)
 exports.spacesRouter.post("/:id/join", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
+        console.log("Space router reached");
         const { clerkId } = req.body;
         const spaceId = req.params.id;
         if (!clerkId || !spaceId) {
-            return res.status(400).json({ message: "Missing required fields: clerkId, spaceId" });
+            return res
+                .status(400)
+                .json({ message: "Missing required fields: clerkId, spaceId" });
         }
         const joinedClerkId = yield (0, spaceServices_1.joinSpace)(spaceId, clerkId);
-        res.json({ message: "Joined space successfully", clerkId: joinedClerkId });
+        res.json({ message: "Joined space successfully", clerkId: clerkId });
     }
     catch (error) {
         console.error(`POST /api/spaces/${req.params.id}/join - Error:`, error.message);
@@ -97,7 +110,9 @@ exports.spacesRouter.post("/:id/join", (req, res) => __awaiter(void 0, void 0, v
             return res.status(404).json({ message: error.message });
         }
         if (error.message.includes("does not have access")) {
-            return res.status(403).json({ message: "User does not have access to this space." });
+            return res
+                .status(403)
+                .json({ message: "User does not have access to this space." });
         }
         res.status(500).json({ message: error.message || "Error joining space" });
     }
@@ -108,7 +123,9 @@ exports.spacesRouter.post("/:id/leave", (req, res) => __awaiter(void 0, void 0, 
         const { clerkId } = req.body;
         const spaceId = req.params.id;
         if (!clerkId || !spaceId) {
-            return res.status(400).json({ message: "Missing required fields: clerkId, spaceId" });
+            return res
+                .status(400)
+                .json({ message: "Missing required fields: clerkId, spaceId" });
         }
         const leftClerkId = yield (0, spaceServices_1.LeaveSpace)(spaceId, clerkId);
         res.json({ message: "Left space successfully", clerkId: leftClerkId });
@@ -127,6 +144,8 @@ exports.spacesRouter.get("/:id/rooms", (req, res) => __awaiter(void 0, void 0, v
     }
     catch (error) {
         console.error(`GET /api/spaces/${req.params.id}/rooms - Error:`, error.message);
-        res.status(500).json({ message: error.message || "Error retrieving rooms" });
+        res
+            .status(500)
+            .json({ message: error.message || "Error retrieving rooms" });
     }
 }));

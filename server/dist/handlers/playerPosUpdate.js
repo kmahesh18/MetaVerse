@@ -26,8 +26,6 @@ function handlePlayerPosUpdate(client, message) {
                 payload: "Invalid position data",
             });
         }
-        // Update the player's position in the map
-        state_1.playerPositions.set(client.userId, { posX, posY });
         // Broadcast the updated position to other clients in the room
         const msRoom = state_1.roomsById.get(client.roomId);
         if (msRoom) {

@@ -4,4 +4,3 @@ export type Playerpos={
   posY: number;
 }
 export const roomsById = new Map<string, Room>();
-export const playerPositions:Map<string, Playerpos> =new Map();

@@ -73,6 +73,7 @@ export async function createSpace(adminid: string, selectedRoomTypes: { typeId: 
   return spaceId;
 }
 
+
 export async function giveUserAccesToSpace(adminId: string, spaceId: string, emailId: string) {
   try {
     // Await the promise from getClerkId to properly get the value

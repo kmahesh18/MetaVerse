@@ -2,9 +2,8 @@ import { ObjectId, Document } from "mongodb";
 import { IAsset } from "./AssetModel";
 
 export interface IRoomType extends Document {
-  _id?: ObjectId;
   name: string;
-  description:string;
+  description: string;
   id: string;
   assets: IAsset[];
 }
@@ -12,3 +11,6 @@ export interface IRoomType extends Document {
 export const RoomType_Collection = "roomtypes";
 
 export default { RoomType_Collection };
+
+
+//

@@ -16,7 +16,7 @@ export function Dashboard() {
   const [showNotification, setShowNotification] = useState<string | null>(
     location.state?.notification || null
   );
-  console.log(user)
+  // console.log(user)
 
   const fetchUserData = useCallback(async () => {
     if (!user) return null;
@@ -25,7 +25,7 @@ export function Dashboard() {
       if (response.status === 404) {
         try {
           const primaryEmail = user.emailAddresses[0].emailAddress || '';
-          console.log("Creating user with email:", primaryEmail);
+          // console.log("Creating user with email:", primaryEmail);
           const createUserResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`, {
             method: 'POST',
             headers: {
@@ -67,7 +67,7 @@ export function Dashboard() {
         return [];
       }
       const accessibleSpaceIds = await response.json();
-      console.log("Accessible space IDs:", accessibleSpaceIds);
+      // console.log("Accessible space IDs:", accessibleSpaceIds);
       if (!Array.isArray(accessibleSpaceIds) || accessibleSpaceIds.length === 0) {
         return [];
       }
@@ -86,7 +86,7 @@ export function Dashboard() {
       });
       const spacesDetails = await Promise.all(spaceDetailsPromises);
       const validSpaces = spacesDetails.filter(space => space !== null) as ISpace[];
-      console.log("Fetched complete space details:", validSpaces);
+      // console.log("Fetched complete space details:", validSpaces);
       return validSpaces;
     } catch (err) {
       console.error("Error fetching spaces:", err);
@@ -146,15 +146,15 @@ export function Dashboard() {
     setShowNotification("Coming Soon! This feature is under development.");
   };
 
-  console.log(spaces)
+  // console.log(spaces)
 
   // Handle entering (activating) a space
   const handleEnterSpace = async (spaceId: string) => {
     if (!user) return;
     
     try {
-      console.log("Current user ID:", user.id); // Log user ID
-      console.log("Space details:", spaces.find(s => s.id === spaceId)); // Log space details
+      // console.log("Current user ID:", user.id); // Log user ID
+      // console.log("Space details:", spaces.find(s => s.id === spaceId)); // Log space details
       
       // Check if user is already active in this space
       const isActive = spaces.find(space => 
@@ -244,12 +244,12 @@ export function Dashboard() {
     try {
       // Check if user is admin of this space
       const space = spaces.find(s => s.id === spaceId);
-      console.log("Space admin check:", {
-        spaceId,
-        adminId: space?.adminid,
-        userId: user?.id,
-        isAdmin: space?.adminid === user?.id
-      });
+      // console.log("Space admin check:", {
+      //   spaceId,
+      //   adminId: space?.adminid,
+      //   userId: user?.id,
+      //   isAdmin: space?.adminid === user?.id
+      // });
       
       if (!space || space.adminid !== user?.id) {
         setError("You must be an admin to invite users to this space");
@@ -444,12 +444,12 @@ export function Dashboard() {
           gap: '20px'
         }}>
           {spaces.map((space) => {
-            console.log("Rendering space:", space); // Log each space being rendered
-            console.log("Admin check:", {
-              spaceAdminId: space.adminid,
-              userId: user?.id,
-              isAdmin: space.adminid === user?.id
-            });
+            // console.log("Rendering space:", space); // Log each space being rendered
+            // console.log("Admin check:", {
+            //   spaceAdminId: space.adminid,
+            //   userId: user?.id,
+            //   isAdmin: space.adminid === user?.id
+            // });
             
             return (
               <div 

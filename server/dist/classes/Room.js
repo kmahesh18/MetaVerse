@@ -5,39 +5,39 @@ class Room {
     constructor(roomId) {
         this.id = roomId;
         this.clients = new Map();
-        this.playerPositions = new Map();
         this.allTransportsById = new Map();
         this.dataProducers = new Map();
         this.dataConsumers = new Map();
+        this.playerPositions = new Map();
     }
     addClient(client) {
         this.clients.set(client.id, client);
+        this.playerPositions.set(client, { posX: 0, posY: 0 });
         console.log(`Client ${client.id} added to room ${this.id}`);
     }
-    removeClient(clientId) {
-        const client = this.clients.get(clientId);
-        if (client) {
-            this.clients.delete(clientId);
-            console.log(`Client ${clientId} removed from room ${this.id}`);
-            return true;
-        }
-        return false;
+    removeClient(client) {
+        if (!this.clients.has(client.id))
+            return false;
+        this.clients.delete(client.id);
+        this.playerPositions.delete(client);
+        console.log(`Client ${client.id} removed from room ${this.id}`);
+        return true;
     }
     getClient(clientId) {
         return this.clients.get(clientId);
     }
     broadcastMessage(senderId, message) {
-        const messageString = JSON.stringify(message);
+        const json = JSON.stringify(message);
         this.clients.forEach((client) => {
             if ((senderId === null || client.id !== senderId) &&
-                client.ws.readyState === WebSocket.OPEN) {
-                client.ws.send(messageString);
+                client.ws.readyState === client.ws.OPEN) {
+                client.ws.send(json);
             }
         });
     }
     sendToClient(clientId, message) {
         const client = this.clients.get(clientId);
-        if (client && client.ws.readyState === WebSocket.OPEN) {
+        if (client && client.ws.readyState === client.ws.OPEN) {
             client.ws.send(JSON.stringify(message));
         }
     }

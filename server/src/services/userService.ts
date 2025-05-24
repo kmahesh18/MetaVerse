@@ -4,9 +4,14 @@ import { IUser, USERS_COLLECTION } from "../Models/UserModel";
 import { ROOMS_COLLECTION } from "../Models/RoomModel";
 import { clerkClient } from "@clerk/clerk-sdk-node";
 import { access } from "fs";
+import { roomsById } from "../state/state";
+import { Client } from "../classes/Client";
+import { getOrCreateRoom } from "../handlers/roomHandler";
 
 export async function getUserByClerkId(clerkId: string): Promise<IUser | null> {
+  
   const db = await getDB();
+  
   return db
     .collection(USERS_COLLECTION)
     .findOne({ clerkId }) as unknown as IUser | null;
@@ -73,23 +78,12 @@ export async function hasSelectedAvatar(clerkId: string): Promise<boolean> {
   return user !== null && !!user.avatarId;
 }
 
-export async function getRoomId(userid: string): Promise<string> {
-  try {
-    const db = await getDB();
-    const user = await db.collection(USERS_COLLECTION).findOne({ id: userid });
-    return user?.roomId;
-  } catch (Error) {
-    console.log("Error occured while getting roomid");
-    throw Error;
-  }
-}
 
-export async function JoinRoom(userid: string, roomId: string) {
+export async function JoinRoom(client:Client, roomId: string) {
   try {
-    const db = await getDB();
-    const updateUser = await db
-      .collection(USERS_COLLECTION)
-      .updateOne({ id: userid }, { roomId: roomId });
+    const room = getOrCreateRoom(roomId);
+    room?.addClient(client);
+    client.roomId = roomId;
     return roomId;
   } catch (Error) {
     console.log("Error occured while joining room", Error);
@@ -97,13 +91,13 @@ export async function JoinRoom(userid: string, roomId: string) {
   }
 }
 
-export async function LeaveRoom(userid: string) {
+export async function LeaveRoom(client:Client,roomId:string) {
   try {
-    const db = await getDB();
-    const updateUser = await db
-      .collection(USERS_COLLECTION)
-      .updateOne({ id: userid }, { roomId: null });
+    const room = getOrCreateRoom(roomId);
+    room.removeClient(client);
+    client.roomId = null;
     console.log("Room left successfully");
+    return roomId;
   } catch (Error) {
     console.log("Error occured while leaving room", Error);
     throw Error;

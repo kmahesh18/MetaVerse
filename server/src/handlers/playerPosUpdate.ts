@@ -1,6 +1,5 @@
 import { Client } from "../classes/Client";
-import { Message } from "../types/message.types";
-import { roomsById, playerPositions } from "../state/state"; 
+import { roomsById } from "../state/state"; 
 
 export async function handlePlayerPosUpdate(client:Client,message:any){
   if (!client.userId || !client.roomId) {
@@ -18,9 +17,6 @@ export async function handlePlayerPosUpdate(client:Client,message:any){
 						payload: "Invalid position data",
 					});
 				}
-
-				// Update the player's position in the map
-				playerPositions.set(client.userId, { posX, posY });
 
 				// Broadcast the updated position to other clients in the room
 				const msRoom = roomsById.get(client.roomId);

@@ -11,14 +11,14 @@ var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, ge
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.handleAuthentication = handleAuthentication;
 const userService_1 = require("../services/userService");
-function handleAuthentication(client, message) {
+function handleAuthentication(client) {
     return __awaiter(this, void 0, void 0, function* () {
         // This case should only run if client is NOT already authenticated
         if (client.isAuthenticated) {
             console.warn(`Client ${client.userId} sent authenticate message again.`);
             return; // Or send an error
         }
-        const { userId } = message.payload;
+        const userId = client.userId;
         if (!userId || typeof userId !== "string") {
             client.sendToSelf({
                 type: "error",
@@ -29,16 +29,9 @@ function handleAuthentication(client, message) {
         // Validate the user ID against the database
         const user = yield (0, userService_1.getUserByClerkId)(userId);
         if (user) {
-            client.userId = user.id; // Store the validated user ID
+            client.userId = user.clerkId; // Store the validated user ID
             client.isAuthenticated = true;
-            console.log(`Connection ${client.id} authenticated as user ${client.userId}`);
-            if (client.userId) {
-                client.sendToSelf({
-                    type: "authenticated",
-                    payload: { userId: client.userId },
-                });
-            }
-            else {
+            if (!client.userId) {
                 client.sendToSelf({
                     type: "error",
                     payload: "Authentication failed: User ID is null",

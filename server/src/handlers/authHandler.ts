@@ -5,14 +5,12 @@ import { getUserByClerkId } from "../services/userService";
 
 
 
-export async function handleAuthentication(client: Client, message: any) {
+export async function handleAuthentication(client: Client) {
   // This case should only run if client is NOT already authenticated
   if (client.isAuthenticated) {
-    console.warn(`Client ${client.userId} sent authenticate message again.`);
     return; // Or send an error
   }
-
-  const { userId } = (message as AuthenticateMessage).payload;
+  const userId = client.userId;
   if (!userId || typeof userId !== "string") {
     client.sendToSelf({
       type: "error",
@@ -24,18 +22,9 @@ export async function handleAuthentication(client: Client, message: any) {
   // Validate the user ID against the database
   const user = await getUserByClerkId(userId);
   if (user) {
-    client.userId = user.id; // Store the validated user ID
-    client.isAuthenticated = true;
-    console.log(
-      `Connection ${client.id} authenticated as user ${client.userId}`,
-    );
-
-    if (client.userId) {
-      client.sendToSelf({
-        type: "authenticated",
-        payload: { userId: client.userId },
-      });
-    } else {
+    client.userId = user.clerkId; // Store the validated user ID
+    client.isAuthenticated = true;    
+    if (!client.userId) {
       client.sendToSelf({
         type: "error",
         payload: "Authentication failed: User ID is null",
@@ -51,3 +40,4 @@ export async function handleAuthentication(client: Client, message: any) {
     });
   }
 }
+ 

@@ -13,7 +13,6 @@ exports.getUserByClerkId = getUserByClerkId;
 exports.getAccessibleSpaces = getAccessibleSpaces;
 exports.createOrUpdateUser = createOrUpdateUser;
 exports.hasSelectedAvatar = hasSelectedAvatar;
-exports.getRoomId = getRoomId;
 exports.JoinRoom = JoinRoom;
 exports.LeaveRoom = LeaveRoom;
 exports.getClerkId = getClerkId;
@@ -21,6 +20,7 @@ exports.getEmail = getEmail;
 const db_1 = require("../db");
 const UserModel_1 = require("../Models/UserModel");
 const clerk_sdk_node_1 = require("@clerk/clerk-sdk-node");
+const roomHandler_1 = require("../handlers/roomHandler");
 function getUserByClerkId(clerkId) {
     return __awaiter(this, void 0, void 0, function* () {
         const db = yield (0, db_1.getDB)();
@@ -84,26 +84,12 @@ function hasSelectedAvatar(clerkId) {
         return user !== null && !!user.avatarId;
     });
 }
-function getRoomId(userid) {
+function JoinRoom(client, roomId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const db = yield (0, db_1.getDB)();
-            const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ id: userid });
-            return user === null || user === void 0 ? void 0 : user.roomId;
-        }
-        catch (Error) {
-            console.log("Error occured while getting roomid");
-            throw Error;
-        }
-    });
-}
-function JoinRoom(userid, roomId) {
-    return __awaiter(this, void 0, void 0, function* () {
-        try {
-            const db = yield (0, db_1.getDB)();
-            const updateUser = yield db
-                .collection(UserModel_1.USERS_COLLECTION)
-                .updateOne({ id: userid }, { roomId: roomId });
+            const room = (0, roomHandler_1.getOrCreateRoom)(roomId);
+            room === null || room === void 0 ? void 0 : room.addClient(client);
+            client.roomId = roomId;
             return roomId;
         }
         catch (Error) {
@@ -112,14 +98,14 @@ function JoinRoom(userid, roomId) {
         }
     });
 }
-function LeaveRoom(userid) {
+function LeaveRoom(client, roomId) {
     return __awaiter(this, void 0, void 0, function* () {
         try {
-            const db = yield (0, db_1.getDB)();
-            const updateUser = yield db
-                .collection(UserModel_1.USERS_COLLECTION)
-                .updateOne({ id: userid }, { roomId: null });
+            const room = (0, roomHandler_1.getOrCreateRoom)(roomId);
+            room.removeClient(client);
+            client.roomId = null;
             console.log("Room left successfully");
+            return roomId;
         }
         catch (Error) {
             console.log("Error occured while leaving room", Error);

@@ -2,7 +2,11 @@ import { v4 } from "uuid";
 import { getDB } from "../db";
 import { IRoom, ROOMS_COLLECTION } from "../Models/RoomModel";
 import { RoomType_Collection, IRoomType } from "../Models/RoomType";
-import { IAsset } from "../Models/AssetModel";
+import { ASSET_COLLECTION, IAsset } from "../Models/AssetModel";
+import { getOrCreateRoom } from "../handlers/roomHandler";
+import { USERS_COLLECTION } from "../Models/UserModel";
+import { ObjectId } from "mongodb";
+import { Playerpos } from "../state/state";
 
 // Create Room
 export async function createRoom(roomTypeId: string, spaceId: string): Promise<string> {
@@ -74,5 +78,34 @@ export async function getRoomTypeId(roomId: string): Promise<string | null> {
   } catch (error) {
     console.log("Error in getRoomTypeId:", error);
     throw error;
+  }
+}
+
+
+export async function getRoomPlayersAvatars(roomId: string) {
+  try {
+    const db = await getDB();
+    const room = getOrCreateRoom(roomId);
+    const clients = room.clients;
+    const clientAvatars = new Map();
+    
+    await Promise.all(
+      Array.from(clients.values()).map(async (client) => {
+        const userId = client.userId;
+        const user = await db.collection(USERS_COLLECTION).findOne({ clerkId: userId });
+        if (user?.avatarId) {
+          const avatarId = user.avatarId;
+          const avatar = await db.collection(ASSET_COLLECTION).findOne({_id: new ObjectId(avatarId) });
+          clientAvatars.set(client.id, avatar?.name|| null);
+        } else {
+          console.log(`No avatarId found for user ${userId}`);
+          clientAvatars.set(client.id, null);
+        }
+      })
+    );
+    return clientAvatars;
+  }
+  catch (error) {
+    console.log("error occured in room ssevices while getting room Players avatars")
   }
 }
