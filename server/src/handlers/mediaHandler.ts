@@ -1,6 +1,7 @@
 // mediaHandler.ts
 import { Client } from "../classes/Client";
 import { mediasoupRouter } from "../mediasoup/setup";
+import { getUserAvatarName } from "../services/userService";
 import { roomsById } from "../state/state";
 
 //will need to call it twice in frontend for each client one for recv transport and the other for send transport
@@ -124,13 +125,19 @@ export async function produceData(client: Client, message: any) {
       type: "dataProduced",
       payload: { dataProducerId: dataProducer.id },
     });
+    
+    const avatarName = await getUserAvatarName(client.userId);
 
     // ✅ ONLY notify other clients about NEW producer
     msRoom.clients.forEach((otherClient) => {
       if (otherClient.id !== client.id) {
         otherClient.sendToSelf({
           type: "newDataProducer",
-          payload: { producerId: dataProducer.id }
+          payload: {
+            producerId: dataProducer.id,
+            userId:client.userId, 
+            avatarName: avatarName
+          }
         });
       }
     });

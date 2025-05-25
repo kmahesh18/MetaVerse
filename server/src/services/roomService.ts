@@ -96,7 +96,7 @@ export async function getRoomPlayersAvatars(roomId: string) {
         if (user?.avatarId) {
           const avatarId = user.avatarId;
           const avatar = await db.collection(ASSET_COLLECTION).findOne({_id: new ObjectId(avatarId) });
-          clientAvatars.set(client.id, avatar?.name|| null);
+          clientAvatars.set(userId, avatar?.name|| null);
         } else {
           console.log(`No avatarId found for user ${userId}`);
           clientAvatars.set(client.id, null);

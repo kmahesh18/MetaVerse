@@ -7,6 +7,7 @@ import { access } from "fs";
 import { roomsById } from "../state/state";
 import { Client } from "../classes/Client";
 import { getOrCreateRoom } from "../handlers/roomHandler";
+import { ASSET_COLLECTION } from "../Models/AssetModel";
 
 export async function getUserByClerkId(clerkId: string): Promise<IUser | null> {
   
@@ -128,4 +129,37 @@ export async function getEmail(clerkId: string): Promise<string> {
     console.log("error occured while getting email id by clerk id", Error);
     throw Error;
   }
+}
+
+export async function getNameByClerkId(clerkId: string): Promise<string> {
+  try {
+    // Get email from database
+    const user = await getUserByClerkId(clerkId);
+    
+    if (user && user.emailId) {
+      // Extract the part before @ as the name
+      const namePart = user.emailId.split('@')[0];
+      return namePart;
+    } else {
+      return "bot";
+    }
+  } catch (error) {
+    console.log("Error occurred while extracting name from email:", error);
+    throw error;
+  }
+}
+
+export async function getUserAvatarName(clerkId:string){
+  try{
+    const db = await getDB();
+    const user = await db.collection(USERS_COLLECTION).findOne({ clerkId: clerkId });
+    const avatarId = user?.avatarId;
+    
+    const avatar = await db.collection(ASSET_COLLECTION).findOne({_id: new ObjectId(avatarId) });
+    console.log(`clerkId=> ${clerkId} && avatarname=>&${avatar?.name}`)
+    return avatar?.name;
+  }
+  catch(err){
+    console.log("Error occured whilee getting avatar using clerkId",err)
+  } 
 }

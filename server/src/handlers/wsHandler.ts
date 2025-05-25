@@ -87,9 +87,17 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
           console.log("ws reached for consumeData");
           await consumeData(client, msg);
           break;
+          
+        case "publicChat":
+          await roomHandler.handleChatMessage(client, msg);
+          break;
 
+        case "proximityChat":
+          await roomHandler.handleProximityChat(client, msg);
+          break;
+          
         case "playerMovementUpdate":
-          const { roomId, clientId, pos, direction } = msg.payload;
+          const { roomId,playerUserId, pos, direction } = msg.payload;
           
           if (!client.roomId || !pos) {
             return client.sendToSelf({
@@ -115,7 +123,7 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
                   producer.send(JSON.stringify({
                     type: "playerMovementUpdate",
                     payload: {
-                      clientId: client.id,
+                      playerUserId:playerUserId,
                       pos: pos,
                       direction: direction,
                       timestamp: Date.now()

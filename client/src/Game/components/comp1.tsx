@@ -3,7 +3,7 @@ import { useParams } from "react-router-dom";
 import { useAuth } from "@clerk/clerk-react";
 import axios from "axios";
 import { types, Device, detectDeviceAsync } from "mediasoup-client";
-
+import { ChatInterface } from "../../components/ChatInterface";
 const GameComponent: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const gameRef = useRef<any>(null);
@@ -69,7 +69,13 @@ const GameComponent: React.FC = () => {
         }
 
         if (msg.type === "SendWebRtcTransportCreated") {
-          const { id, iceParameters, iceCandidates, dtlsParameters, sctpParameters } = msg.payload;
+          const {
+            id,
+            iceParameters,
+            iceCandidates,
+            dtlsParameters,
+            sctpParameters,
+          } = msg.payload;
 
           sendTransportRef.current = deviceRef.current!.createSendTransport({
             id,
@@ -80,36 +86,52 @@ const GameComponent: React.FC = () => {
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
 
-          sendTransportRef.current.on("connect", ({ dtlsParameters }, callback) => {
-            ws.send(JSON.stringify({
-              type: "connectWebRtcTransport",
-              payload: { transportId: id, dtlsParameters },
-            }));
-            callback();
-          });
+          sendTransportRef.current.on(
+            "connect",
+            ({ dtlsParameters }, callback) => {
+              ws.send(
+                JSON.stringify({
+                  type: "connectWebRtcTransport",
+                  payload: { transportId: id, dtlsParameters },
+                }),
+              );
+              callback();
+            },
+          );
 
-          sendTransportRef.current.on("producedata", ({ sctpStreamParameters, label, protocol }, callback) => {
-            producedataCallbackRef.current = callback;
-            ws.send(JSON.stringify({
-              type: "produceData",
-              payload: { transportId: id, sctpStreamParameters, label, protocol },
-            }));
-          });
+          sendTransportRef.current.on(
+            "producedata",
+            ({ sctpStreamParameters, label, protocol }, callback) => {
+              producedataCallbackRef.current = callback;
+              ws.send(
+                JSON.stringify({
+                  type: "produceData",
+                  payload: {
+                    transportId: id,
+                    sctpStreamParameters,
+                    label,
+                    protocol,
+                  },
+                }),
+              );
+            },
+          );
 
           // Auto-create DataProducer
           if (!dataProducerRef.current) {
             const streamId = Math.floor(Math.random() * 65535);
-            dataProducerRef.current = await sendTransportRef.current.produceData({
-              ordered: true,
-              label: "player-sync",
-              protocol: "json",
-              sctpStreamParameters: {
-                streamId,
+            dataProducerRef.current =
+              await sendTransportRef.current.produceData({
                 ordered: true,
-                maxPacketLifeTime: undefined,
-                maxRetransmits: undefined,
-              },
-            });
+                label: "player-sync",
+                protocol: "json",
+                sctpStreamParameters: {
+                  streamId,
+                  ordered: true,
+                  maxPacketLifeTime: undefined,
+                  maxRetransmits: undefined,
+                },
+              });
           }
         }
 
@@ -120,7 +142,13 @@ const GameComponent: React.FC = () => {
         }
 
         if (msg.type === "RecvWebRtcTransportCreated") {
-          const { id, iceParameters, iceCandidates, dtlsParameters, sctpParameters } = msg.payload;
+          const {
+            id,
+            iceParameters,
+            iceCandidates,
+            dtlsParameters,
+            sctpParameters,
+          } = msg.payload;
 
           recvTransportRef.current = deviceRef.current!.createRecvTransport({
             id,
@@ -131,41 +159,52 @@ const GameComponent: React.FC = () => {
             iceServers: [{ urls: "stun:stun.l.google.com:19302" }],
           });
 
-          recvTransportRef.current.on("connect", ({ dtlsParameters }, callback) => {
-            ws.send(JSON.stringify({
-              type: "connectWebRtcTransport",
-              payload: { transportId: id, dtlsParameters },
-            }));
-            callback();
-          });
+          recvTransportRef.current.on(
+            "connect",
+            ({ dtlsParameters }, callback) => {
+              ws.send(
+                JSON.stringify({
+                  type: "connectWebRtcTransport",
+                  payload: { transportId: id, dtlsParameters },
+                }),
+              );
+              callback();
+            },
+          );
         }
 
         // ✅ HANDLE: New DataProducers from other players
         if (msg.type === "newDataProducer") {
           const { producerId } = msg.payload;
           console.log("🆕 New DataProducer detected:", producerId);
-          
+
           if (recvTransportRef.current) {
-            ws.send(JSON.stringify({
-              type: "consumeData",
-              payload: { 
-                producerId, 
-                transportId: recvTransportRef.current.id 
-              }
-            }));
+            ws.send(
+              JSON.stringify({
+                type: "consumeData",
+                payload: {
+                  producerId,
+                  transportId: recvTransportRef.current.id,
+                },
+              }),
+            );
           }
 
           // ✅ FORWARD TO SCENE: If scene exists, notify it
-          if (roomSceneRef.current && typeof roomSceneRef.current.handleNewDataProducer === 'function') {
+          if (
+            roomSceneRef.current &&
+            typeof roomSceneRef.current.handleNewDataProducer === "function"
+          ) {
             roomSceneRef.current.handleNewDataProducer(msg);
           }
         }
 
         // ✅ HANDLE: DataConsumer creation
         if (msg.type === "dataConsumerCreated") {
-          const { id, producerId, sctpStreamParameters, label, protocol } = msg.payload;
+          const { id, producerId, sctpStreamParameters, label, protocol } =
+            msg.payload;
           console.log("🔗 Creating DataConsumer:", id);
-          
+
           const dataConsumer = await recvTransportRef.current!.consumeData({
             id,
             dataProducerId: producerId,
@@ -175,10 +214,15 @@ const GameComponent: React.FC = () => {
           });
 
           dataConsumersRef.current.push(dataConsumer);
-          console.log(`✅ DataConsumer created. Total: ${dataConsumersRef.current.length}`);
+          console.log(
+            `✅ DataConsumer created. Total: ${dataConsumersRef.current.length}`,
+          );
 
           // ✅ FORWARD TO SCENE: Notify scene of new DataConsumer
-          if (roomSceneRef.current && typeof roomSceneRef.current.addDataConsumer === 'function') {
+          if (
+            roomSceneRef.current &&
+            typeof roomSceneRef.current.addDataConsumer === "function"
+          ) {
             roomSceneRef.current.addDataConsumer(dataConsumer);
           }
         }
@@ -228,6 +272,7 @@ const GameComponent: React.FC = () => {
         const launchData = {
           clientId: clientIdRef.current!,
           RoomId: roomId,
+          userId: userId,
           ws: wsRef.current!,
           sendTransport: sendTransportRef.current!,
           recvTransport: recvTransportRef.current!,
@@ -245,7 +290,9 @@ const GameComponent: React.FC = () => {
 
     return () => {
       if (wsRef.current) {
-        wsRef.current.send(JSON.stringify({ type: "leaveRoom", payload: { roomId } }));
+        wsRef.current.send(
+          JSON.stringify({ type: "leaveRoom", payload: { roomId } }),
+        );
         wsRef.current.close();
       }
       if (gameRef.current) {
@@ -254,7 +301,13 @@ const GameComponent: React.FC = () => {
     };
   }, [spaceId, roomId, userid]);
 
-  return <div ref={containerRef} id="game-container" />;
+  return (
+    <>
+      <div ref={containerRef} id="game-container">
+        {wsRef.current && <ChatInterface ws={wsRef.current} userId={userid} />}
+      </div>
+    </>
+  );
 };
 
 export default GameComponent;

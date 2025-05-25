@@ -3,12 +3,13 @@ import {
   getUserByClerkId,
   createOrUpdateUser,
   hasSelectedAvatar,
-  getEmail,
 } from "../services/userService";
 import { getAccessibleSpaces } from "../services/userService";
 import { getDB } from "../db";
 import { Space_Collection } from "../Models/SpaceType";
-
+import { USERS_COLLECTION } from "../Models/UserModel";
+import { ASSET_COLLECTION } from "../Models/AssetModel";
+import { ObjectId } from "mongodb";
 export const userRouter = Router();
 
 // Get all accessible spaces of a user
