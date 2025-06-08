@@ -3,8 +3,9 @@ import { JoinRoom } from "../services/userService";
 import { LeaveRoom } from "../services/userService";
 import { getNameByClerkId } from "../services/userService";
 import { roomsById, Playerpos } from "../state/state";
-
+import { getUserAvatarName } from "../services/userService";
 import Room from "../classes/Room";
+import { types } from "mediasoup";
 
 export function getOrCreateRoom(roomId: string): Room {
   let r = roomsById.get(roomId);
@@ -33,12 +34,14 @@ export async function handleJoinRoom(client: Client, message: any) {
     const oldRoom = roomsById.get(client.roomId);
     if (oldRoom) {
       oldRoom.removeClient(client);
-      
+
       oldRoom.dataProducers.forEach((producer, producerId) => {
-        if ((producer as any).appData?.clientId === client.id) {
+        if ((producer as any).appData?.clientId === client.userId) {
           producer.close();
           oldRoom.dataProducers.delete(producerId);
-          console.log(`Cleaned up old DataProducer ${producerId} for client ${client.id}`);
+          console.log(
+            `Cleaned up old DataProducer ${producerId} for client ${client.userId}`,
+          );
         }
       });
     }
@@ -47,40 +50,21 @@ export async function handleJoinRoom(client: Client, message: any) {
   // Join the new room
   await JoinRoom(client, roomId);
   const msRoom = getOrCreateRoom(roomId);
-  if (!msRoom.clients.has(client.id)) {
+  if (!msRoom.clients.has(client.userId)) {
     msRoom.addClient(client);
   }
-  msRoom.dataConsumers.set(client.id, []);
+  msRoom.dataConsumers.set(client.userId, []);
 
   client.sendToSelf({
     type: "JoinedRoom",
-    payload: { 
+    payload: {
       roomId,
-      clientId: client.id
+      clientId: client.userId,
     },
   });
 
-  // ✅ CLEAN: Only get ACTIVE DataProducers (exclude client's own future producer)
-  setTimeout(() => {
-    const existingProducers = Array.from(msRoom.dataProducers.entries())
-      .filter(([id, producer]) => {
-        const ownerClientId = (producer as any).appData?.clientId;
-        return ownerClientId && ownerClientId !== client.id; // Exclude own producer
-      })
-      .map(([id]) => id);
-    
-    console.log(`Client ${client.id} found ${existingProducers.length} existing producers:`, existingProducers);
-    
-    if (existingProducers.length > 0) {
-      existingProducers.forEach(producerId => {
-        client.sendToSelf({
-          type: "newDataProducer",
-          payload: { producerId }
-        });
-      });
-    }
-  }, 2000);
 
+  // }, 2000);
   return roomId;
 }
 
@@ -102,9 +86,9 @@ export async function handleLeaveRoom(client: Client, message: any) {
   if (msRoom) {
     msRoom.removeClient(client);
     cleanupRoom(roomId);
-    client.sendToSelf({
+    msRoom.broadcastMessage(client.userId, {
       type: "leftRoom",
-      payload: { roomId },
+      payload: { roomId: roomId, userId: client.userId },
     });
   } else {
     client.sendToSelf({
@@ -132,8 +116,10 @@ export async function playerMovementUpdate(
   }
 }
 
-
-export async function handleChatMessage(client: Client, message: any): Promise<void> {
+export async function handleChatMessage(
+  client: Client,
+  message: any,
+): Promise<void> {
   if (!client.userId || !client.roomId) {
     return client.sendToSelf({
       type: "error",
@@ -142,7 +128,7 @@ export async function handleChatMessage(client: Client, message: any): Promise<v
   }
 
   const { text } = message.payload;
-  
+
   if (!text || typeof text !== "string" || text.trim() === "") {
     return client.sendToSelf({
       type: "error",
@@ -162,7 +148,6 @@ export async function handleChatMessage(client: Client, message: any): Promise<v
   let senderName;
   try {
     senderName = await getNameByClerkId(client.userId);
-    console.log("jhvedcjehvdcjwhdvkje")
   } catch (error) {
     console.error(`Error getting name for user ${client.userId}:`, error);
     senderName = "bot"; // Fallback name
@@ -172,15 +157,18 @@ export async function handleChatMessage(client: Client, message: any): Promise<v
   room.broadcastMessage(null, {
     type: "publicChat",
     payload: {
-      senderId: client.id,
+      senderId: client.userId,
       senderName: senderName || "bot", // Ensure we have a string value
       message: text,
-      timestamp: Date.now()
+      timestamp: Date.now(),
     },
   });
 }
 
-export async function handleProximityChat(client: Client, message: any): Promise<void> {
+export async function handleProximityChat(
+  client: Client,
+  message: any,
+): Promise<void> {
   if (!client.userId || !client.roomId) {
     return client.sendToSelf({
       type: "error",
@@ -189,7 +177,7 @@ export async function handleProximityChat(client: Client, message: any): Promise
   }
 
   const { text, chatRadius = 150 } = message.payload; // Default radius of 150 pixels
-  
+
   if (!text || typeof text !== "string" || text.trim() === "") {
     return client.sendToSelf({
       type: "error",
@@ -206,7 +194,7 @@ export async function handleProximityChat(client: Client, message: any): Promise
   }
 
   // Get sender's position
-  const senderPos = room.playerPositions.get(client.id);
+  const senderPos = room.playerPositions.get(client.userId);
   if (!senderPos) {
     return client.sendToSelf({
       type: "error",
@@ -225,38 +213,34 @@ export async function handleProximityChat(client: Client, message: any): Promise
 
   // Find clients within proximity radius
   const nearbyClients: string[] = [];
-  
+
   room.clients.forEach((otherClient, otherClientId) => {
-    if (otherClientId === client.id) return; // Skip sender
-    
+    if (otherClientId === client.userId) return; // Skip sender
+
     const otherPos = room.playerPositions.get(otherClientId);
     if (!otherPos) return;
-    
+
     // Calculate distance between players
     const distance = Math.sqrt(
-      Math.pow(senderPos.posX - otherPos.posX, 2) + 
-      Math.pow(senderPos.posY - otherPos.posY, 2)
+      Math.pow(senderPos.posX - otherPos.posX, 2) +
+        Math.pow(senderPos.posY - otherPos.posY, 2),
     );
-    
-    console.log(`Distance between ${client.id} and ${otherClientId}: ${distance.toFixed(2)}`);
-    
+
     if (distance <= chatRadius) {
       nearbyClients.push(otherClientId);
     }
   });
 
-  console.log(`Client ${client.id} proximity chat to ${nearbyClients.length} nearby clients`);
-
   // Send message to nearby clients (including sender for confirmation)
   const chatMessage = {
     type: "proximityChat",
     payload: {
-      senderId: client.id,
+      senderId: client.userId,
       senderName: senderName || "bot",
       message: text,
       timestamp: Date.now(),
       chatRadius,
-      senderPosition: senderPos
+      senderPosition: senderPos,
     },
   };
 
@@ -264,7 +248,7 @@ export async function handleProximityChat(client: Client, message: any): Promise
   client.sendToSelf(chatMessage);
 
   // Send to nearby clients
-  nearbyClients.forEach(clientId => {
+  nearbyClients.forEach((clientId) => {
     const targetClient = room.getClient(clientId);
     if (targetClient) {
       targetClient.sendToSelf(chatMessage);
@@ -274,7 +258,7 @@ export async function handleProximityChat(client: Client, message: any): Promise
     type: "proximityChatInfo",
     payload: {
       recipientCount: nearbyClients.length,
-      radius: chatRadius
-    }
+      radius: chatRadius,
+    },
   });
 }

@@ -10,19 +10,20 @@ export class Client {
 	sendTransportId?:string; //store transport id of pipeline  to send data to server
   recvTransportId?:string //transport id of pipeline for receiving data from server
   rtpCapabilites?:mediasoup.types.RtpCapabilities
-	constructor(id: string, ws: WebSocket) {
+	constructor(id: string,userId:string, ws: WebSocket) {
 		this.id = id; // This is the temporary connection ID
 		this.ws = ws;
+    this.userId = userId;
 		this.roomId = null;
-		this.spaceId = null;
-		this.userId = null; // Starts as null
+		this.spaceId = null;// Starts as null
 		this.isAuthenticated = false; // Starts as false
-    console.log("Clientid:", id);
+    console.log("UserId:", userId);
 	}
 
 	sendToSelf(message:any): void {
 		if (this.ws.readyState === WebSocket.OPEN) {
 			this.ws.send(JSON.stringify(message));
+      console.log("sent the msg");
 		}
 	}
 }

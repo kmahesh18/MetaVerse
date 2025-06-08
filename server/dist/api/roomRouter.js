@@ -39,7 +39,7 @@ exports.roomRouter.get("/:roomId", (req, res) => __awaiter(void 0, void 0, void 
         const [assets, spaceId, roomTypeId] = yield Promise.all([
             (0, roomService_1.getRoomAssets)(roomId),
             (0, roomService_1.getSpaceIdByRoomId)(roomId),
-            (0, roomService_1.getRoomTypeId)(roomId)
+            (0, roomService_1.getRoomTypeId)(roomId),
         ]);
         // Check if the room exists (e.g., by checking if spaceId was found)
         if (!spaceId || !roomTypeId) {
@@ -49,29 +49,37 @@ exports.roomRouter.get("/:roomId", (req, res) => __awaiter(void 0, void 0, void 
             id: roomId,
             spaceId: spaceId,
             roomTypeId: roomTypeId,
-            assets: assets
+            assets: assets,
         });
     }
     catch (err) {
         console.error(`GET /api/rooms/${req.params.roomId} - Error:`, err.message);
-        res.status(500).json({ error: err.message || "Error retrieving room details" });
+        res
+            .status(500)
+            .json({ error: err.message || "Error retrieving room details" });
     }
 }));
 exports.roomRouter.get("/:id/space", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // Changed path slightly to avoid conflict
     try {
         const { id } = req.params;
         const spaceId = yield (0, roomService_1.getSpaceIdByRoomId)(id);
         if (!spaceId) {
-            return res.status(404).json({ error: "Room not found or space association missing" });
+            return res
+                .status(404)
+                .json({ error: "Room not found or space association missing" });
         }
         res.json({ spaceId: spaceId });
     }
     catch (err) {
         console.error(`GET /api/rooms/${req.params.id}/space - Error:`, err.message);
-        res.status(500).json({ error: err.message || "Error retrieving space for room" });
+        res
+            .status(500)
+            .json({ error: err.message || "Error retrieving space for room" });
     }
 }));
 exports.roomRouter.get("/:roomId/assets", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    // Changed path slightly
     try {
         const { roomId } = req.params;
         const roomAssets = yield (0, roomService_1.getRoomAssets)(roomId);
@@ -80,15 +88,18 @@ exports.roomRouter.get("/:roomId/assets", (req, res) => __awaiter(void 0, void 0
     }
     catch (err) {
         console.error(`GET /api/rooms/${req.params.roomId}/assets - Error:`, err.message);
-        res.status(500).json({ error: err.message || "Error retrieving room assets" });
+        res
+            .status(500)
+            .json({ error: err.message || "Error retrieving room assets" });
     }
 }));
 exports.roomRouter.get("/:roomId/players", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
         const { roomId } = req.params;
         const room = state_1.roomsById.get(roomId);
-        const positionsObject = (room === null || room === void 0 ? void 0 : room.playerPositions) ?
-            Object.fromEntries(room.playerPositions) : {};
+        const positionsObject = (room === null || room === void 0 ? void 0 : room.playerPositions)
+            ? Object.fromEntries(room.playerPositions)
+            : {};
         res.json(positionsObject);
     }
     catch (error) {

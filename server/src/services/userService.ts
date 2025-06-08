@@ -156,7 +156,6 @@ export async function getUserAvatarName(clerkId:string){
     const avatarId = user?.avatarId;
     
     const avatar = await db.collection(ASSET_COLLECTION).findOne({_id: new ObjectId(avatarId) });
-    console.log(`clerkId=> ${clerkId} && avatarname=>&${avatar?.name}`)
     return avatar?.name;
   }
   catch(err){

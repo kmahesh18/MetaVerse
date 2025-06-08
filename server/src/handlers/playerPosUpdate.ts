@@ -21,7 +21,7 @@ export async function handlePlayerPosUpdate(client:Client,message:any){
 				// Broadcast the updated position to other clients in the room
 				const msRoom = roomsById.get(client.roomId);
 				if (msRoom) {
-					msRoom.broadcastMessage(client.id, {
+					msRoom.broadcastMessage(client.userId, {
 						type: "broadcastPlayerPos",
 						payload: {
 							userId: client.userId,

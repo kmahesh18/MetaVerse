@@ -60,6 +60,42 @@ export class room extends Scene {
     this.sendTransport = data.sendTransport;
     this.recvTransport = data.recvTransport;
 
+    if (!this.ws) {
+      console.warn("no ws connection found ");
+      return;
+    }
+    // if (this.ws) {
+    //   this.ws.onmessage = async(event: MessageEvent) => {
+    //     const msg = JSON.parse(event.data);
+    //     console.log(msg);
+    //     if(msg.type=="newDataProducer"){
+    //       this.handleNewDataProducer(msg);
+    //     }
+    //     else if (msg.type === "dataConsumerCreated"){
+    //       const { id, producerId, sctpStreamParameters, label, protocol } =msg.payload;
+    //       if(!this.recvTransport){
+    //         console.log("recv transport missing");
+    //         return;
+    //       }
+				// 	const dataConsumer = await this.recvTransport.consumeData({
+				// 		id,
+				// 		dataProducerId: producerId,
+				// 		sctpStreamParameters,
+				// 		label,
+				// 		protocol,
+				// 	});
+     
+    //       this.addDataConsumer(dataConsumer);
+    //     }
+    //     else if (msg.type === "clientLeft") {
+    //       console.log(this.gameObjects);
+    //       this.gameObjects.delete(msg.clientId);
+    //       console.log(this.gameObjects)
+    //       console.log("deleted");
+    //     }
+        
+    //   };
+    // }
     console.log("🎮 Room init:", {
       userId: this.userId,
       clientId: this.clientId,
@@ -84,8 +120,6 @@ export class room extends Scene {
       });
     });
 
-    console.log("room assets", this.roomAssets);
-
     // load player positions
     this.load.json(
       "playersData",
@@ -107,7 +141,6 @@ export class room extends Scene {
     );
     this.load.once("filecomplete-json-userAvatarsData", (_k, _t, data: any) => {
       this.playerAsset = new Map(Object.entries(data));
-      console.log("player assets", this.playerAsset);
       this.playerAsset.forEach((_, userId) => {
         const url = `/assets/${data[userId]}/${data[userId]}_run.png`;
         console.log("check 1", userId, url);
@@ -128,10 +161,8 @@ export class room extends Scene {
 
     // place room assets
     this.roomAssets.forEach((a) => this.placeAsset(a));
-    console.log("after room assets", this.gameObjects.entries());
     // place each player sprite
     this.playerAsset.forEach((_, userId) => {
-      console.log("+1");
       const pos = this.playerPositions.get(userId) ?? { posX: 0, posY: 0 };
       this.playerPos =
         pos.posX === 0 && pos.posY === 0
@@ -154,8 +185,6 @@ export class room extends Scene {
         this.currentPlayer = sprite;
       }
     });
-
-    console.log("iinitiallyy", this.gameObjects.entries());
     this.setupControls();
     this.setupDataProducer();
     this.setupInitialDataConsumers();
@@ -168,10 +197,13 @@ export class room extends Scene {
   // PUBLIC METHODS FOR COMP1.TSX INTEGRATION
   public handleNewDataProducer(msg: any) {
     const { userId, avatarName } = msg.payload;
-    console.log("payload", msg.payload);
     const url = `/assets/${avatarName}/${avatarName}_run.png`;
-    console.log("check 2", userId, url);
+    // console.log("at handleNewDataProducer ", userId, avatarName, url);
 
+    if (this.gameObjects.get(userId)) {
+      console.log("already exists of the user", msg);
+      return;
+    }
     // Load sprite and wait for completion
     this.load.spritesheet(userId, url, {
       frameWidth: 16,
@@ -196,16 +228,8 @@ export class room extends Scene {
         .setDepth(2)
         .setScale(1.75);
 
-      console.log(
-        "Before adding gameobject",
-        Array.from(this.gameObjects.keys()),
-      );
       this.createAnimations(userId);
       this.gameObjects.set(userId, sprite);
-      console.log(
-        "New producer added to sprites:",
-        Array.from(this.gameObjects.keys()),
-      );
     });
 
     // Start the loading process
@@ -213,15 +237,13 @@ export class room extends Scene {
   }
 
   public addDataConsumer(dataConsumer: types.DataConsumer) {
-    console.log("🎮 Scene: Adding new DataConsumer:", dataConsumer.id);
+    console.log("🎮 Scene: Adding new DataConsumer:", dataConsumer.id,dataConsumer.dataProducerId);
 
     dataConsumer.on("message", (data: any) => {
       try {
         const msg = JSON.parse(data);
-        console.log(`🔗 New DC parsed message:`, msg);
-
         if (msg.type === "playerMovementUpdate") {
-          console.log(`🔗 Handling player movement from new DC:`, msg.payload);
+          console.log("got playermoment update ", msg);
           this.handleRemotePlayerUpdates(msg);
         } else {
           console.log(`🔗 New DC received unknown message type:`, msg.type);
@@ -237,7 +259,6 @@ export class room extends Scene {
     dataConsumer.on("open", () => console.log("✅ New DataConsumer opened"));
 
     this.dataConsumers.push(dataConsumer);
-    console.log(`🔗 Total DataConsumers: ${this.dataConsumers.length}`);
   }
 
   public toggleProximityCircle(radius: number = 150) {
@@ -408,23 +429,31 @@ export class room extends Scene {
       ? `${this.userId}-${dir}-run`
       : `${this.userId}-${dir}-idle`;
 
+    // Always update current position
     const newPos = { posX: this.currentPlayer.x, posY: this.currentPlayer.y };
-    const changed =
-      Math.abs(newPos.posX - this.playerPos.posX) > 5 ||
-      Math.abs(newPos.posY - this.playerPos.posY) > 5;
 
-    if (moving || changed) {
+    // Send update if moving OR if movement state changed OR position changed significantly
+    const positionChanged =
+      Math.abs(newPos.posX - this.playerPos.posX) > 2 ||
+      Math.abs(newPos.posY - this.playerPos.posY) > 2;
+
+    // Store previous moving state
+    const wasMoving = body.velocity.x !== 0 || body.velocity.y !== 0;
+    const movementStateChanged = wasMoving !== moving;
+
+    if (moving || positionChanged || movementStateChanged) {
       this.playerPos = newPos;
-      this.sendUpdates();
+      this.sendUpdates(moving);
     }
 
     this.currentPlayer.play(animKey, true);
   }
 
-  private sendUpdates() {
+  private sendUpdates(isMoving: boolean) {
     const msg = JSON.stringify({
       type: "playerMovementUpdate",
       payload: {
+        isMoving: isMoving,
         playerUserId: this.userId,
         pos: this.playerPos,
         direction: this.currentDirection,
@@ -443,11 +472,12 @@ export class room extends Scene {
       if (dataChannel && dataChannel.readyState === "open") {
         try {
           this.dataProducer.send(msg);
-          console.log("📤 Sent via DataProducer");
+          console.log("sent the update using dataproducer", this.dataProducer);
         } catch (error) {
           console.error("🚨 DataProducer.send failed:", error);
         }
       } else {
+        console.log("data producer", this.dataProducer);
         console.log(
           "⏳ DataProducer channel not open. State:",
           dataChannel?.readyState,
@@ -460,7 +490,6 @@ export class room extends Scene {
   }
 
   private setupDataProducer() {
-    console.log("setupDataproducer reached");
     if (!this.dataProducer) return;
 
     this.dataProducer.on("error", (e) => console.error("🚨 DP error:", e));
@@ -477,23 +506,22 @@ export class room extends Scene {
       dataChannel.addEventListener("open", () => {
         console.log("🔗 DataProducer DataChannel opened!");
       });
+    } else {
+      console.log("Data producer not opened");
     }
   }
 
   private setupInitialDataConsumers() {
     if (this.dataConsumers.length > 0) {
+      console.log("consumers", this.dataConsumers);
       this.dataConsumers.forEach((dataConsumer, index) => {
         if (!dataConsumer.closed) {
           dataConsumer.on("message", (data: any) => {
             try {
               const msg = JSON.parse(data);
-              console.log(`🔗 DC${index} parsed message:`, msg);
-
+              console.log(msg);
               if (msg.type === "playerMovementUpdate") {
-                // console.log(
-                // 	`🔗 Handling player movement from DC${index}:`,
-                // 	msg.payload
-                // );
+                console.log("player moment update", msg);
                 this.handleRemotePlayerUpdates(msg);
               } else {
                 console.log(
@@ -518,20 +546,15 @@ export class room extends Scene {
           );
         }
       });
-
-      console.log(
-        `🔗 Set up ${this.dataConsumers.length} initial DataConsumers`,
-      );
     } else {
       console.log("👤 No initial DataConsumers - likely first player");
     }
   }
 
   private handleRemotePlayerUpdates(msg: any) {
-    console.log("🎮 handleRemotePlayerUpdates called with:", msg);
-
-    const { playerUserId, pos, direction } = msg.payload;
-
+    const { playerUserId, pos, direction, isMoving } = msg.payload;
+    console.log(msg);
+    // console.log("current player",this.currentPlayer);
     if (playerUserId === this.userId) {
       return;
     }
@@ -539,6 +562,7 @@ export class room extends Scene {
     const other = this.gameObjects.get(
       playerUserId,
     ) as Phaser.GameObjects.Sprite;
+    // console.log("moved player",other);
     if (!other) {
       console.log(
         `🎮 No sprite found for client ${playerUserId}. Available sprites:`,
@@ -547,9 +571,12 @@ export class room extends Scene {
       console.log("userid", this.userId);
       return;
     }
-    other.setPosition(pos.posX, pos.posY);
-
-    const key = `${playerUserId}-${direction}-run`;
+    if (isMoving) {
+      other.setPosition(pos.posX, pos.posY);
+    }
+    const key = isMoving
+      ? `${playerUserId}-${direction}-run`
+      : `${playerUserId}-${direction}-idle`;
     if (this.anims.exists(key)) {
       other.play(key, true);
     } else {

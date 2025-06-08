@@ -21,6 +21,7 @@ const RoomType_1 = require("../Models/RoomType");
 const AssetModel_1 = require("../Models/AssetModel");
 const roomHandler_1 = require("../handlers/roomHandler");
 const UserModel_1 = require("../Models/UserModel");
+const mongodb_1 = require("mongodb");
 // Create Room
 function createRoom(roomTypeId, spaceId) {
     return __awaiter(this, void 0, void 0, function* () {
@@ -105,17 +106,19 @@ function getRoomPlayersAvatars(roomId) {
             const room = (0, roomHandler_1.getOrCreateRoom)(roomId);
             const clients = room.clients;
             const clientAvatars = new Map();
-            clients.forEach((client) => __awaiter(this, void 0, void 0, function* () {
+            yield Promise.all(Array.from(clients.values()).map((client) => __awaiter(this, void 0, void 0, function* () {
                 const userId = client.userId;
-                console.log("userId", userId);
-                const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ id: userId });
-                console.log("user", user);
-                const avatarId = user === null || user === void 0 ? void 0 : user.avatarId;
-                const avatar = yield db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ id: avatarId });
-                console.log("avatar", avatarId);
-                clientAvatars.set(client.id, avatar === null || avatar === void 0 ? void 0 : avatar.previewUrl);
-            }));
-            console.log("Client Avatars previewUrl", clientAvatars);
+                const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ clerkId: userId });
+                if (user === null || user === void 0 ? void 0 : user.avatarId) {
+                    const avatarId = user.avatarId;
+                    const avatar = yield db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ _id: new mongodb_1.ObjectId(avatarId) });
+                    clientAvatars.set(userId, (avatar === null || avatar === void 0 ? void 0 : avatar.name) || null);
+                }
+                else {
+                    console.log(`No avatarId found for user ${userId}`);
+                    clientAvatars.set(client.id, null);
+                }
+            })));
             return clientAvatars;
         }
         catch (error) {

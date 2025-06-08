@@ -103,20 +103,72 @@ function startWebsocketServer(server, path = "/ws") {
                     // call your existing helper
                     yield (0, mediaHandler_1.produceData)(client, msg);
                     break;
+                // case "produce":
+                //   await produce(client, msg);
+                //   break;
                 case "joinSpace":
                     yield (0, spaceServices_1.joinSpace)(msg.payload.spaceId, userId);
-                    console.log("Joined space succesfully");
                     break;
                 case "joinRoom":
                     res = yield roomHandler.handleJoinRoom(client, msg);
                     client.sendToSelf({
                         type: "JoinedRoom",
-                        payload: { clientid: clientid }
+                        payload: { clientId: clientid }
                     });
                     break;
                 case "leaveRoom":
                     res = yield roomHandler.handleLeaveRoom(client, msg);
-                    console.log("Left room succesfully", res);
+                    break;
+                case "consumeData":
+                    yield (0, mediaHandler_1.consumeData)(client, msg);
+                    break;
+                case "publicChat":
+                    yield roomHandler.handleChatMessage(client, msg);
+                    break;
+                case "proximityChat":
+                    yield roomHandler.handleProximityChat(client, msg);
+                    break;
+                case "playerMovementUpdate":
+                    const { roomId, playerUserId, pos, direction, isMoving } = msg.payload;
+                    if (!client.roomId || !pos) {
+                        return client.sendToSelf({
+                            type: "error",
+                            payload: "Invalid movement data or not in room"
+                        });
+                    }
+                    // Update position in room
+                    const room = state_1.roomsById.get(client.roomId);
+                    if (room) {
+                        room.playerPositions.set(client.id, pos);
+                        room.dataProducers.forEach((producer, producerId) => {
+                            // Find which client owns this producer
+                            const ownerClient = Array.from(room.clients.values()).find(c => {
+                                // You might need to track which client owns which producer
+                                return true; // For now, broadcast to all
+                            });
+                            if (ownerClient && ownerClient.id !== client.id) {
+                                try {
+                                    producer.send(JSON.stringify({
+                                        type: "playerMovementUpdate",
+                                        payload: {
+                                            isMoving: isMoving,
+                                            playerUserId: playerUserId,
+                                            pos: pos,
+                                            direction: direction,
+                                            timestamp: Date.now()
+                                        }
+                                    }));
+                                }
+                                catch (error) {
+                                    console.log("Error broadcasting via DataProducer:", error);
+                                }
+                            }
+                        });
+                    }
+                    break;
+                //video call handlers 
+                case "produceMedia":
+                    (0, mediaHandler_1.produceMedia)(client, msg);
                     break;
             }
         }));
@@ -130,17 +182,30 @@ function startWebsocketServer(server, path = "/ws") {
         }));
     }));
 }
-// ADD THIS FUNCTION:
+// Update your handleDisconnect function:
 function handleDisconnect(client) {
     return __awaiter(this, void 0, void 0, function* () {
         console.log(`Handling disconnect for client ${client.id}`);
-        // Remove client from room if they were in one
         if (client.roomId) {
             const room = state_1.roomsById.get(client.roomId);
             if (room) {
+                // ✅ CLEAN UP: Close and remove client's DataProducers
+                room.dataProducers.forEach((producer, producerId) => {
+                    var _a;
+                    if (((_a = producer.appData) === null || _a === void 0 ? void 0 : _a.clientId) === client.id) {
+                        producer.close();
+                        room.dataProducers.delete(producerId);
+                        console.log(`Cleaned up DataProducer ${producerId} for disconnected client ${client.id}`);
+                        // ✅ NOTIFY: Tell other clients this producer is gone
+                        room.broadcastMessage(null, {
+                            type: "dataProducerClosed",
+                            payload: { producerId }
+                        });
+                    }
+                });
                 // Remove from clients map
                 room.removeClient(client);
-                // Close any mediasoup transports for this client
+                // Close any transports for this client
                 const transports = Array.from(room.allTransportsById.values()).filter(transport => { var _a; return ((_a = transport.appData) === null || _a === void 0 ? void 0 : _a.clientId) === client.id; });
                 transports.forEach(transport => transport.close());
                 // Close any data consumers for this client
@@ -154,7 +219,6 @@ function handleDisconnect(client) {
                     type: "clientLeft",
                     payload: { clientId: client.id }
                 });
-                console.log(`Client ${client.id} removed from room ${client.roomId}`);
                 // Clean up empty room
                 if (room.isEmpty()) {
                     state_1.roomsById.delete(client.roomId);

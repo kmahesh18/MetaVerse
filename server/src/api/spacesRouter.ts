@@ -103,7 +103,6 @@ spacesRouter.post("/:id/access", async (req, res) => {
 // Join space (Mark user as active)
 spacesRouter.post("/:id/join", async (req, res) => {
   try {
-    console.log("Space router reached");
     const { clerkId } = req.body;
     const spaceId = req.params.id;
 

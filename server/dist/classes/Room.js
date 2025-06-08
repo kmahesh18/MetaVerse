@@ -9,17 +9,19 @@ class Room {
         this.dataProducers = new Map();
         this.dataConsumers = new Map();
         this.playerPositions = new Map();
+        this.mediaConsumers = new Map();
+        this.mediaProducers = new Map();
     }
     addClient(client) {
         this.clients.set(client.id, client);
-        this.playerPositions.set(client, { posX: 0, posY: 0 });
+        this.playerPositions.set(client.id, { posX: 0, posY: 0 });
         console.log(`Client ${client.id} added to room ${this.id}`);
     }
     removeClient(client) {
         if (!this.clients.has(client.id))
             return false;
         this.clients.delete(client.id);
-        this.playerPositions.delete(client);
+        this.playerPositions.delete(client.id);
         console.log(`Client ${client.id} removed from room ${this.id}`);
         return true;
     }

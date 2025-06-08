@@ -17,10 +17,14 @@ exports.JoinRoom = JoinRoom;
 exports.LeaveRoom = LeaveRoom;
 exports.getClerkId = getClerkId;
 exports.getEmail = getEmail;
+exports.getNameByClerkId = getNameByClerkId;
+exports.getUserAvatarName = getUserAvatarName;
+const mongodb_1 = require("mongodb");
 const db_1 = require("../db");
 const UserModel_1 = require("../Models/UserModel");
 const clerk_sdk_node_1 = require("@clerk/clerk-sdk-node");
 const roomHandler_1 = require("../handlers/roomHandler");
+const AssetModel_1 = require("../Models/AssetModel");
 function getUserByClerkId(clerkId) {
     return __awaiter(this, void 0, void 0, function* () {
         const db = yield (0, db_1.getDB)();
@@ -138,6 +142,41 @@ function getEmail(clerkId) {
         catch (Error) {
             console.log("error occured while getting email id by clerk id", Error);
             throw Error;
+        }
+    });
+}
+function getNameByClerkId(clerkId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            // Get email from database
+            const user = yield getUserByClerkId(clerkId);
+            if (user && user.emailId) {
+                // Extract the part before @ as the name
+                const namePart = user.emailId.split('@')[0];
+                return namePart;
+            }
+            else {
+                return "bot";
+            }
+        }
+        catch (error) {
+            console.log("Error occurred while extracting name from email:", error);
+            throw error;
+        }
+    });
+}
+function getUserAvatarName(clerkId) {
+    return __awaiter(this, void 0, void 0, function* () {
+        try {
+            const db = yield (0, db_1.getDB)();
+            const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ clerkId: clerkId });
+            const avatarId = user === null || user === void 0 ? void 0 : user.avatarId;
+            const avatar = yield db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ _id: new mongodb_1.ObjectId(avatarId) });
+            console.log(`clerkId=> ${clerkId} && avatarname=>&${avatar === null || avatar === void 0 ? void 0 : avatar.name}`);
+            return avatar === null || avatar === void 0 ? void 0 : avatar.name;
+        }
+        catch (err) {
+            console.log("Error occured whilee getting avatar using clerkId", err);
         }
     });
 }

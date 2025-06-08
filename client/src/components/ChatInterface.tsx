@@ -1,4 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
+import { BsChat } from "react-icons/bs";
+import { MdPublic, MdWifiTethering, MdSend, MdClose } from "react-icons/md";
+import { IoLocationOutline } from "react-icons/io5";
 
 interface ChatMessage {
 	senderId: string;
@@ -13,12 +16,12 @@ interface ChatMessage {
 interface ChatInterfaceProps {
 	ws: WebSocket;
 	userId: string;
+	onClose?: () => void; // Add this prop for closing
 }
 
-export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
+export function ChatInterface({ ws, userId, onClose }: ChatInterfaceProps) {
 	const [messages, setMessages] = useState<ChatMessage[]>([]);
 	const [inputText, setInputText] = useState("");
-	const [isVisible, setIsVisible] = useState(false);
 	const [chatMode, setChatMode] = useState<"public" | "proximity">("public");
 	const [proximityRadius, setProximityRadius] = useState(150);
 	const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -91,38 +94,25 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 		});
 	};
 
-	if (!isVisible) {
-		return (
-			<div className="chat-toggle-container">
-				<button
-					className="chat-toggle-circle"
-					onClick={() => setIsVisible(true)}
-					title="Open Chat">
-					💬
-				</button>
-			</div>
-		);
-	}
-
 	return (
 		<>
-			{/* Chat Overlay Background */}
-			<div className="chat-overlay" onClick={() => setIsVisible(false)} />
-
-			{/* Chat Sidebar */}
-			<div className="chat-sidebar">
+			<div
+				className="chat-overlay"
+				onClick={onClose} // Use the onClose prop
+			/>
+			<div className="chat-sidebar open">
 				{/* Chat Header */}
 				<div className="chat-header">
 					<div className="chat-header-content">
 						<div className="chat-mode-indicator">
 							{chatMode === "public" ? (
 								<>
-									<span className="chat-icon">🌍</span>
+									<MdPublic className="chat-icon" />
 									<span className="chat-title">Public Chat</span>
 								</>
 							) : (
 								<>
-									<span className="chat-icon">📡</span>
+									<MdWifiTethering className="chat-icon" />
 									<span className="chat-title">Proximity Chat</span>
 									<span className="chat-radius">({proximityRadius}px)</span>
 								</>
@@ -130,9 +120,9 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 						</div>
 						<button
 							className="chat-close-btn"
-							onClick={() => setIsVisible(false)}
+							onClick={onClose} // Use the onClose prop
 							title="Close Chat">
-							✕
+							<MdClose size={22} />
 						</button>
 					</div>
 				</div>
@@ -142,7 +132,7 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 					<button
 						className={`chat-mode-btn ${chatMode === "public" ? "active" : ""}`}
 						onClick={() => setChatMode("public")}>
-						<span className="mode-icon">🌍</span>
+						<MdPublic className="mode-icon" />
 						<span>Public</span>
 					</button>
 					<button
@@ -150,7 +140,7 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 							chatMode === "proximity" ? "active" : ""
 						}`}
 						onClick={() => setChatMode("proximity")}>
-						<span className="mode-icon">📡</span>
+						<IoLocationOutline className="mode-icon" />
 						<span>Nearby</span>
 					</button>
 				</div>
@@ -180,7 +170,7 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 				<div className="chat-messages-container">
 					{messages.length === 0 ? (
 						<div className="chat-empty-state">
-							<div className="empty-icon">💭</div>
+							<BsChat className="empty-icon" size={48} />
 							<p>No messages yet</p>
 							<p>Start a conversation!</p>
 						</div>
@@ -199,7 +189,7 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 									<span className="sender-name">{msg.senderName}</span>
 									<div className="message-meta">
 										{msg.type === "proximity" && (
-											<span className="proximity-badge">📡</span>
+											<IoLocationOutline className="proximity-badge" />
 										)}
 										<span className="message-time">
 											{formatTime(msg.timestamp)}
@@ -234,7 +224,7 @@ export function ChatInterface({ ws, userId }: ChatInterfaceProps) {
 								className="send-button"
 								disabled={!inputText.trim()}
 								title="Send message">
-								<span className="send-icon">➤</span>
+								<MdSend className="send-icon" />
 							</button>
 						</div>
 					</form>

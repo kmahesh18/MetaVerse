@@ -15,7 +15,6 @@ function handleAuthentication(client) {
     return __awaiter(this, void 0, void 0, function* () {
         // This case should only run if client is NOT already authenticated
         if (client.isAuthenticated) {
-            console.warn(`Client ${client.userId} sent authenticate message again.`);
             return; // Or send an error
         }
         const userId = client.userId;

@@ -9,7 +9,7 @@ import { roomsById } from "../state/state";
 import http from "http";
 import { mediasoupRouter } from "../mediasoup/setup";
 import { joinSpace } from "../services/spaceServices";
-import { createWebRtcTransport,produceData,consumeData, connectWebRtcTransport } from "./mediaHandler";
+import { createWebRtcTransport,produceData,consumeData, connectWebRtcTransport, produceMedia } from "./mediaHandler";
 
 export function startWebsocketServer(server: http.Server, path = "/ws") {
   const wss = new WebSocketServer({ server, path });
@@ -23,8 +23,7 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
     }
     //we make a client obj for each user
     const clientid = uuidv4().toString();
-    const client = new Client(clientid, ws);
-    client.userId = userId;
+    const client = new Client(clientid,userId, ws);
     ws.on("message", async (raw) => {
       let msg;
       try {
@@ -61,13 +60,17 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
           break;
           
         case "produceData":
-              // call your existing helper
-              await produceData(client, msg);
-              break;
+            // call your existing helper
+            await produceData(client, msg);
+            break;
+              
+        // case "produce":
+        //   await produce(client, msg);
+        //   break;
+            
 
         case "joinSpace":
           await joinSpace(msg.payload.spaceId, userId);
-          console.log("Joined space succesfully");
           break;
           
           
@@ -80,11 +83,9 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
           break;
         case "leaveRoom":
           res = await roomHandler.handleLeaveRoom(client, msg);
-          console.log("Left room succesfully", res);
           break;
 
         case "consumeData":
-          console.log("ws reached for consumeData");
           await consumeData(client, msg);
           break;
           
@@ -97,7 +98,7 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
           break;
           
         case "playerMovementUpdate":
-          const { roomId,playerUserId, pos, direction } = msg.payload;
+          const { roomId,playerUserId, pos, direction,isMoving} = msg.payload;
           
           if (!client.roomId || !pos) {
             return client.sendToSelf({
@@ -109,7 +110,11 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
           // Update position in room
           const room = roomsById.get(client.roomId);
           if (room) {
-            room.playerPositions.set(client.id, pos);
+            if(!client.userId){
+              console.log("error at player moment update");
+              return;
+            }
+            room.playerPositions.set(client.userId, pos);
             
             room.dataProducers.forEach((producer, producerId) => {
               // Find which client owns this producer
@@ -118,11 +123,12 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
                 return true; // For now, broadcast to all
               });
               
-              if (ownerClient && ownerClient.id !== client.id) {
+              if (ownerClient && ownerClient.userId !== client.userId) {
                 try {
                   producer.send(JSON.stringify({
                     type: "playerMovementUpdate",
                     payload: {
+                      isMoving: isMoving,
                       playerUserId:playerUserId,
                       pos: pos,
                       direction: direction,
@@ -136,6 +142,13 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
             });
           }
           break;
+          
+          
+        //video call handlers 
+        
+        case "produceMedia":
+          produceMedia(client, msg);
+          break;
       }
     });
     
@@ -145,7 +158,7 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
     })
     
     ws.on("error", async (error) => {
-        console.error(`WebSocket error for client ${client.id}:`, error);
+        console.error(`WebSocket error for client ${client.userId}:`, error);
         await handleDisconnect(client);
       });
   });
@@ -154,17 +167,21 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 // Update your handleDisconnect function:
 
 async function handleDisconnect(client: Client): Promise<void> {
-  console.log(`Handling disconnect for client ${client.id}`);
+  console.log(`Handling disconnect for client ${client.userId}`);
   
   if (client.roomId) {
     const room = roomsById.get(client.roomId);
     if (room) {
-      // ✅ CLEAN UP: Close and remove client's DataProducers
+      // ✅ CLEAN UP: Close and remove client's DataProducer
+      room.broadcastMessage(null, {
+        type: "clientLeft",
+        payload: { clientId: client.userId }
+      });
       room.dataProducers.forEach((producer, producerId) => {
-        if ((producer as any).appData?.clientId === client.id) {
+        if ((producer as any).appData?.clientId === client.userId) {
           producer.close();
           room.dataProducers.delete(producerId);
-          console.log(`Cleaned up DataProducer ${producerId} for disconnected client ${client.id}`);
+          console.log(`Cleaned up DataProducer ${producerId} for disconnected client ${client.userId}`);
           
           // ✅ NOTIFY: Tell other clients this producer is gone
           room.broadcastMessage(null, {
@@ -179,22 +196,23 @@ async function handleDisconnect(client: Client): Promise<void> {
       
       // Close any transports for this client
       const transports = Array.from(room.allTransportsById.values()).filter(
-        transport => transport.appData?.clientId === client.id
+        transport => transport.appData?.clientId === client.userId
       );
       transports.forEach(transport => transport.close());
       
       // Close any data consumers for this client
-      const consumers = room.dataConsumers.get(client.id);
+      if(!client.userId){
+        console.log("userId not found at handleDisonnect in wshandler");
+        return;
+      }
+      const consumers = room.dataConsumers.get(client.userId);
       if (consumers) {
         consumers.forEach(consumer => consumer.close());
-        room.dataConsumers.delete(client.id);
+        room.dataConsumers.delete(client.userId);
       }
       
       // Notify other clients that this client left
-      room.broadcastMessage(null, {
-        type: "clientLeft",
-        payload: { clientId: client.id }
-      });
+
       
       // Clean up empty room
       if (room.isEmpty()) {

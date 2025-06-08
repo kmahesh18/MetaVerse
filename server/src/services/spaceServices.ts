@@ -152,7 +152,6 @@ export async function joinSpace(spaceId: string, clerkId: string) {
       { $set: { spaceId: spaceId } } // Fix: Use $set operator
     );
 
-    console.log(`User ${clerkId} joined space ${spaceId}`);
     return clerkId;
 
   } catch (error) {
