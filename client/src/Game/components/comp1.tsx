@@ -32,11 +32,6 @@ const GameComponent: React.FC = () => {
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
 	const phaserStartedRef = useRef(false);
 
-	// //videocall ref's
-	// const videoProducerRef = useRef<any>(null);
-	// const audioProducerRef = useRef<any>(null);
-	// const videoConsumerRef = useRef<any>(null);
-	// const audioConsumerRef = useRef<any>(null);
 
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
@@ -100,11 +95,10 @@ const GameComponent: React.FC = () => {
 						iceCandidates,
 						dtlsParameters,
 						sctpParameters,
-						iceServers: [
-							{ urls: "stun:stun.l.google.com:19302" },
-							{ urls: "stun:stun1.l.google.com:19302" },
-						],
 					});
+
+					// ✅ ENABLE: Client-side ICE monitoring
+					monitorICEConnection(sendTransportRef.current, "Send");
 
 					sendTransportRef.current.on(
 						"connect",
@@ -192,18 +186,16 @@ const GameComponent: React.FC = () => {
 						sctpParameters,
 					} = msg.payload;
 
-
 					recvTransportRef.current = deviceRef.current!.createRecvTransport({
 						id,
 						iceParameters,
 						iceCandidates,
 						dtlsParameters,
 						sctpParameters,
-						iceServers: [
-							{ urls: "stun:stun.l.google.com:19302" },
-							{ urls: "stun:stun1.l.google.com:19302" },
-						],
 					});
+
+					// ✅ ENABLE: Client-side ICE monitoring
+					monitorICEConnection(recvTransportRef.current, "Recv");
 
 					recvTransportRef.current.on(
 						"connect",
@@ -219,6 +211,19 @@ const GameComponent: React.FC = () => {
 					);
 				}
 
+				// ✅ NEW: Handle server ICE/DTLS state updates
+				if (msg.type === "transportIceStateChange") {
+					// console.log(
+					// 	`🧊 Server ICE state: ${msg.payload.iceState} for transport ${msg.payload.transportId}`
+					// );
+				}
+
+				if (msg.type === "transportDtlsStateChange") {
+					// console.log(
+					// 	`🔒 Server DTLS state: ${msg.payload.dtlsState} for transport ${msg.payload.transportId}`
+					// );
+				}
+
 				// ✅ HANDLE: New DataProducers from other players
 				if (msg.type === "newDataProducer") {
 					const { producerId } = msg.payload;
@@ -227,7 +232,7 @@ const GameComponent: React.FC = () => {
 							JSON.stringify({
 								type: "consumeData",
 								payload: {
-									producerId:producerId,
+									producerId: producerId,
 									transportId: recvTransportRef.current.id,
 								},
 							})
@@ -245,7 +250,8 @@ const GameComponent: React.FC = () => {
 
 				// ✅ HANDLE: DataConsumer creation
 				if (msg.type === "dataConsumerCreated") {
-					const { id, producerId, sctpStreamParameters, label, protocol } =msg.payload;
+					const { id, producerId, sctpStreamParameters, label, protocol } =
+						msg.payload;
 					const dataConsumer = await recvTransportRef.current!.consumeData({
 						id,
 						dataProducerId: producerId,
@@ -274,6 +280,28 @@ const GameComponent: React.FC = () => {
 							await createPhaserGame();
 						}
 					}, 1000);
+				}
+
+				// ✅ NEW: Handle ICE restart response
+				if (msg.type === "iceRestarted") {
+					const { transportId, iceParameters } = msg.payload;
+
+					// Find the transport and restart ICE with new parameters
+					const transport =
+						transportId === sendTransportRef.current?.id
+							? sendTransportRef.current
+							: recvTransportRef.current;
+
+					if (transport) {
+						try {
+							await transport.restartIce({ iceParameters });
+							// console.log(
+							// 	`🔄 ICE restarted successfully for transport ${transportId}`
+							// );
+						} catch (error) {
+							console.error(`❌ ICE restart failed:`, error);
+						}
+					}
 				}
 
 				console.log(msg);
@@ -339,64 +367,80 @@ const GameComponent: React.FC = () => {
 		};
 	}, [spaceId, roomId, userid]);
 
-	// Add this function to monitor ICE connection state
-	// function monitorICEConnection(
-	// 	transport: types.Transport,
-	// 	transportType: string
-	// ) {
-	// 	let iceGatheringComplete = false;
-	// 	let connectionTimeout: NodeJS.Timeout;
+	function monitorICEConnection(
+		transport: types.Transport,
+		transportType: string
+	) {
+		let iceGatheringComplete = false;
+		let connectionTimeout: NodeJS.Timeout;
 
-	// 	// Monitor ICE gathering
-	// 	transport.on("icegatheringstatechange", () => {
-	// 		console.log(
-	// 			`📡 ${transportType} ICE gathering state:`,
-	// 			transport.iceGatheringState
-	// 		);
-	// 		if (transport.iceGatheringState === "complete") {
-	// 			iceGatheringComplete = true;
-	// 			console.log(`✅ ${transportType} ICE gathering completed`);
-	// 		}
-	// 	});
+		// Monitor ICE gathering
+		transport.on("icegatheringstatechange", () => {
+			if (transport.iceGatheringState === "complete") {
+				iceGatheringComplete = true;
+				// console.log(`✅ ${transportType} ICE gathering completed`);
+			}
+		});
 
-	// 	// Monitor connection state
-	// 	transport.on("connectionstatechange", () => {
-	// 		console.log(
-	// 			`🔗 ${transportType} connection state:`,
-	// 			transport.connectionState
-	// 		);
+		// Monitor connection state
+		transport.on("connectionstatechange", () => {
+			if (transport.connectionState === "connected") {
+				// console.log(`✅ ${transportType} WebRTC connected!`);
+				if (connectionTimeout) clearTimeout(connectionTimeout);
+			} else if (transport.connectionState === "failed") {
+				console.error(`❌ ${transportType} WebRTC connection failed!`);
+				console.error(`ICE gathering complete: ${iceGatheringComplete}`);
+				console.error(`Current ICE state: ${transport.iceConnectionState}`);
+				if (connectionTimeout) clearTimeout(connectionTimeout);
 
-	// 		if (transport.connectionState === "connected") {
-	// 			console.log(`✅ ${transportType} WebRTC connected!`);
-	// 			if (connectionTimeout) clearTimeout(connectionTimeout);
-	// 		} else if (transport.connectionState === "failed") {
-	// 			console.error(`❌ ${transportType} WebRTC connection failed!`);
-	// 			if (connectionTimeout) clearTimeout(connectionTimeout);
-	// 		}
-	// 	});
+				
+				wsRef.current?.send(
+					JSON.stringify({
+						type: "restartIce",
+						payload: {
+							transportId: transport.id,
+							transportType: transportType,
+						},
+					})
+				);
+			}
+		});
 
-	// 	// Set a timeout for connection
-	// 	connectionTimeout = setTimeout(() => {
-	// 		if (transport.connectionState !== "connected") {
-	// 			console.error(
-	// 				`⏰ ${transportType} connection timeout after 30 seconds`
-	// 			);
-	// 			console.log(`Current state: ${transport.connectionState}`);
-	// 			console.log(`ICE gathering complete: ${iceGatheringComplete}`);
-	// 		}
-	// 	}, 30000);
-	// }
+		// Set a timeout for connection
+		connectionTimeout = setTimeout(() => {
+			if (transport.connectionState !== "connected") {
+				console.error(
+					`⏰ ${transportType} connection timeout after 30 seconds`
+				);
+				console.log(`Current state: ${transport.connectionState}`);
+				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
+				console.log(`ICE connection state: ${transport.iceConnectionState}`);
+
+				
+				wsRef.current?.send(
+					JSON.stringify({
+						type: "restartIce",
+						payload: {
+							transportId: transport.id,
+							transportType: transportType,
+						},
+					})
+				);
+			}
+		}, 30000);
+	}
 
 	return (
 		<>
 			<div ref={containerRef} id="game-container">
 				{/* Show components based on state */}
-				 
-					<VideoInterface
-						sendTransport={sendTransportRef.current}
-						recvTransport={recvTransportRef.current}// Add this
-						ws ={wsRef.current}
-						clientId={clientIdRef.current}/>
+
+				<VideoInterface
+					sendTransport={sendTransportRef.current}
+					recvTransport={recvTransportRef.current} // Add this
+					ws={wsRef.current}
+					clientId={clientIdRef.current}
+				/>
 				{showChat && wsRef.current && (
 					<ChatInterface
 						ws={wsRef.current}
