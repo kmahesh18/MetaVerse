@@ -37,43 +37,43 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		// ],
 	});
 
-	// ✅ ENABLE: Server-side transport monitoring
-	transport.on("icestatechange", (iceState) => {
-		console.log(
-			`🧊 Transport ${transport.id} ICE state changed to: ${iceState}`
-		);
+	// // ✅ ENABLE: Server-side transport monitoring
+	// transport.on("icestatechange", (iceState) => {
+	// 	console.log(
+	// 		`🧊 Transport ${transport.id} ICE state changed to: ${iceState}`
+	// 	);
 
-		// Notify client of ICE state changes
-		client.sendToSelf({
-			type: "transportIceStateChange",
-			payload: { transportId: transport.id, iceState },
-		});
-	});
+	// 	// Notify client of ICE state changes
+	// 	client.sendToSelf({
+	// 		type: "transportIceStateChange",
+	// 		payload: { transportId: transport.id, iceState },
+	// 	});
+	// });
 
-	transport.on("iceselectedtuplechange", (iceSelectedTuple) => {
-		console.log(
-			`🎯 Transport ${transport.id} ICE selected tuple:`,
-			iceSelectedTuple
-		);
-	});
+	// transport.on("iceselectedtuplechange", (iceSelectedTuple) => {
+	// 	console.log(
+	// 		`🎯 Transport ${transport.id} ICE selected tuple:`,
+	// 		iceSelectedTuple
+	// 	);
+	// });
 
-	transport.on("dtlsstatechange", (dtlsState) => {
-		console.log(
-			`🔒 Transport ${transport.id} DTLS state changed to: ${dtlsState}`
-		);
+	// transport.on("dtlsstatechange", (dtlsState) => {
+	// 	console.log(
+	// 		`🔒 Transport ${transport.id} DTLS state changed to: ${dtlsState}`
+	// 	);
 
-		// Notify client of DTLS state changes
-		client.sendToSelf({
-			type: "transportDtlsStateChange",
-			payload: { transportId: transport.id, dtlsState },
-		});
-	});
+	// 	// Notify client of DTLS state changes
+	// 	client.sendToSelf({
+	// 		type: "transportDtlsStateChange",
+	// 		payload: { transportId: transport.id, dtlsState },
+	// 	});
+	// });
 
-	transport.on("sctpstatechange", (sctpState) => {
-		console.log(
-			`📦 Transport ${transport.id} SCTP state changed to: ${sctpState}`
-		);
-	});
+	// transport.on("sctpstatechange", (sctpState) => {
+	// 	console.log(
+	// 		`📦 Transport ${transport.id} SCTP state changed to: ${sctpState}`
+	// 	);
+	// });
 
 	msRoom.allTransportsById.set(transport.id, transport);
 
@@ -271,7 +271,7 @@ export async function consumeData(client: Client, message: any) {
 
 //mediaproducer for video calls;
 export async function produceMedia(client: Client, msg: any) {
-	console.log("reached produce media with details", msg);
+	// console.log("reached produce media with details", msg);
 	if (!client.userId || !client.roomId) {
 		return client.sendToSelf({
 			type: "error",
@@ -334,7 +334,8 @@ export async function produceMedia(client: Client, msg: any) {
 
 
 export async function consumeMedia(client: Client, msg: any) {
-	const { producerId, transportId,rtpCapabilities } = msg.payload;
+  // console.log("reached consume media",msg)
+	const { producerId, transportId,rtpCapabilities,userId,avatarName} = msg.payload;
 	if (!client.roomId) {
 		console.log("User not in room");
 		return;
@@ -360,7 +361,7 @@ export async function consumeMedia(client: Client, msg: any) {
 
 	const mediaConsumer = await transport.consume({
 		producerId: producer.id,
-		rtpCapabilities:msg.rtpCapabilities,
+		rtpCapabilities:rtpCapabilities
 	});
 
 	if (!msRoom.mediaConsumers.has(client.userId)) {
@@ -373,6 +374,8 @@ export async function consumeMedia(client: Client, msg: any) {
 		payload: {
 			id: mediaConsumer.id,
 			producerId: producer.id,
+			userId:userId,
+			avatarName:avatarName,
 			kind: mediaConsumer.kind,
 			appData: mediaConsumer.appData,
 			rtpParameters: mediaConsumer.rtpParameters,

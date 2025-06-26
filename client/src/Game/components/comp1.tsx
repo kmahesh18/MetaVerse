@@ -33,6 +33,7 @@ const GameComponent: React.FC = () => {
 	const phaserStartedRef = useRef(false);
 
 
+
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
 		try {
@@ -439,6 +440,7 @@ const GameComponent: React.FC = () => {
 					sendTransport={sendTransportRef.current}
 					recvTransport={recvTransportRef.current} // Add this
 					ws={wsRef.current}
+					device={deviceRef.current}
 					clientId={clientIdRef.current}
 				/>
 				{showChat && wsRef.current && (

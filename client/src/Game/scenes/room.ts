@@ -64,38 +64,7 @@ export class room extends Scene {
       console.warn("no ws connection found ");
       return;
     }
-    // if (this.ws) {
-    //   this.ws.onmessage = async(event: MessageEvent) => {
-    //     const msg = JSON.parse(event.data);
-    //     console.log(msg);
-    //     if(msg.type=="newDataProducer"){
-    //       this.handleNewDataProducer(msg);
-    //     }
-    //     else if (msg.type === "dataConsumerCreated"){
-    //       const { id, producerId, sctpStreamParameters, label, protocol } =msg.payload;
-    //       if(!this.recvTransport){
-    //         console.log("recv transport missing");
-    //         return;
-    //       }
-				// 	const dataConsumer = await this.recvTransport.consumeData({
-				// 		id,
-				// 		dataProducerId: producerId,
-				// 		sctpStreamParameters,
-				// 		label,
-				// 		protocol,
-				// 	});
-     
-    //       this.addDataConsumer(dataConsumer);
-    //     }
-    //     else if (msg.type === "clientLeft") {
-    //       console.log(this.gameObjects);
-    //       this.gameObjects.delete(msg.clientId);
-    //       console.log(this.gameObjects)
-    //       console.log("deleted");
-    //     }
-        
-    //   };
-    // }
+ 
     console.log("🎮 Room init:", {
       userId: this.userId,
       clientId: this.clientId,
@@ -237,7 +206,7 @@ export class room extends Scene {
   }
 
   public addDataConsumer(dataConsumer: types.DataConsumer) {
-    console.log("🎮 Scene: Adding new DataConsumer:", dataConsumer.id,dataConsumer.dataProducerId);
+    // console.log("🎮 Scene: Adding new DataConsumer:", dataConsumer.id,dataConsumer.dataProducerId);
 
     dataConsumer.on("message", (data: any) => {
       try {
@@ -472,7 +441,6 @@ export class room extends Scene {
       if (dataChannel && dataChannel.readyState === "open") {
         try {
           this.dataProducer.send(msg);
-          console.log("sent the update using dataproducer", this.dataProducer);
         } catch (error) {
           console.error("🚨 DataProducer.send failed:", error);
         }
@@ -521,7 +489,6 @@ export class room extends Scene {
               const msg = JSON.parse(data);
               console.log(msg);
               if (msg.type === "playerMovementUpdate") {
-                console.log("player moment update", msg);
                 this.handleRemotePlayerUpdates(msg);
               } else {
                 console.log(

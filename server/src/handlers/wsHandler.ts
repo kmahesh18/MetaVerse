@@ -77,9 +77,6 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 					await restartIce(client, msg);
 					break;
 
-				// case "produce":
-				//   await produce(client, msg);
-				//   break;
 
 				case "joinSpace":
 					await joinSpace(msg.payload.spaceId, userId);
@@ -230,6 +227,20 @@ async function handleDisconnect(client: Client): Promise<void> {
 				consumers.forEach((consumer) => consumer.close());
 				room.dataConsumers.delete(client.userId);
 			}
+			
+			
+			room.mediaProducers?.forEach((producer, producerId) => {
+    if ((producer as any).appData?.clientId === client.userId) {
+      producer.close();
+      room.mediaProducers!.delete(producerId);
+      console.log(`🗑️ Cleaned up MediaProducer ${producerId} for ${client.userId}`);
+      // notify the others so they can remove that box
+      room.broadcastMessage(null, {
+        type: "mediaProducerClosed",
+        payload: { producerId },
+      });
+    }
+  });
 
 			// Notify other clients that this client left
 
