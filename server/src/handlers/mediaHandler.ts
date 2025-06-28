@@ -21,7 +21,11 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		listenIps: [
 			{
 				ip: "0.0.0.0",
-				announcedIp: process.env.ANNOUNCED_IP || "127.0.0.1",
+				// ✅ FIX: Use environment variable for announced IP
+				announcedIp:
+					process.env.ANNOUNCED_IP ||
+					process.env.RENDER_EXTERNAL_URL?.replace(/^https?:\/\//, "") ||
+					"127.0.0.1",
 			},
 		],
 		enableTcp: true,
@@ -29,12 +33,8 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		preferUdp: true,
 		enableSctp: true,
 		numSctpStreams: { OS: 1024, MIS: 1024 },
-		// ❌ REMOVE: Custom ICE servers - this was causing the "stuck at connecting" issue
-		// iceServers: [
-		// 	{
-		// 		urls: ["stun:stun.l.google.com:19302"],
-		// 	},
-		// ],
+		// ✅ ADD: Additional configuration for production
+		initialAvailableOutgoingBitrate: 1000000,
 	});
 
 	// ✅ ENABLE: Server-side transport monitoring
@@ -281,8 +281,8 @@ export async function produceMedia(client: Client, msg: any) {
 	const { transportId, rtpParameters, kind } = msg.payload;
 	const msRoom = roomsById.get(client.roomId)!;
 	const transport = msRoom.allTransportsById.get(transportId);
-  let producerId = "";
-	
+	let producerId = "";
+
 	if (!transport) {
 		console.log("transport not found");
 		return client.sendToSelf({
@@ -292,25 +292,23 @@ export async function produceMedia(client: Client, msg: any) {
 	}
 
 	const existingProducer = msRoom.mediaProducers.get(client.userId);
-  console.log(existingProducer);
+	console.log(existingProducer);
 
-  if (existingProducer) {
-    console.log(
-      `Client ${client.userId} already has meida producer ${existingProducer.id}`
-    );
-    producerId = existingProducer.id;
-  }
-  else {
-
-    const producer = await transport.produce({
-      rtpParameters,
-      kind,
-      appData: { clientId: client.userId },
-    });
-    producerId = producer.id;
-    console.log("media producer created with details", producer.id);
-    msRoom.mediaProducers.set(client.userId, producer);
-  }
+	if (existingProducer) {
+		console.log(
+			`Client ${client.userId} already has meida producer ${existingProducer.id}`
+		);
+		producerId = existingProducer.id;
+	} else {
+		const producer = await transport.produce({
+			rtpParameters,
+			kind,
+			appData: { clientId: client.userId },
+		});
+		producerId = producer.id;
+		console.log("media producer created with details", producer.id);
+		msRoom.mediaProducers.set(client.userId, producer);
+	}
 	client.sendToSelf({
 		type: "mediaProducerCreated",
 		payload: { producerId: producerId },
@@ -332,9 +330,8 @@ export async function produceMedia(client: Client, msg: any) {
 	});
 }
 
-
 export async function consumeMedia(client: Client, msg: any) {
-	const { producerId, transportId,rtpCapabilities } = msg.payload;
+	const { producerId, transportId, rtpCapabilities } = msg.payload;
 	if (!client.roomId) {
 		console.log("User not in room");
 		return;
@@ -360,7 +357,7 @@ export async function consumeMedia(client: Client, msg: any) {
 
 	const mediaConsumer = await transport.consume({
 		producerId: producer.id,
-		rtpCapabilities:msg.rtpCapabilities,
+		rtpCapabilities: msg.rtpCapabilities,
 	});
 
 	if (!msRoom.mediaConsumers.has(client.userId)) {
@@ -379,12 +376,6 @@ export async function consumeMedia(client: Client, msg: any) {
 		},
 	});
 }
-
-
-
-
-
-
 
 // ✅ NEW: Handle ICE restart requests
 export async function restartIce(client: Client, message: any) {

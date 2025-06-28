@@ -13,7 +13,6 @@ import { createMediasoupWorker } from "./mediasoup/setup";
 
 
 async function main(){
-
   dotenv.config();
   
   await createMediasoupWorker();
@@ -23,9 +22,30 @@ async function main(){
   // Attach WS to the HTTP server
   startWebsocketServer(server);
   
-  // Middleware
-  app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
+  // ✅ ENHANCED: CORS configuration for production
+  const corsOptions = {
+    origin: [
+      process.env.CLIENT_URL || "*",
+      process.env.FRONTEND_URL || "*", 
+      "http://localhost:5173",
+      "http://localhost:3000",
+      "https://metaverse-three-indol.vercel.app"
+    ],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+  };
+  
+  app.use(cors(corsOptions));
   app.use(express.json());
+  
+  // ✅ ADD: Health check for WebSocket
+  app.get("/ws-health", (req, res) => {
+    res.json({ 
+      status: "WebSocket server running",
+      timestamp: new Date().toISOString()
+    });
+  });
   
   // API routes
   app.use("/api/user", userRouter);

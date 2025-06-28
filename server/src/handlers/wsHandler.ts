@@ -20,15 +20,31 @@ import {
 } from "./mediaHandler";
 
 export function startWebsocketServer(server: http.Server, path = "/ws") {
-	const wss = new WebSocketServer({ server, path });
+	const wss = new WebSocketServer({
+		server,
+		path,
+		// ✅ ADD: Better configuration for production
+		perMessageDeflate: false,
+		maxPayload: 1024 * 1024, // 1MB
+	});
+
+	console.log(`🚀 WebSocket server started on path: ${path}`);
+
 	wss.on("connection", async (ws, req) => {
+		console.log(`🔗 New WebSocket connection from: ${req.socket.remoteAddress}`);
+
 		const url = req.url || " ";
 		const fullUrl = new URL(url, `http://${req.headers.host}`);
 		const userId = decodeURI(fullUrl.searchParams.get("userId") || "");
+
 		if (userId.length == 0) {
-			console.log("NO userid found check again");
+			console.log("❌ NO userid found in WebSocket connection");
+			ws.close(1008, "User ID required");
 			return;
 		}
+
+		console.log(`✅ WebSocket connected for user: ${userId}`);
+
 		//we make a client obj for each user
 		const clientid = uuidv4().toString();
 		const client = new Client(clientid, userId, ws);
@@ -164,21 +180,32 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 				case "produceMedia":
 					produceMedia(client, msg);
 					break;
-        case "consumeMedia":
-          consumeMedia(client, msg);
-          break;
+				case "consumeMedia":
+					consumeMedia(client, msg);
+					break;
 			}
 		});
 
-		ws.on("close", async () => {
+		ws.on("error", async (error) => {
+			console.error(`🚨 WebSocket error for client ${client.userId}:`, error);
 			await handleDisconnect(client);
-			console.log("Client disconnect succesfully");
 		});
 
-		ws.on("error", async (error) => {
-			console.error(`WebSocket error for client ${client.userId}:`, error);
+		ws.on("close", async (code, reason) => {
+			console.log(
+				`🔌 WebSocket disconnected for user ${client.userId}. Code: ${code}, Reason: ${reason}`
+			);
 			await handleDisconnect(client);
 		});
+	});
+
+	// ✅ ADD: WebSocket server error handling
+	wss.on("error", (error) => {
+		console.error("🚨 WebSocket Server Error:", error);
+	});
+
+	wss.on("listening", () => {
+		console.log("🎧 WebSocket server is listening");
 	});
 }
 
