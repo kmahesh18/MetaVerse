@@ -16,7 +16,7 @@ export function AvatarSelection() {
     const fetchAvatars = async () => {
       try {
         // Change the endpoint to fetch only avatar assets
-        const response = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/assets/avatars`);
+        const response = await fetch(`https://metaverse.onrender.com/api/assets/avatars`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("Failed to fetch avatars:", errorData);
@@ -43,7 +43,7 @@ export function AvatarSelection() {
       setError(null);
 
       // Use the PATCH endpoint to update the avatar
-      const userResponse = await fetch(`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${user.id}/avatar`, {
+      const userResponse = await fetch(`https://metaverse.onrender.com/api/user/${user.id}/avatar`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'

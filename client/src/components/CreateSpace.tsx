@@ -20,7 +20,7 @@ export function CreateSpace() {
       try {
         setLoading(true);
         // Update to use the backend port from environment variables
-        const response = await axios.get(`http://localhost:${import.meta.env.VITE_BKPORT}/api/roomtypes`);
+        const response = await axios.get(`https://metaverse.onrender.com/api/roomtypes`);
         
         // Make sure we're getting an array back
         if (Array.isArray(response.data)) {
@@ -67,7 +67,7 @@ export function CreateSpace() {
     setError(null);
 
     try {
-      const response = await axios.post(`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces`, {
+      const response = await axios.post(`https://metaverse.onrender.com/api/spaces`, {
         adminid: user.id,
         selectedRoomTypes: selectedRoomTypes
       });

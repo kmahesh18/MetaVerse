@@ -35,13 +35,11 @@ export function Homepage() {
 			if (isSignedIn && user) {
 				try {
 					const response = await fetch(
-						`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${
-							user.id
-						}`
+						`https://metaverse.onrender.com/api/user/${user.id}`
 					);
 					if (!response.ok) {
 						const createResponse = await fetch(
-							`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`,
+							`https://metaverse.onrender.com/api/user`,
 							{
 								method: "POST",
 								headers: { "Content-Type": "application/json" },
