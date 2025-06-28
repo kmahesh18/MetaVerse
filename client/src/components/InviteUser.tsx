@@ -28,7 +28,7 @@ export function InviteUser() {
       if (!user || !spaceId) return;
 
       try {
-        const response = await axios.get(`https://metaverse.onrender.com/api/spaces/${spaceId}`);
+        const response = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
         const data = response.data;
         setSpaceDetails(data);
         
@@ -78,7 +78,7 @@ export function InviteUser() {
         ...prev
       ]);
 
-      const response = await axios.post(`https://metaverse.onrender.com/api/spaces/${spaceId}/access`, {
+      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/access`, {
         adminId: user.id,
         emailId: email
       });
@@ -98,7 +98,7 @@ export function InviteUser() {
       setEmail("");
 
       // Fetch updated space details to show the new user
-      const updatedSpace = await axios.get(`https://metaverse.onrender.com/api/spaces/${spaceId}`);
+      const updatedSpace = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
       setSpaceDetails(updatedSpace.data);
     } catch (err) {
       console.error("Error inviting user:", err);

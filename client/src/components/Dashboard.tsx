@@ -19,12 +19,12 @@ export function Dashboard() {
   const fetchUserData = useCallback(async () => {
     if (!user) return null;
     try {
-      const response = await fetch(`https://metaverse.onrender.com/api/user/${user.id}`);
+      const response = await fetch(`${import.meta.env.VITE_BKPORT}/api/user/${user.id}`);
       if (response.status === 404) {
         try {
           const primaryEmail = user.emailAddresses[0].emailAddress || '';
           // console.log("Creating user with email:", primaryEmail);
-          const createUserResponse = await fetch(`https://metaverse.onrender.com/api/user`, {
+          const createUserResponse = await fetch(`${import.meta.env.VITE_BKPORT}/api/user`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -59,7 +59,7 @@ export function Dashboard() {
   const fetchAccessibleSpaces = useCallback(async () => {
     if (!user) return [];
     try {
-      const response = await fetch(`https://metaverse.onrender.com/api/user/${user.id}/spaces`);
+      const response = await fetch(`${import.meta.env.VITE_BKPORT}/api/user/${user.id}/spaces`);
       if (!response.ok) {
         console.warn("Could not fetch accessible spaces:", response.status);
         return [];
@@ -71,7 +71,7 @@ export function Dashboard() {
       }
       const spaceDetailsPromises = accessibleSpaceIds.map(async (spaceId) => {
         try {
-          const spaceResponse = await fetch(`https://metaverse.onrender.com/api/spaces/${spaceId}`);
+          const spaceResponse = await fetch(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
           if (!spaceResponse.ok) {
             console.warn(`Failed to fetch details for space ${spaceId}: ${spaceResponse.status}`);
             return null;
@@ -160,7 +160,7 @@ export function Dashboard() {
       
       if (isActive) {
         // User is already active, navigate directly to the room
-        const spaceResponse = await axios.get(`https://metaverse.onrender.com/api/spaces/${spaceId}`);
+        const spaceResponse = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
         const spaceData = spaceResponse.data;
         
         if (!spaceData.roomids || spaceData.roomids.length === 0) {
@@ -173,7 +173,7 @@ export function Dashboard() {
       }
 
       // Join the space (add user to active users)
-      const response = await axios.post(`https://metaverse.onrender.com/api/spaces/${spaceId}/join`, {
+      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/join`, {
           clerkId: user.id
       });
       
@@ -182,7 +182,7 @@ export function Dashboard() {
       }
 
       // Get the default room (first room) of the space
-      const spaceResponse = await axios.get(`https://metaverse.onrender.com/api/spaces/${spaceId}`);
+      const spaceResponse = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
       const spaceData = spaceResponse.data;
       
       if (!spaceData.roomids || spaceData.roomids.length === 0) {
@@ -211,7 +211,7 @@ export function Dashboard() {
     
     try {
       setLoading(true);
-      const response = await axios.post(`https://metaverse.onrender.com/api/spaces/${spaceId}/leave`, {
+      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/leave`, {
         clerkId: user.id
       });
       
