@@ -29,7 +29,7 @@ function handlePlayerPosUpdate(client, message) {
         // Broadcast the updated position to other clients in the room
         const msRoom = state_1.roomsById.get(client.roomId);
         if (msRoom) {
-            msRoom.broadcastMessage(client.id, {
+            msRoom.broadcastMessage(client.userId, {
                 type: "broadcastPlayerPos",
                 payload: {
                     userId: client.userId,

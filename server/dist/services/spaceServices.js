@@ -137,7 +137,6 @@ function joinSpace(spaceId, clerkId) {
             // Update user's current space (if this is the intended logic)
             yield db.collection(UserModel_1.USERS_COLLECTION).updateOne({ clerkId: clerkId }, { $set: { spaceId: spaceId } } // Fix: Use $set operator
             );
-            console.log(`User ${clerkId} joined space ${spaceId}`);
             return clerkId;
         }
         catch (error) {
