@@ -189,7 +189,7 @@ export class room extends Scene {
       });
 
       // Place player sprites
-      this.playerAsset.forEach((avatarName, userId) => {
+      this.playerAsset.forEach(( userId) => {
         try {
           const pos = this.playerPositions.get(userId) ?? { posX: 0, posY: 0 };
           this.playerPos = pos.posX === 0 && pos.posY === 0
