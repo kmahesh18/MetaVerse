@@ -1,23 +1,466 @@
-@import url("https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap");
-
-* {
-  margin: 0;
-  padding: 0;
-  box-sizing: border-box;
+/* ===== GAME COMPONENT STYLES ===== */
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  overflow: hidden;
 }
 
-body {
-  background-color: #ffffff;
+#game-container canvas {
+  display: block;
+  background: #000000;
+}
+
+/* Game UI Overlay Styles */
+.game-ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game-ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Enhanced Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes loadingPulse {
+  0%, 100% { 
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #000000, #0a0a0a);
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: float 20s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(0, 212, 255, 0.3);
+  border-top: 3px solid #00d4ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 2rem;
+  box-shadow: 
+    0 0 20px rgba(0, 212, 255, 0.5),
+    inset 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.loading-text {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+  animation: loadingPulse 2s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Responsive Game Interface */
+@media (max-width: 768px) {
+  .interface-toggle-btn {
+    padding: 0.5rem;
+    left: 1rem !important;
+    top: 1rem !important;
+  }
+  
+  .video-simple-container {
+    width: 150px;
+    height: 110px;
+    bottom: 1rem;
+    right: 1rem;
+  }
+  
+  .chat-sidebar {
+    width: 100vw;
+    right: -100vw;
+  }
+  
+  .chat-sidebar.open {
+    transform: translateX(-100vw);
+  }
+}
+
+/* Professional Notification Styles */
+.notification {
+  border-radius: 8px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: linear-gradient(135deg, 
+    rgba(26, 26, 26, 0.95), 
+    rgba(34, 34, 34, 0.95)
+  );
+  animation: slideInFromRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification.success {
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.notification.error {
+  border-color: rgba(255, 71, 87, 0.5);
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+}
+
+/* Enhanced Button Styles */
+.btn-2d {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  color: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-2d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-2d:hover::before {
+  left: 100%;
+}
+
+.btn-2d:hover {
+  background: linear-gradient(135deg, #222222, #333333);
+  border-color: #00d4ff;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.btn-2d.primary {
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border-color: #00d4ff;
   color: #000000;
-  font-family: monospace;
-  line-height: 1.6;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
 }
 
-button {
-  cursor: pointer;
+.btn-2d.primary:hover {
+  background: linear-gradient(135deg, #33e0ff, #00d4ff);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(0, 212, 255, 0.6);
+  transform: translateY(-3px);
 }
 
-a {
-  text-decoration: none;
-  color: inherit;
+/* Container Enhancements */
+.container-2d {
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  backdrop-filter: blur(15px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.container-2d:hover {
+  border-color: #00d4ff;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Grid System */
+.grid-container {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.grid-item {
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-item:hover {
+  border-color: #00d4ff;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.2);
+  transform: translateY(-4px);
+}
+/* ===== GAME COMPONENT STYLES ===== */
+#game-container {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  background: #000000;
+  overflow: hidden;
+}
+
+#game-container canvas {
+  display: block;
+  background: #000000;
+}
+
+/* Game UI Overlay Styles */
+.game-ui-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+.game-ui-overlay > * {
+  pointer-events: auto;
+}
+
+/* Enhanced Loading Animation */
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes loadingPulse {
+  0%, 100% { 
+    opacity: 0.4;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: linear-gradient(135deg, #000000, #0a0a0a);
+  position: relative;
+  overflow: hidden;
+}
+
+.loading-container::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-image: 
+    linear-gradient(rgba(0, 212, 255, 0.1) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 212, 255, 0.1) 1px, transparent 1px);
+  background-size: 40px 40px;
+  animation: float 20s ease-in-out infinite;
+  opacity: 0.3;
+}
+
+.loading-spinner {
+  width: 60px;
+  height: 60px;
+  border: 3px solid rgba(0, 212, 255, 0.3);
+  border-top: 3px solid #00d4ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 2rem;
+  box-shadow: 
+    0 0 20px rgba(0, 212, 255, 0.5),
+    inset 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.loading-text {
+  font-family: 'Orbitron', sans-serif;
+  font-weight: 600;
+  color: #00d4ff;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  font-size: 1.1rem;
+  animation: loadingPulse 2s ease-in-out infinite;
+  text-shadow: 0 0 10px rgba(0, 212, 255, 0.5);
+}
+
+/* Responsive Game Interface */
+@media (max-width: 768px) {
+  .interface-toggle-btn {
+    padding: 0.5rem;
+    left: 1rem !important;
+    top: 1rem !important;
+  }
+  
+  .video-simple-container {
+    width: 150px;
+    height: 110px;
+    bottom: 1rem;
+    right: 1rem;
+  }
+  
+  .chat-sidebar {
+    width: 100vw;
+    right: -100vw;
+  }
+  
+  .chat-sidebar.open {
+    transform: translateX(-100vw);
+  }
+}
+
+/* Professional Notification Styles */
+.notification {
+  border-radius: 8px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(0, 212, 255, 0.3);
+  background: linear-gradient(135deg, 
+    rgba(26, 26, 26, 0.95), 
+    rgba(34, 34, 34, 0.95)
+  );
+  animation: slideInFromRight 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.notification.success {
+  border-color: rgba(0, 255, 136, 0.5);
+  box-shadow: 0 0 20px rgba(0, 255, 136, 0.3);
+}
+
+.notification.error {
+  border-color: rgba(255, 71, 87, 0.5);
+  box-shadow: 0 0 20px rgba(255, 71, 87, 0.3);
+}
+
+/* Enhanced Button Styles */
+.btn-2d {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  color: #ffffff;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.btn-2d::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-2d:hover::before {
+  left: 100%;
+}
+
+.btn-2d:hover {
+  background: linear-gradient(135deg, #222222, #333333);
+  border-color: #00d4ff;
+  transform: translateY(-2px);
+  box-shadow: 
+    0 4px 12px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.3);
+}
+
+.btn-2d.primary {
+  background: linear-gradient(135deg, #00d4ff, #0099cc);
+  border-color: #00d4ff;
+  color: #000000;
+  font-weight: 600;
+  box-shadow: 0 0 20px rgba(0, 212, 255, 0.4);
+}
+
+.btn-2d.primary:hover {
+  background: linear-gradient(135deg, #33e0ff, #00d4ff);
+  box-shadow: 
+    0 6px 20px rgba(0, 0, 0, 0.9),
+    0 0 30px rgba(0, 212, 255, 0.6);
+  transform: translateY(-3px);
+}
+
+/* Container Enhancements */
+.container-2d {
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  backdrop-filter: blur(15px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.container-2d:hover {
+  border-color: #00d4ff;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.2);
+  transform: translateY(-2px);
+}
+
+/* Grid System */
+.grid-container {
+  display: grid;
+  gap: 2rem;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.grid-item {
+  background: linear-gradient(135deg, #1a1a1a, #222222);
+  border: 1px solid #333333;
+  border-radius: 12px;
+  padding: 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.grid-item:hover {
+  border-color: #00d4ff;
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.9),
+    0 0 20px rgba(0, 212, 255, 0.2);
+  transform: translateY(-4px);
 }

@@ -141,12 +141,10 @@ const GameComponent: React.FC = () => {
 								ordered: true,
 								label: "player-sync",
 								protocol: "json",
-								sctpStreamParameters: {
-									streamId,
-									ordered: true,
-									maxPacketLifeTime: undefined,
-									maxRetransmits: undefined,
-								},
+								maxPacketLifeTime: undefined,
+								maxRetransmits: undefined,
+								// Custom data can be passed via appData if needed
+								appData: { streamId }
 							});
 
 						// Monitor DataChannel ready state
@@ -390,7 +388,7 @@ const GameComponent: React.FC = () => {
 			} else if (transport.connectionState === "failed") {
 				console.error(`❌ ${transportType} WebRTC connection failed!`);
 				console.error(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.error(`Current ICE state: ${transport.iceConnectionState}`);
+				console.error(`Current ICE state: ${transport.connectionState}`);
 				if (connectionTimeout) clearTimeout(connectionTimeout);
 
 				
@@ -414,7 +412,7 @@ const GameComponent: React.FC = () => {
 				);
 				console.log(`Current state: ${transport.connectionState}`);
 				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.log(`ICE connection state: ${transport.iceConnectionState}`);
+				console.log(`ICE connection state: ${transport.connectionState}`);
 
 				
 				wsRef.current?.send(
@@ -433,14 +431,15 @@ const GameComponent: React.FC = () => {
 	return (
 		<>
 			<div ref={containerRef} id="game-container">
-				{/* Show components based on state */}
-
+				{/* Video Interface */}
 				<VideoInterface
 					sendTransport={sendTransportRef.current}
-					recvTransport={recvTransportRef.current} // Add this
+					recvTransport={recvTransportRef.current}
 					ws={wsRef.current}
 					clientId={clientIdRef.current}
 				/>
+				
+				{/* Chat Interface */}
 				{showChat && wsRef.current && (
 					<ChatInterface
 						ws={wsRef.current}
@@ -449,13 +448,90 @@ const GameComponent: React.FC = () => {
 					/>
 				)}
 			</div>
-			<div>
+			
+			{/* Interface controls positioned side by side */}
+			<div style={{
+				position: "fixed",
+				top: window.innerWidth <= 768 ? "1rem" : "1.5rem",
+				left: window.innerWidth <= 768 ? "1rem" : "1.5rem",
+				zIndex: 1001,
+				display: "flex",
+				flexDirection: "row",
+				gap: window.innerWidth <= 480 ? "0.5rem" : window.innerWidth <= 768 ? "0.75rem" : "1rem"
+			}}>
+				{/* Video Toggle Button */}
 				<button
 					className="interface-toggle-btn"
-					style={{ left: 24, top: 24 }}
+					style={{
+						width: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
+						height: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
+						borderRadius: "50%",
+						background: "rgba(26, 26, 26, 0.9)",
+						border: "2px solid var(--border-accent)",
+						color: "var(--text-primary)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						cursor: "pointer",
+						transition: "all var(--transition-normal)",
+						backdropFilter: "blur(10px)",
+						boxShadow: "var(--shadow-md)",
+						position: "relative"
+					}}
+					onClick={() => {
+						// Call the video toggle function exposed by VideoInterface
+						if ((window as any).toggleVideo) {
+							(window as any).toggleVideo();
+						}
+					}}
+					title="Toggle Video"
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = "rgba(0, 212, 255, 0.2)";
+						e.currentTarget.style.borderColor = "var(--highlight)";
+						e.currentTarget.style.transform = "scale(1.1)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = "rgba(26, 26, 26, 0.9)";
+						e.currentTarget.style.borderColor = "var(--border-accent)";
+						e.currentTarget.style.transform = "scale(1)";
+					}}
+				>
+					<IoVideocamOutline size={window.innerWidth <= 480 ? 18 : window.innerWidth <= 768 ? 20 : 24} />
+				</button>
+
+				{/* Chat Toggle Button */}
+				<button
+					className="interface-toggle-btn"
+					style={{
+						width: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
+						height: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
+						borderRadius: "50%",
+						background: showChat ? "rgba(0, 212, 255, 0.2)" : "rgba(26, 26, 26, 0.9)",
+						border: "2px solid var(--border-accent)",
+						color: "var(--text-primary)",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						cursor: "pointer",
+						transition: "all var(--transition-normal)",
+						backdropFilter: "blur(10px)",
+						boxShadow: "var(--shadow-md)",
+						position: "relative"
+					}}
 					onClick={() => setShowChat(!showChat)}
-					title="Toggle Chat">
-					<BsChat size={28} />
+					title="Toggle Chat"
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = "rgba(0, 212, 255, 0.2)";
+						e.currentTarget.style.borderColor = "var(--highlight)";
+						e.currentTarget.style.transform = "scale(1.1)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = showChat ? "rgba(0, 212, 255, 0.2)" : "rgba(26, 26, 26, 0.9)";
+						e.currentTarget.style.borderColor = "var(--border-accent)";
+						e.currentTarget.style.transform = "scale(1)";
+					}}
+				>
+					<BsChat size={window.innerWidth <= 480 ? 18 : window.innerWidth <= 768 ? 20 : 24} />
 				</button>
 			</div>
 		</>

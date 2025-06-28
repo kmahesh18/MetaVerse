@@ -1,4 +1,3 @@
-
 import { useUser } from "@clerk/clerk-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -13,11 +12,9 @@ export function Dashboard() {
   const [spaces, setSpaces] = useState<ISpace[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [userData, setUserData] = useState<IUser | null>(null);
   const [showNotification, setShowNotification] = useState<string | null>(
     location.state?.notification || null
   );
-  // console.log(user)
 
   const fetchUserData = useCallback(async () => {
     if (!user) return null;
@@ -115,7 +112,6 @@ export function Dashboard() {
         if (!userDataResult) {
           return;
         }
-        setUserData(userDataResult);
         if (!userDataResult.avatarId) {
           navigate('/select-avatar');
           return;
@@ -266,325 +262,425 @@ export function Dashboard() {
 
   if (!isLoaded || loading) {
     return (
-      <div 
-        className="container-2d" 
-        style={{ 
-          display: 'flex', 
-          justifyContent: 'center', 
-          alignItems: 'center', 
-          height: '100vh',
-          background: 'var(--secondary)'
-        }}
-      >
-        <p className="text-2d" style={{ fontSize: '18px' }}>Loading...</p>
+      <div className="loading-container">
+        <div className="loading-spinner"></div>
+        <div className="loading-text">Loading Dashboard...</div>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div 
-        className="container-2d" 
-        style={{ 
-          maxWidth: '600px', 
-          margin: '40px auto',
-          background: 'var(--secondary)',
-          borderColor: '#ff0000'
-        }}
-      >
-        <p className="text-2d" style={{ color: '#ff0000', marginBottom: '20px' }}>Error: {error}</p>
-        <button className="btn-2d" onClick={() => window.location.reload()}>
-          Retry
-        </button>
+      <div style={{
+        minHeight: "100vh",
+        display: "flex",
+        justifyContent: "center",
+        alignItems: "center",
+        background: "var(--bg-primary)"
+      }}>
+        <div className="container-2d" style={{
+          textAlign: "center",
+          maxWidth: "500px",
+          border: "1px solid var(--error)",
+          boxShadow: "0 0 20px var(--error)"
+        }}>
+          <h2 style={{ color: "var(--error)", marginBottom: "1rem" }}>System Error</h2>
+          <p style={{ marginBottom: "2rem" }}>{error}</p>
+          <button className="btn-2d primary" onClick={() => window.location.reload()}>
+            Retry Connection
+          </button>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="container-2d" style={{ 
-      maxWidth: '1000px', 
-      margin: '40px auto',
-      background: 'var(--secondary)',
-      padding: '30px',
-      position: 'relative'
+    <div style={{
+      minHeight: "100vh",
+      background: `
+        radial-gradient(circle at 10% 20%, var(--neon-blue)08 0%, transparent 50%),
+        radial-gradient(circle at 90% 80%, var(--neon-cyan)08 0%, transparent 50%),
+        var(--bg-primary)
+      `,
+      position: "relative"
     }}>
+      {/* Background Grid */}
+      <div style={{
+        position: "fixed",
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundImage: `
+          linear-gradient(rgba(0, 212, 255, 0.05) 1px, transparent 1px),
+          linear-gradient(90deg, rgba(0, 212, 255, 0.05) 1px, transparent 1px)
+        `,
+        backgroundSize: window.innerWidth <= 768 ? "25px 25px" : "40px 40px",
+        zIndex: 0
+      }} />
+
+      {/* Notification */}
       {showNotification && (
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'var(--highlight)',
-          color: 'var(--secondary)',
-          padding: '10px 15px',
-          borderRadius: '4px',
-          zIndex: 100,
-          maxWidth: '300px'
+        <div className="notification success" style={{
+          position: "fixed",
+          top: window.innerWidth <= 768 ? "1rem" : "2rem",
+          right: window.innerWidth <= 768 ? "1rem" : "2rem",
+          left: window.innerWidth <= 480 ? "1rem" : "auto",
+          maxWidth: window.innerWidth <= 768 ? "calc(100% - 2rem)" : "350px",
+          zIndex: 1000
         }}>
-          <p>{showNotification}</p>
-          <button 
+          {showNotification}
+          <button
             style={{
-              position: 'absolute',
-              top: '5px',
-              right: '5px',
-              background: 'transparent',
-              border: 'none',
-              color: 'var(--secondary)',
-              cursor: 'pointer',
-              fontSize: '12px'
+              position: "absolute",
+              top: "0.5rem",
+              right: "0.5rem",
+              background: "transparent",
+              border: "none",
+              color: "var(--text-muted)",
+              cursor: "pointer",
+              fontSize: "1.2rem",
+              minWidth: "24px",
+              minHeight: "24px"
             }}
             onClick={() => setShowNotification(null)}
           >
-            ✕
+            ×
           </button>
         </div>
       )}
 
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '20px', 
-        marginBottom: '30px',
-        borderBottom: '2px solid var(--accent)',
-        paddingBottom: '20px'
+      <div style={{
+        position: "relative",
+        zIndex: 1,
+        padding: window.innerWidth <= 768 ? "1rem" : "2rem",
+        maxWidth: "1400px",
+        margin: "0 auto"
       }}>
-        <div style={{
-          width: '80px',
-          height: '80px',
-          borderRadius: '50%',
-          overflow: 'hidden',
-          border: '3px solid var(--text)',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          background: 'var(--accent)'
+        {/* Welcome Section */}
+        <div className="container-2d" style={{
+          marginBottom: window.innerWidth <= 768 ? "2rem" : "3rem",
+          display: "grid",
+          gridTemplateColumns: window.innerWidth <= 768 ? "1fr" : "auto 1fr auto",
+          alignItems: window.innerWidth <= 768 ? "stretch" : "center",
+          gap: window.innerWidth <= 768 ? "1.5rem" : "2rem",
+          animation: "fadeInUp 0.6s ease-out",
+          textAlign: window.innerWidth <= 768 ? "center" : "left"
         }}>
-          {userData?.avatarId && (
-            <img 
-              src={`/assets/${userData.avatarId}.png`} 
-              alt="Your avatar" 
+          {/* Avatar */}
+          <div style={{
+            width: window.innerWidth <= 768 ? "80px" : "100px",
+            height: window.innerWidth <= 768 ? "80px" : "100px",
+            borderRadius: "var(--border-radius-lg)",
+            overflow: "hidden",
+            border: "2px solid var(--border-accent)",
+            background: "var(--bg-elevated)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow: "var(--shadow-neon)",
+            margin: window.innerWidth <= 768 ? "0 auto" : "0"
+          }}>
+            <div style={{ 
+              fontSize: window.innerWidth <= 768 ? "2rem" : "2.5rem", 
+              color: "var(--text-muted)" 
+            }}>👤</div>
+          </div>
+
+          {/* Welcome Text */}
+          <div style={{
+            order: window.innerWidth <= 768 ? -1 : 0
+          }}>
+            <h1 className="title-2d" style={{
+              fontSize: window.innerWidth <= 480 ? "1.8rem" : window.innerWidth <= 768 ? "2rem" : "2.5rem",
+              marginBottom: "0.5rem"
+            }}>
+              Welcome back, {user?.firstName || 'User'}
+            </h1>
+            <p className="text-2d" style={{
+              fontSize: window.innerWidth <= 768 ? "1rem" : "1.1rem",
+              margin: 0,
+              color: "var(--text-secondary)"
+            }}>
+              Manage your virtual spaces and collaborate with your team
+            </p>
+          </div>
+
+          {/* Action Buttons */}
+          <div style={{
+            display: "flex",
+            gap: "1rem",
+            flexDirection: window.innerWidth <= 768 ? "row" : "column",
+            justifyContent: window.innerWidth <= 768 ? "center" : "flex-start",
+            flexWrap: "wrap"
+          }}>
+            <button
+              className="btn-2d primary"
+              onClick={() => navigate('/create-space')}
               style={{ 
-                width: '100%', 
-                height: '100%',
-                objectFit: 'cover' 
-              }} 
-            />
-          )}
+                padding: "0.75rem 1.5rem",
+                flex: window.innerWidth <= 480 ? "1" : "none",
+                minWidth: window.innerWidth <= 480 ? "120px" : "auto"
+              }}
+            >
+              Create Space
+            </button>
+            <button
+              className="btn-2d"
+              onClick={handleJoinSpace}
+              style={{ 
+                padding: "0.75rem 1.5rem", 
+                opacity: 0.6,
+                flex: window.innerWidth <= 480 ? "1" : "none",
+                minWidth: window.innerWidth <= 480 ? "120px" : "auto"
+              }}
+            >
+              Join Space
+            </button>
+          </div>
         </div>
-        
-        <div>
-          <h1 className="title-2d" style={{ marginBottom: '5px', fontSize: '22px' }}>
-            Welcome, {user?.firstName || 'User'}
-          </h1>
-          <p className="text-2d" style={{ color: 'var(--highlight)' }}>
-            Manage Your Virtual Spaces
-          </p>
-        </div>
-      </div>
 
-      <div className="action-buttons" style={{ 
-        display: 'flex', 
-        gap: '15px', 
-        marginBottom: '30px',
-        justifyContent: 'flex-start' 
-      }}>
-        <button 
-          className="btn-2d" 
-          onClick={() => navigate('/create-space')}
-          style={{ 
-            fontSize: '14px',
-            padding: '10px 20px',
-            background: 'var(--highlight)',
-            color:'var(--secondary)'
-          }}
-        >
-          + Create New Space
-        </button>
-        <button 
-          className="btn-2d" 
-          onClick={handleJoinSpace}
-          style={{ 
-            fontSize: '14px',
-            padding: '10px 20px',
-            opacity: 0.7
-          }}
-        >
-          Join Space (Coming Soon)
-        </button>
-      </div>
+        {/* Spaces Section */}
+        <section>
+          <h2 className="title-2d" style={{
+            fontSize: window.innerWidth <= 768 ? "1.5rem" : "2rem",
+            marginBottom: window.innerWidth <= 768 ? "1.5rem" : "2rem",
+            textAlign: "center"
+          }}>
+            Your Virtual Spaces
+          </h2>
 
-      <h2 className="title-2d" style={{ fontSize: '18px', marginBottom: '20px' }}>
-        Your Spaces
-      </h2>
-
-      {spaces.length === 0 ? (
-        <div style={{ 
-          textAlign: 'center', 
-          margin: '60px 0',
-          padding: '30px',
-          border: '2px dashed var(--accent)',
-          background: 'rgba(255, 255, 255, 0.05)'
-        }}>
-          <p className="text-2d" style={{ marginBottom: '10px' }}>
-            You haven't joined any spaces yet.
-          </p>
-          <p className="text-2d" style={{ marginBottom: '20px', color: 'var(--highlight)' }}>
-            Create or join one to get started!
-          </p>
-          <button 
-            className="btn-2d" 
-            onClick={() => navigate('/create-space')}
-            style={{ background: 'var(--highlight)',color:'var(--secondary)' }}
-          >
-            Create Your First Space
-          </button>
-        </div>
-      ) : (
-        <div className="space-grid" style={{ 
-          display: 'grid', 
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', 
-          gap: '20px'
-        }}>
-          {spaces.map((space) => {
-            // console.log("Rendering space:", space); // Log each space being rendered
-            // console.log("Admin check:", {
-            //   spaceAdminId: space.adminid,
-            //   userId: user?.id,
-            //   isAdmin: space.adminid === user?.id
-            // });
-            
-            return (
-              <div 
-                key={space.id} 
-                className="space-card"
+          {spaces.length === 0 ? (
+            <div className="container-2d" style={{
+              textAlign: "center",
+              padding: window.innerWidth <= 768 ? "2rem 1rem" : "4rem 2rem",
+              animation: "fadeInUp 0.8s ease-out"
+            }}>
+              <div style={{ 
+                fontSize: window.innerWidth <= 768 ? "3rem" : "4rem", 
+                marginBottom: window.innerWidth <= 768 ? "1rem" : "2rem", 
+                opacity: 0.6 
+              }}>🏢</div>
+              <h3 className="subtitle-2d" style={{ 
+                marginBottom: "1rem",
+                fontSize: window.innerWidth <= 768 ? "1.2rem" : "1.5rem"
+              }}>
+                No Spaces Yet
+              </h3>
+              <p className="text-2d" style={{
+                marginBottom: "2rem",
+                maxWidth: "400px",
+                margin: "0 auto 2rem auto",
+                fontSize: window.innerWidth <= 768 ? "0.9rem" : "1rem"
+              }}>
+                Create your first virtual space to start collaborating with your team.
+              </p>
+              <button
+                className="btn-2d primary"
+                onClick={() => navigate('/create-space')}
                 style={{ 
-                  cursor: 'pointer', 
-                  padding: '20px',
-                  background: 'var(--secondary)',
-                  border: space.adminid === user?.id ? '2px solid var(--highlight)' : '2px solid var(--text)',
-                  borderRadius: '4px'
+                  padding: window.innerWidth <= 768 ? "0.8rem 1.5rem" : "1rem 2rem",
+                  width: window.innerWidth <= 480 ? "100%" : "auto",
+                  maxWidth: window.innerWidth <= 480 ? "300px" : "none"
                 }}
               >
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '15px'
-                }}>
-                  <h3 className="text-2d" style={{ 
-                    fontSize: '18px',
-                    fontWeight: 'bold'
+                Create Your First Space
+              </button>
+            </div>
+          ) : (
+            <div className="grid-container" style={{
+              gridTemplateColumns: window.innerWidth <= 480 
+                ? "1fr" 
+                : window.innerWidth <= 768 
+                  ? "repeat(auto-fit, minmax(280px, 1fr))" 
+                  : "repeat(auto-fit, minmax(300px, 1fr))"
+            }}>
+              {spaces.map((space, index) => (
+                <div
+                  key={space.id}
+                  className="grid-item"
+                  style={{
+                    cursor: "pointer",
+                    border: space.adminid === user?.id ? "1px solid var(--neon-blue)" : "1px solid var(--border-primary)",
+                    animation: `fadeInUp ${0.6 + index * 0.1}s ease-out`,
+                    boxShadow: space.adminid === user?.id ? "var(--shadow-neon)" : "var(--shadow-md)",
+                    padding: window.innerWidth <= 768 ? "1rem" : "1.5rem"
+                  }}
+                >
+                  {/* Space Header */}
+                  <div style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    marginBottom: "1.5rem",
+                    flexWrap: window.innerWidth <= 480 ? "wrap" : "nowrap",
+                    gap: window.innerWidth <= 480 ? "0.5rem" : "0"
                   }}>
-                    Space 
-                  </h3>
-                  <span style={{ 
-                    fontSize: '12px', 
-                    padding: '4px 8px',
-                    border: space.adminid === user?.id ? '1px solid var(--highlight)' : '1px solid var(--accent)',
-                    borderRadius: '4px',
-                    textTransform: 'capitalize',
-                    background: space.adminid === user?.id ? 'var(--highlight)' : 'var(--accent)',
-                    color: 'var(--secondary)'
-                  }}>
-                    {space.adminid === user?.id ? "Admin" : "Member"}
-                  </span>
-                </div>
-                
-                <div style={{
-                  display: 'flex',
-                  flexDirection: 'column',
-                  gap: '5px'
-                }}>
-                  <p className="text-2d" style={{ 
-                    fontSize: '12px', 
-                    color: 'var(--highlight)',
-                    marginBottom: '5px'
-                  }}>
-                    Rooms: {Array.isArray(space.roomids) ? space.roomids.length : 0}
-                  </p>
-                  <p className="text-2d" style={{ 
-                    fontSize: '12px', 
-                    color: 'var(--highlight)'
-                  }}>
-                    Active users: {Array.isArray(space.activeuserids) ? space.activeuserids.length : 0}
-                  </p>
-                  <p className="text-2d" style={{ 
-                    fontSize: '12px', 
-                    color: Array.isArray(space.activeuserids) && space.activeuserids.includes(user?.id || '') ? '#00ff00' : '#ffaa00',
-                    marginTop: '5px'
-                  }}>
-                    Status: {Array.isArray(space.activeuserids) && space.activeuserids.includes(user?.id || '') ? 'Active' : 'Accessible'}
-                  </p>
-                </div>
-                
-                <div style={{ 
-                  marginTop: '15px', 
-                  display: 'flex', 
-                  justifyContent: 'space-between',
-                  flexWrap: 'wrap',
-                  gap: '8px'
-                }}>
-                  {/* Debug admin status */}
-                  <div style={{ fontSize: '10px', color: '#999', marginBottom: '5px', width: '100%' }}>
-                    Admin ID: {space.adminid?.substring(0, 8)}... | Your ID: {user?.id?.substring(0, 8)}...
+                    <h3 className="subtitle-2d" style={{
+                      margin: 0,
+                      fontSize: window.innerWidth <= 768 ? "0.95rem" : "1.1rem",
+                      flex: window.innerWidth <= 480 ? "1 1 100%" : "1"
+                    }}>
+                      Space #{space.id.substring(0, 8)}
+                    </h3>
+                    <span style={{
+                      padding: "0.25rem 0.75rem",
+                      borderRadius: "var(--border-radius-md)",
+                      fontSize: window.innerWidth <= 768 ? "0.7rem" : "0.8rem",
+                      fontWeight: "600",
+                      background: space.adminid === user?.id ? "var(--neon-blue)" : "var(--accent)",
+                      color: space.adminid === user?.id ? "var(--text-inverse)" : "var(--text-primary)",
+                      fontFamily: "var(--font-display)",
+                      textTransform: "uppercase",
+                      whiteSpace: "nowrap"
+                    }}>
+                      {space.adminid === user?.id ? "Admin" : "Member"}
+                    </span>
                   </div>
-                  
-                  {space.adminid === user?.id && (
-                    <button 
-                      className="btn-2d"
-                      style={{ 
-                        fontSize: '12px',
-                        padding: '6px 12px',
-                        background: 'var(--highlight)',
-                        color: 'var(--secondary)'
-                      }}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleInviteUser(space.id);
-                      }}
-                    >
-                      Invite Users
-                    </button>
-                  )}
-                  
-                  <div style={{ display: 'flex', gap: '8px' }}>
-                    <button 
-                      className="btn-2d"
-                      style={{ 
-                        fontSize: '12px',
-                        padding: '6px 12px',
-                        background: space.activeuserids?.includes(user?.id || '') ? 'var(--highlight)' : 'var(--accent)'
+
+                  {/* Space Stats */}
+                  <div style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 1fr",
+                    gap: window.innerWidth <= 768 ? "0.75rem" : "1rem",
+                    marginBottom: "1.5rem"
+                  }}>
+                    <div style={{
+                      background: "var(--bg-elevated)",
+                      padding: window.innerWidth <= 768 ? "0.75rem" : "1rem",
+                      borderRadius: "var(--border-radius-md)",
+                      textAlign: "center",
+                      border: "1px solid var(--border-primary)"
+                    }}>
+                      <div style={{
+                        fontSize: window.innerWidth <= 768 ? "1.2rem" : "1.5rem",
+                        fontWeight: "700",
+                        color: "var(--neon-blue)",
+                        fontFamily: "var(--font-display)"
+                      }}>
+                        {Array.isArray(space.roomids) ? space.roomids.length : 0}
+                      </div>
+                      <div style={{
+                        fontSize: window.innerWidth <= 768 ? "0.7rem" : "0.8rem",
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase"
+                      }}>
+                        Rooms
+                      </div>
+                    </div>
+                    <div style={{
+                      background: "var(--bg-elevated)",
+                      padding: window.innerWidth <= 768 ? "0.75rem" : "1rem",
+                      borderRadius: "var(--border-radius-md)",
+                      textAlign: "center",
+                      border: "1px solid var(--border-primary)"
+                    }}>
+                      <div style={{
+                        fontSize: window.innerWidth <= 768 ? "1.2rem" : "1.5rem",
+                        fontWeight: "700",
+                        color: "var(--neon-green)",
+                        fontFamily: "var(--font-display)"
+                      }}>
+                        {Array.isArray(space.activeuserids) ? space.activeuserids.length : 0}
+                      </div>
+                      <div style={{
+                        fontSize: window.innerWidth <= 768 ? "0.7rem" : "0.8rem",
+                        color: "var(--text-muted)",
+                        textTransform: "uppercase"
+                      }}>
+                        Active
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Status */}
+                  <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                    <span style={{
+                      padding: "0.5rem 1rem",
+                      borderRadius: "var(--border-radius-lg)",
+                      fontSize: window.innerWidth <= 768 ? "0.8rem" : "0.9rem",
+                      fontWeight: "600",
+                      background: space.activeuserids?.includes(user?.id || '') ? "var(--neon-green)" : "var(--warning)",
+                      color: "var(--text-inverse)",
+                      fontFamily: "var(--font-display)",
+                      textTransform: "uppercase"
+                    }}>
+                      {space.activeuserids?.includes(user?.id || '') ? "Active" : "Available"}
+                    </span>
+                  </div>
+
+                  {/* Actions */}
+                  <div style={{
+                    display: "flex",
+                    gap: "0.5rem",
+                    flexWrap: "wrap",
+                    flexDirection: window.innerWidth <= 480 ? "column" : "row"
+                  }}>
+                    {space.adminid === user?.id && (
+                      <button
+                        className="btn-2d"
+                        style={{ 
+                          fontSize: window.innerWidth <= 768 ? "0.75rem" : "0.8rem", 
+                          padding: window.innerWidth <= 768 ? "0.6rem 0.8rem" : "0.5rem 1rem",
+                          flex: window.innerWidth <= 480 ? "1" : "none"
+                        }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleInviteUser(space.id);
+                        }}
+                      >
+                        Invite Users
+                      </button>
+                    )}
+                    
+                    <button
+                      className="btn-2d primary"
+                      style={{
+                        fontSize: window.innerWidth <= 768 ? "0.75rem" : "0.8rem",
+                        padding: window.innerWidth <= 768 ? "0.6rem 0.8rem" : "0.5rem 1rem",
+                        flex: "1"
                       }}
                       onClick={(e) => {
                         e.stopPropagation();
                         handleEnterSpace(space.id);
                       }}
                     >
-                      {space.activeuserids?.includes(user?.id || '') ? 'Enter Space →' : 'Join Space →'}
+                      {space.activeuserids?.includes(user?.id || '') ? "Enter →" : "Join →"}
                     </button>
                     
                     {space.activeuserids?.includes(user?.id || '') && (
-                      <button 
+                      <button
                         className="btn-2d"
-                        style={{ 
-                          fontSize: '12px',
-                          padding: '6px 12px',
-                          background: 'var(--accent)'
+                        style={{
+                          fontSize: window.innerWidth <= 768 ? "0.75rem" : "0.8rem",
+                          padding: window.innerWidth <= 768 ? "0.6rem 0.8rem" : "0.5rem 1rem",
+                          borderColor: "var(--error)",
+                          color: "var(--error)",
+                          flex: window.innerWidth <= 480 ? "1" : "none"
                         }}
                         onClick={(e) => {
                           e.stopPropagation();
                           handleLeaveSpace(space.id);
                         }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = "var(--error)";
+                          e.currentTarget.style.color = "var(--text-inverse)";
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = "transparent";
+                          e.currentTarget.style.color = "var(--error)";
+                        }}
                       >
-                        Leave Space
+                        Leave
                       </button>
                     )}
                   </div>
                 </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
     </div>
   );
 }

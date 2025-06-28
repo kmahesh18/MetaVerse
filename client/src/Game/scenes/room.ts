@@ -1,7 +1,6 @@
 import { Scene } from "phaser";
 import { IAsset } from "../../../../server/src/Models/AssetModel";
 import { types } from "mediasoup-client";
-import { use } from "react";
 
 type PlayerPos = { posX: number; posY: number };
 
@@ -14,8 +13,6 @@ export class room extends Scene {
   private ws: WebSocket | null = null;
   private dataProducer: types.DataProducer | null = null;
   private dataConsumers: types.DataConsumer[] = [];
-  private sendTransport: types.Transport | null = null;
-  private recvTransport: types.Transport | null = null;
 
   // ✅ GAME STATE
   private currentPlayer: Phaser.GameObjects.Sprite | null = null;
@@ -57,8 +54,6 @@ export class room extends Scene {
     this.ws = data.ws;
     this.dataProducer = data.dataProducer;
     this.dataConsumers = data.dataConsumers;
-    this.sendTransport = data.sendTransport;
-    this.recvTransport = data.recvTransport;
 
     if (!this.ws) {
       console.warn("no ws connection found ");
@@ -113,7 +108,7 @@ export class room extends Scene {
       "roomData",
       `http://localhost:${import.meta.env.VITE_BKPORT}/api/rooms/${this.roomId}`,
     );
-    this.load.once("filecomplete-json-roomData", (_key, _type, data: any) => {
+    this.load.once("filecomplete-json-roomData", (_key: string, _type: string, data: any) => {
       data.assets.forEach((asset: IAsset) => {
         this.roomAssets.push(asset);
         this.load.image(asset.assetId, asset.previewUrl);
@@ -127,7 +122,7 @@ export class room extends Scene {
         this.roomId
       }/players`,
     );
-    this.load.once("filecomplete-json-playersData", (_k, _t, data: any) => {
+    this.load.once("filecomplete-json-playersData", (_k: string, _t: string, data: any) => {
       this.playerPositions = new Map(Object.entries(data));
       // console.log("loaded playerPositions:", this.playerPositions);
     });
@@ -139,7 +134,7 @@ export class room extends Scene {
         this.roomId
       }/userAvatars`,
     );
-    this.load.once("filecomplete-json-userAvatarsData", (_k, _t, data: any) => {
+    this.load.once("filecomplete-json-userAvatarsData", (_k: string, _t: string, data: any) => {
       this.playerAsset = new Map(Object.entries(data));
       this.playerAsset.forEach((_, userId) => {
         const url = `/assets/${data[userId]}/${data[userId]}_run.png`;

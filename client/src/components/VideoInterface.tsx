@@ -1,5 +1,4 @@
 import React, { useRef, useEffect, useState } from "react";
-import { IoVideocamOutline } from "react-icons/io5";
 import { types } from "mediasoup-client";
 
 interface VideoInterfaceProps {
@@ -12,7 +11,7 @@ interface VideoInterfaceProps {
 
 const VideoInterface: React.FC<VideoInterfaceProps> = ({
 	sendTransport,
-	recvTransport,
+	recvTransport: _recvTransport, // Renamed to indicate it's intentionally unused
 	ws,
 	clientId,
 }) => {
@@ -40,7 +39,7 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 	useEffect(() => {
 		if (!sendTransport || !ws) return;
 
-		const handleProduce = ({ rtpParameters, kind }, callback) => {
+		const handleProduce = ({ rtpParameters, kind }: { rtpParameters: types.RtpParameters, kind: string }, callback: (data: { id: string }) => void) => {
 			console.log("reached handle produce");
 			produceCallbackRef.current = callback;
 			ws.send(
@@ -116,47 +115,113 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 			setLocalStream(null);
 			setShowVideo(false);
 		} else {
-			const stream = await navigator.mediaDevices.getUserMedia({
-				video: true,
-				audio: false,
-			});
-			const videoTrack = stream.getTracks()[0];
-
-			if (producerRef.current && !producerRef.current.closed) {
-				await producerRef.current.replaceTrack({ track: videoTrack });
-			} else {
-				producerRef.current = await sendTransport?.produce({
-					track: videoTrack,
-					appData: { clientId: clientId },
+			try {
+				const stream = await navigator.mediaDevices.getUserMedia({
+					video: true,
+					audio: false,
 				});
-			}
+				const videoTrack = stream.getTracks()[0];
 
-			setLocalStream(stream);
-			setShowVideo(true);
+				if (producerRef.current && !producerRef.current.closed) {
+					await producerRef.current.replaceTrack({ track: videoTrack });
+				} else if (sendTransport) {
+					producerRef.current = await sendTransport?.produce({
+						track: videoTrack,
+						appData: { clientId: clientId },
+					});
+				}
+
+				setLocalStream(stream);
+				setShowVideo(true);
+			} catch (error) {
+				console.error("Failed to get video stream:", error);
+			}
 		}
 	}
 
+	// Expose toggle function to parent component
+	useEffect(() => {
+		(window as any).toggleVideo = handleToggle;
+		return () => {
+			delete (window as any).toggleVideo;
+		};
+	}, []);
+
 	return (
 		<>
-			<div className="video-simple-container">
-				{showVideo && (
+			{showVideo && (
+				<div
+					style={{
+						position: "fixed",
+						bottom: window.innerWidth <= 768 ? "1rem" : "1.5rem",
+						right: window.innerWidth <= 768 ? "1rem" : "1.5rem",
+						width: window.innerWidth <= 480 ? "140px" : window.innerWidth <= 768 ? "180px" : "240px",
+						height: window.innerWidth <= 480 ? "105px" : window.innerWidth <= 768 ? "135px" : "180px",
+						background: "var(--bg-surface)",
+						border: "2px solid var(--border-accent)",
+						borderRadius: "var(--border-radius-lg)",
+						overflow: "hidden",
+						zIndex: 1000,
+						boxShadow: "var(--shadow-lg), var(--shadow-neon)",
+						backdropFilter: "blur(10px)",
+						transition: "all var(--transition-normal)"
+					}}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.transform = "scale(1.05)";
+						e.currentTarget.style.boxShadow = "var(--shadow-xl), var(--shadow-neon-strong)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.transform = "scale(1)";
+						e.currentTarget.style.boxShadow = "var(--shadow-lg), var(--shadow-neon)";
+					}}
+				>
 					<video
 						ref={videoRef}
 						autoPlay
 						muted
 						playsInline
-						className="video-simple"
+						style={{
+							width: "100%",
+							height: "100%",
+							objectFit: "cover",
+							background: "var(--bg-primary)"
+						}}
 					/>
-				)}
-			</div>
-
-			<button
-				className="interface-toggle-btn"
-				style={{ left: 92, top: 24 }}
-				onClick={handleToggle}
-				title="Toggle Video">
-				<IoVideocamOutline size={28} />
-			</button>
+					
+					{/* Video control overlay */}
+					<div style={{
+						position: "absolute",
+						bottom: "8px",
+						right: "8px",
+						background: "rgba(0, 0, 0, 0.7)",
+						borderRadius: "50%",
+						width: "32px",
+						height: "32px",
+						display: "flex",
+						alignItems: "center",
+						justifyContent: "center",
+						cursor: "pointer",
+						transition: "all var(--transition-fast)",
+						border: "1px solid var(--border-accent)"
+					}}
+					onClick={handleToggle}
+					onMouseEnter={(e) => {
+						e.currentTarget.style.background = "var(--error)";
+						e.currentTarget.style.transform = "scale(1.1)";
+					}}
+					onMouseLeave={(e) => {
+						e.currentTarget.style.background = "rgba(0, 0, 0, 0.7)";
+						e.currentTarget.style.transform = "scale(1)";
+					}}
+					>
+						<span style={{ 
+							color: "white", 
+							fontSize: "14px",
+							fontWeight: "bold"
+						}}>×</span>
+					</div>
+				</div>
+			)}
 		</>
 	);
 };

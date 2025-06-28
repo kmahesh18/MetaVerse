@@ -3,10 +3,22 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/Modern tiles_Free/table2.png" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Metaverse</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <meta name="description" content="MetaVerse - A sophisticated black & white 2D virtual world platform for meetings and social interactions" />
+    <meta name="theme-color" content="#0a0a0a" />
+    <meta name="color-scheme" content="dark" />
+    <title>MetaVerse</title>
+    <!-- Preconnect to Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Font preloading for critical UI -->
+    <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Orbitron:wght@400;700;900&family=Press+Start+2P&display=swap">
   </head>
   <body>
+    <!-- Loading screen that will be replaced by React -->
+    <div id="loading" class="loading">
+      <div class="loading__spinner"></div>
+    </div>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -98,7 +98,7 @@ export function ChatInterface({ ws, userId, onClose }: ChatInterfaceProps) {
 		<>
 			<div
 				className="chat-overlay"
-				onClick={onClose} // Use the onClose prop
+				onClick={onClose}
 			/>
 			<div className="chat-sidebar open">
 				{/* Chat Header */}
@@ -120,7 +120,7 @@ export function ChatInterface({ ws, userId, onClose }: ChatInterfaceProps) {
 						</div>
 						<button
 							className="chat-close-btn"
-							onClick={onClose} // Use the onClose prop
+							onClick={onClose}
 							title="Close Chat">
 							<MdClose size={22} />
 						</button>
