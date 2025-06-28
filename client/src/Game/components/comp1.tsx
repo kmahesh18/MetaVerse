@@ -53,6 +53,7 @@ const GameComponent: React.FC = () => {
 			const handlerName = await detectDeviceAsync();
 			deviceRef.current = new Device({ handlerName });
 
+			// Fix WebSocket URL construction
 			const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
 			const protocol = backendUrl.startsWith('https') ? 'wss' : 'ws';
 			const wsBaseUrl = backendUrl.replace(/^https?:\/\//, '');
@@ -314,49 +315,123 @@ const GameComponent: React.FC = () => {
 			};
 
 			async function createPhaserGame() {
-				// ✅ METHOD 2: Use Phaser Events to get scene reference
-				const [PhaserModule, roomModule] = await Promise.all([
-					import("phaser"),
-					import("../scenes/room"),
-				]);
-				const Phaser = PhaserModule as typeof import("phaser");
-				const { room: RoomScene } = roomModule;
+				try {
+					console.log("🎮 Starting Phaser game initialization...");
+					
+					// ✅ FIXED: Import Phaser and room scene properly
+					const [PhaserModule, roomModule] = await Promise.all([
+						import("phaser"),
+						import("../scenes/room"),
+					]);
+					
+					const Phaser = PhaserModule.default || PhaserModule;
+					const { room: RoomScene } = roomModule;
 
-				gameRef.current = new Phaser.Game({
-					type: Phaser.AUTO,
-					parent: containerRef.current!,
-					width: window.innerWidth,
-					height: window.innerHeight,
-					backgroundColor: "#000",
-					physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 } } },
-				});
+					console.log("📦 Phaser and Room modules loaded successfully");
 
-				// ✅ METHOD 2: Register scene without auto-start
-				gameRef.current.scene.add("RoomScene", RoomScene, false);
+					// ✅ FIXED: Destroy existing game if any
+					if (gameRef.current) {
+						console.log("🗑️ Destroying existing Phaser game");
+						gameRef.current.destroy(true);
+						gameRef.current = null;
+					}
 
-				// ✅ METHOD 2: Listen for scene creation event
-				gameRef.current.events.once("create-RoomScene", () => {
-					roomSceneRef.current = gameRef.current!.scene.getScene("RoomScene");
-					console.log("🏁 RoomScene reference acquired:", roomSceneRef.current);
-				});
+					// ✅ FIXED: Ensure container is available
+					if (!containerRef.current) {
+						console.error("❌ Game container not found");
+						return;
+					}
 
-				// ✅ METHOD 2: Start scene with data
-				const launchData = {
-					clientId: clientIdRef.current!,
-					RoomId: roomId,
-					userId: userId,
-					ws: wsRef.current!,
-					sendTransport: sendTransportRef.current!,
-					recvTransport: recvTransportRef.current!,
-					dataConsumers: dataConsumersRef.current,
-					dataProducer: dataProducerRef.current!,
-				};
+					// ✅ FIXED: Create Phaser game with proper config
+					const gameConfig = {
+						type: Phaser.AUTO,
+						parent: containerRef.current,
+						width: window.innerWidth,
+						height: window.innerHeight,
+						backgroundColor: "#000000",
+						physics: { 
+							default: "arcade", 
+							arcade: { 
+								gravity: { x: 0, y: 0 },
+								debug: false
+							} 
+						},
+						dom: {
+							createContainer: true
+						},
+						scale: {
+							mode: Phaser.Scale.RESIZE,
+							autoCenter: Phaser.Scale.CENTER_BOTH
+						}
+					};
 
-				gameRef.current.scene.start("RoomScene", launchData);
+					console.log("🎮 Creating Phaser Game with config:", gameConfig);
+					gameRef.current = new Phaser.Game(gameConfig);
+
+					// ✅ FIXED: Wait for game to be ready
+					gameRef.current.events.once('ready', () => {
+						console.log("🎮 Phaser Game is ready");
+						
+						// Add the room scene
+						gameRef.current.scene.add("RoomScene", RoomScene, false);
+
+						// Listen for scene creation
+						gameRef.current.events.once("create-RoomScene", () => {
+							roomSceneRef.current = gameRef.current.scene.getScene("RoomScene");
+							console.log("🏁 RoomScene reference acquired:", roomSceneRef.current);
+						});
+
+						// Prepare launch data
+						const launchData = {
+							clientId: clientIdRef.current,
+							RoomId: roomId,
+							userId: userid,
+							ws: wsRef.current,
+							sendTransport: sendTransportRef.current,
+							recvTransport: recvTransportRef.current,
+							dataConsumers: dataConsumersRef.current,
+							dataProducer: dataProducerRef.current,
+						};
+
+						console.log("🚀 Starting RoomScene with data:", launchData);
+						
+						// Start the scene
+						try {
+							gameRef.current.scene.start("RoomScene", launchData);
+							console.log("✅ RoomScene started successfully");
+						} catch (sceneError) {
+							console.error("❌ Error starting RoomScene:", sceneError);
+						}
+					});
+
+				} catch (error) {
+					console.error("❌ Error creating Phaser game:", error);
+					console.error("Stack trace:", error);
+				}
 			}
 
-			ws.onerror = (err) => {
-				console.error("WS error:", err);
+			// Cleanup function
+			return () => {
+				console.log("🧹 Cleaning up GameComponent");
+				
+				if (wsRef.current) {
+					wsRef.current.send(
+						JSON.stringify({ type: "leaveRoom", payload: { roomId } })
+					);
+					wsRef.current.close();
+					wsRef.current = null;
+				}
+				
+				if (gameRef.current) {
+					console.log("🗑️ Destroying Phaser game");
+					gameRef.current.destroy(true);
+					gameRef.current = null;
+				}
+				
+				// Reset refs
+				roomSceneRef.current = null;
+				dataConsumersRef.current = [];
+				phaserStartedRef.current = false;
 			};
 		})();
 
@@ -436,26 +511,21 @@ const GameComponent: React.FC = () => {
 
 	return (
 		<>
-			<div ref={containerRef} id="game-container">
-				{/* Video Interface */}
-				<VideoInterface
-					sendTransport={sendTransportRef.current}
-					recvTransport={recvTransportRef.current}
-					ws={wsRef.current}
-					clientId={clientIdRef.current}
-				/>
-				
-				{/* Chat Interface */}
-				{showChat && wsRef.current && (
-					<ChatInterface
-						ws={wsRef.current}
-						userId={userid}
-						onClose={() => setShowChat(false)}
-					/>
-				)}
+			<div 
+				ref={containerRef} 
+				id="game-container"
+				style={{
+					width: "100vw",
+					height: "100vh",
+					position: "relative",
+					overflow: "hidden",
+					background: "#000000"
+				}}
+			>
+				{/* Game will be rendered here */}
 			</div>
 
-			{/* Interface controls positioned in top-left */}
+			{/* Interface controls */}
 			<div className="video-overlay">
 				<VideoInterface
 					sendTransport={sendTransportRef.current}
@@ -469,7 +539,6 @@ const GameComponent: React.FC = () => {
 				<button
 					className="interface-toggle-btn"
 					onClick={() => {
-						// Call the video toggle function exposed by VideoInterface
 						if ((window as any).toggleVideo) {
 							(window as any).toggleVideo();
 						}
