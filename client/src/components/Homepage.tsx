@@ -34,12 +34,13 @@ export function Homepage() {
 		const initUser = async () => {
 			if (isSignedIn && user) {
 				try {
+					const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
 					const response = await fetch(
-						`${import.meta.env.VITE_BKPORT}/api/user/${user.id}`
+						`${backendUrl}/api/user/${user.id}`
 					);
 					if (!response.ok) {
 						const createResponse = await fetch(
-							`${import.meta.env.VITE_BKPORT}/api/user`,
+							`${backendUrl}/api/user`,
 							{
 								method: "POST",
 								headers: { "Content-Type": "application/json" },

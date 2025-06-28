@@ -19,12 +19,12 @@ export function Dashboard() {
   const fetchUserData = useCallback(async () => {
     if (!user) return null;
     try {
-      const response = await fetch(`${import.meta.env.VITE_BKPORT}/api/user/${user.id}`);
+      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const response = await fetch(`${backendUrl}/api/user/${user.id}`);
       if (response.status === 404) {
         try {
           const primaryEmail = user.emailAddresses[0].emailAddress || '';
-          // console.log("Creating user with email:", primaryEmail);
-          const createUserResponse = await fetch(`${import.meta.env.VITE_BKPORT}/api/user`, {
+          const createUserResponse = await fetch(`${backendUrl}/api/user`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -59,19 +59,19 @@ export function Dashboard() {
   const fetchAccessibleSpaces = useCallback(async () => {
     if (!user) return [];
     try {
-      const response = await fetch(`${import.meta.env.VITE_BKPORT}/api/user/${user.id}/spaces`);
+      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const response = await fetch(`${backendUrl}/api/user/${user.id}/spaces`);
       if (!response.ok) {
         console.warn("Could not fetch accessible spaces:", response.status);
         return [];
       }
       const accessibleSpaceIds = await response.json();
-      // console.log("Accessible space IDs:", accessibleSpaceIds);
       if (!Array.isArray(accessibleSpaceIds) || accessibleSpaceIds.length === 0) {
         return [];
       }
       const spaceDetailsPromises = accessibleSpaceIds.map(async (spaceId) => {
         try {
-          const spaceResponse = await fetch(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
+          const spaceResponse = await fetch(`${backendUrl}/api/spaces/${spaceId}`);
           if (!spaceResponse.ok) {
             console.warn(`Failed to fetch details for space ${spaceId}: ${spaceResponse.status}`);
             return null;
@@ -84,7 +84,6 @@ export function Dashboard() {
       });
       const spacesDetails = await Promise.all(spaceDetailsPromises);
       const validSpaces = spacesDetails.filter(space => space !== null) as ISpace[];
-      // console.log("Fetched complete space details:", validSpaces);
       return validSpaces;
     } catch (err) {
       console.error("Error fetching spaces:", err);
@@ -143,15 +142,12 @@ export function Dashboard() {
     setShowNotification("Coming Soon! This feature is under development.");
   };
 
-  // console.log(spaces)
-
   // Handle entering (activating) a space
   const handleEnterSpace = async (spaceId: string) => {
     if (!user) return;
     
     try {
-      // console.log("Current user ID:", user.id); // Log user ID
-      // console.log("Space details:", spaces.find(s => s.id === spaceId)); // Log space details
+      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
       
       // Check if user is already active in this space
       const isActive = spaces.find(space => 
@@ -160,7 +156,7 @@ export function Dashboard() {
       
       if (isActive) {
         // User is already active, navigate directly to the room
-        const spaceResponse = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
+        const spaceResponse = await axios.get(`${backendUrl}/api/spaces/${spaceId}`);
         const spaceData = spaceResponse.data;
         
         if (!spaceData.roomids || spaceData.roomids.length === 0) {
@@ -173,7 +169,7 @@ export function Dashboard() {
       }
 
       // Join the space (add user to active users)
-      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/join`, {
+      const response = await axios.post(`${backendUrl}/api/spaces/${spaceId}/join`, {
           clerkId: user.id
       });
       
@@ -182,7 +178,7 @@ export function Dashboard() {
       }
 
       // Get the default room (first room) of the space
-      const spaceResponse = await axios.get(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}`);
+      const spaceResponse = await axios.get(`${backendUrl}/api/spaces/${spaceId}`);
       const spaceData = spaceResponse.data;
       
       if (!spaceData.roomids || spaceData.roomids.length === 0) {
@@ -205,13 +201,13 @@ export function Dashboard() {
     }
   };
 
-  // Add a function to handle leaving a space
   const handleLeaveSpace = async (spaceId: string) => {
     if (!user) return;
     
     try {
       setLoading(true);
-      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/leave`, {
+      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const response = await axios.post(`${backendUrl}/api/spaces/${spaceId}/leave`, {
         clerkId: user.id
       });
       
@@ -241,12 +237,6 @@ export function Dashboard() {
     try {
       // Check if user is admin of this space
       const space = spaces.find(s => s.id === spaceId);
-      // console.log("Space admin check:", {
-      //   spaceId,
-      //   adminId: space?.adminid,
-      //   userId: user?.id,
-      //   isAdmin: space?.adminid === user?.id
-      // });
       
       if (!space || space.adminid !== user?.id) {
         setError("You must be an admin to invite users to this space");
