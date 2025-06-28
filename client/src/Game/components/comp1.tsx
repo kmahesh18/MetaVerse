@@ -21,22 +21,21 @@ const GameComponent: React.FC = () => {
 
 	const [showChat, setShowChat] = useState(false);
 
-	//webrtc initiliazers
+	// WebRTC initializers
 	const sendTransportRef = useRef<types.Transport | null>(null);
 	const recvTransportRef = useRef<types.Transport | null>(null);
 	const producedataCallbackRef = useRef<any | null>(null);
 	const dataProducerRef = useRef<types.DataProducer | null>(null);
 
-	//game related ref's
+	// Game related refs
 	const roomSceneRef = useRef<any>(null);
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
 	const phaserStartedRef = useRef(false);
 
-
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
 		try {
-			await axios.post(`http://localhost:5001/api/spaces/${spaceId}/join`, {
+			await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/join`, {
 				clerkId: userid,
 			});
 		} catch (e) {
@@ -54,16 +53,32 @@ const GameComponent: React.FC = () => {
 			const handlerName = await detectDeviceAsync();
 			deviceRef.current = new Device({ handlerName });
 
-			const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-			const wsUrl = `${protocol}://localhost:5001/ws?userId=${encodeURIComponent(
-				userid
-			)}`;
+			const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+			const protocol = backendUrl.startsWith('https') ? 'wss' : 'ws';
+			const wsBaseUrl = backendUrl.replace(/^https?:\/\//, '');
+			const wsUrl = `${protocol}://${wsBaseUrl}/ws?userId=${encodeURIComponent(userid)}`;
+			
 			const ws = new WebSocket(wsUrl);
 			wsRef.current = ws;
+			console.log('🔗 Connecting to WebSocket:', wsUrl);
 
 			ws.onopen = () => {
+				console.log('✅ WebSocket connected successfully');
 				ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
 				ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
+			};
+
+			ws.onerror = (err) => {
+				console.error("🚨 WebSocket connection error:", err);
+				console.error("🚨 WebSocket URL was:", wsUrl);
+				console.error("🚨 Backend URL:", backendUrl);
+			};
+
+			ws.onclose = (event) => {
+				console.error(`🔌 WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
+				if (event.code !== 1000) {
+					console.error("🚨 WebSocket closed unexpectedly");
+				}
 			};
 
 			ws.onmessage = async (e) => {
@@ -77,7 +92,6 @@ const GameComponent: React.FC = () => {
 					await deviceRef.current!.load({ routerRtpCapabilities: msg.payload });
 					ws.send(JSON.stringify({ type: "createWebRtcTransportSend" }));
 					ws.send(JSON.stringify({ type: "createWebRtcTransportRecv" }));
-					return;
 				}
 
 				if (msg.type === "SendWebRtcTransportCreated") {
@@ -133,7 +147,7 @@ const GameComponent: React.FC = () => {
 
 					// Auto-create DataProducer
 					if (!dataProducerRef.current) {
-						console.log("firtst");
+						console.log("Creating first data producer");
 						const streamId = Math.floor(Math.random() * 65535);
 
 						dataProducerRef.current =
@@ -143,7 +157,6 @@ const GameComponent: React.FC = () => {
 								protocol: "json",
 								maxPacketLifeTime: undefined,
 								maxRetransmits: undefined,
-								// Custom data can be passed via appData if needed
 								appData: { streamId }
 							});
 
@@ -153,11 +166,7 @@ const GameComponent: React.FC = () => {
 								console.log("✅ DataChannel is ready!");
 								return;
 							}
-
 							if (dataProducerRef.current?.readyState === "connecting") {
-								// console.log(
-								// 	"⏳ DataChannel still connecting, checking again in 2s..."
-								// );
 								setTimeout(checkDataChannelState, 2000);
 							} else if (dataProducerRef.current?.readyState === "closed") {
 								console.error("❌ DataChannel closed unexpectedly");
@@ -283,7 +292,6 @@ const GameComponent: React.FC = () => {
 				// ✅ NEW: Handle ICE restart response
 				if (msg.type === "iceRestarted") {
 					const { transportId, iceParameters } = msg.payload;
-
 					// Find the transport and restart ICE with new parameters
 					const transport =
 						transportId === sendTransportRef.current?.id
@@ -391,7 +399,6 @@ const GameComponent: React.FC = () => {
 				console.error(`Current ICE state: ${transport.connectionState}`);
 				if (connectionTimeout) clearTimeout(connectionTimeout);
 
-				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -414,7 +421,6 @@ const GameComponent: React.FC = () => {
 				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
 				console.log(`ICE connection state: ${transport.connectionState}`);
 
-				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -448,36 +454,20 @@ const GameComponent: React.FC = () => {
 					/>
 				)}
 			</div>
-			
-			{/* Interface controls positioned side by side */}
-			<div style={{
-				position: "fixed",
-				top: window.innerWidth <= 768 ? "1rem" : "1.5rem",
-				left: window.innerWidth <= 768 ? "1rem" : "1.5rem",
-				zIndex: 1001,
-				display: "flex",
-				flexDirection: "row",
-				gap: window.innerWidth <= 480 ? "0.5rem" : window.innerWidth <= 768 ? "0.75rem" : "1rem"
-			}}>
-				{/* Video Toggle Button */}
+
+			{/* Interface controls positioned in top-left */}
+			<div className="video-overlay">
+				<VideoInterface
+					sendTransport={sendTransportRef.current}
+					recvTransport={recvTransportRef.current}
+					ws={wsRef.current}
+					clientId={clientIdRef.current}
+				/>
+			</div>
+
+			<div className="interface-overlay">
 				<button
 					className="interface-toggle-btn"
-					style={{
-						width: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
-						height: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
-						borderRadius: "50%",
-						background: "rgba(26, 26, 26, 0.9)",
-						border: "2px solid var(--border-accent)",
-						color: "var(--text-primary)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						cursor: "pointer",
-						transition: "all var(--transition-normal)",
-						backdropFilter: "blur(10px)",
-						boxShadow: "var(--shadow-md)",
-						position: "relative"
-					}}
 					onClick={() => {
 						// Call the video toggle function exposed by VideoInterface
 						if ((window as any).toggleVideo) {
@@ -485,55 +475,34 @@ const GameComponent: React.FC = () => {
 						}
 					}}
 					title="Toggle Video"
-					onMouseEnter={(e) => {
-						e.currentTarget.style.background = "rgba(0, 212, 255, 0.2)";
-						e.currentTarget.style.borderColor = "var(--highlight)";
-						e.currentTarget.style.transform = "scale(1.1)";
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.background = "rgba(26, 26, 26, 0.9)";
-						e.currentTarget.style.borderColor = "var(--border-accent)";
-						e.currentTarget.style.transform = "scale(1)";
-					}}
 				>
-					<IoVideocamOutline size={window.innerWidth <= 480 ? 18 : window.innerWidth <= 768 ? 20 : 24} />
-				</button>
-
-				{/* Chat Toggle Button */}
-				<button
-					className="interface-toggle-btn"
-					style={{
-						width: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
-						height: window.innerWidth <= 480 ? "44px" : window.innerWidth <= 768 ? "48px" : "56px",
-						borderRadius: "50%",
-						background: showChat ? "rgba(0, 212, 255, 0.2)" : "rgba(26, 26, 26, 0.9)",
-						border: "2px solid var(--border-accent)",
-						color: "var(--text-primary)",
-						display: "flex",
-						alignItems: "center",
-						justifyContent: "center",
-						cursor: "pointer",
-						transition: "all var(--transition-normal)",
-						backdropFilter: "blur(10px)",
-						boxShadow: "var(--shadow-md)",
-						position: "relative"
-					}}
-					onClick={() => setShowChat(!showChat)}
-					title="Toggle Chat"
-					onMouseEnter={(e) => {
-						e.currentTarget.style.background = "rgba(0, 212, 255, 0.2)";
-						e.currentTarget.style.borderColor = "var(--highlight)";
-						e.currentTarget.style.transform = "scale(1.1)";
-					}}
-					onMouseLeave={(e) => {
-						e.currentTarget.style.background = showChat ? "rgba(0, 212, 255, 0.2)" : "rgba(26, 26, 26, 0.9)";
-						e.currentTarget.style.borderColor = "var(--border-accent)";
-						e.currentTarget.style.transform = "scale(1)";
-					}}
-				>
-					<BsChat size={window.innerWidth <= 480 ? 18 : window.innerWidth <= 768 ? 20 : 24} />
+					<IoVideocamOutline size={20} />
+					<span>Video</span>
 				</button>
 			</div>
+
+			<div className="chat-controls">
+				<button
+					className="chat-toggle-btn"
+					onClick={() => setShowChat(!showChat)}
+					title="Toggle Chat"
+					style={{
+						background: showChat ? "var(--neon-green)" : "var(--bg-elevated)"
+					}}
+				>
+					<BsChat size={20} />
+					<span>Chat</span>
+				</button>
+			</div>
+
+			{/* Chat Interface */}
+			{showChat && wsRef.current && (
+				<ChatInterface
+					ws={wsRef.current}
+					userId={userid}
+					onClose={() => setShowChat(false)}
+				/>
+			)}
 		</>
 	);
 };
