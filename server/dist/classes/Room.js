@@ -13,20 +13,16 @@ class Room {
         this.mediaProducers = new Map();
     }
     addClient(client) {
-        if (!client.userId) {
-            throw new Error("Cannot add client without userId");
-        }
-        // Key by userId
-        this.clients.set(client.userId, client);
-        this.playerPositions.set(client.userId, { posX: 0, posY: 0 });
+        this.clients.set(client.id, client);
+        this.playerPositions.set(client.id, { posX: 0, posY: 0 });
+        console.log(`Client ${client.id} added to room ${this.id}`);
     }
     removeClient(client) {
-        const uid = client.userId;
-        if (!uid || !this.clients.has(uid)) {
+        if (!this.clients.has(client.id))
             return false;
-        }
-        this.clients.delete(uid);
-        this.playerPositions.delete(uid);
+        this.clients.delete(client.id);
+        this.playerPositions.delete(client.id);
+        console.log(`Client ${client.id} removed from room ${this.id}`);
         return true;
     }
     getClient(clientId) {
@@ -35,19 +31,16 @@ class Room {
     broadcastMessage(senderId, message) {
         const json = JSON.stringify(message);
         this.clients.forEach((client) => {
-            if ((senderId === null || client.userId !== senderId) &&
+            if ((senderId === null || client.id !== senderId) &&
                 client.ws.readyState === client.ws.OPEN) {
                 client.ws.send(json);
-                console.log(`broadcasted to ${client.userId}`, message);
             }
         });
     }
     sendToClient(clientId, message) {
         const client = this.clients.get(clientId);
-        console.log(client);
         if (client && client.ws.readyState === client.ws.OPEN) {
             client.ws.send(JSON.stringify(message));
-            console.log('msg sent');
         }
     }
     isEmpty() {

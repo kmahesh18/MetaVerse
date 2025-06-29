@@ -3,34 +3,31 @@ import {
   getUserByClerkId,
   createOrUpdateUser,
   hasSelectedAvatar,
-  getAccessibleSpaces
 } from "../services/userService";
+import { getAccessibleSpaces } from "../services/userService";
 import { getDB } from "../db";
 import { Space_Collection } from "../Models/SpaceType";
 import { USERS_COLLECTION } from "../Models/UserModel";
-
+import { ASSET_COLLECTION } from "../Models/AssetModel";
+import { ObjectId } from "mongodb";
 export const userRouter = Router();
 
 // Get all accessible spaces of a user
 userRouter.get("/:clerkId/spaces", async (req, res) => {
   try {
     const { clerkId } = req.params;
-    console.log(`Fetching accessible spaces for user: ${clerkId}`);
-    
     const spaces = await getAccessibleSpaces(clerkId);
-    
     if (spaces && spaces.length > 0) {
-      console.log(`Found ${spaces.length} accessible spaces for user ${clerkId}`);
       res.json(spaces);
     } else {
-      console.log(`No accessible spaces found for user ${clerkId}`);
       res.json([]); // Return empty array instead of 404
     }
   } catch (error) {
-    console.error("Error getting accessible spaces:", error);
-    res.status(500).json({ message: "Error retrieving accessible spaces" });
+    console.log("Error getting spaces", error);
+    res.status(500).json({ message: "Error retrieving spaces" });
   }
 });
+
 
 // Get user by clerk ID
 userRouter.get("/:clerkId", async (req, res) => {
@@ -62,13 +59,13 @@ userRouter.get("/:clerkId/has-avatar", async (req, res) => {
 // Create a new user
 userRouter.post("/", async (req, res) => {
   try {
-    const { clerkId, avatarId, emailId } = req.body;
+    const { clerkId, avatarId ,emailId} = req.body;
     
     if (!clerkId) {
       return res.status(400).json({ message: "Clerk ID is required" });
     }
     
-    const result = await createOrUpdateUser(clerkId, avatarId, emailId);
+    const result = await createOrUpdateUser(clerkId, avatarId,emailId);
     
     if (result && result.value) {
       res.status(201).json(result.value);
@@ -86,7 +83,7 @@ userRouter.post("/:clerkId", async (req, res) => {
   try {
     const { clerkId } = req.params;
     const { avatarId } = req.body;
-    
+
     const result = await createOrUpdateUser(clerkId, avatarId);
     
     if (result && result.value) {
@@ -97,6 +94,30 @@ userRouter.post("/:clerkId", async (req, res) => {
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ message: "Error updating user" });
+  }
+});
+
+// Get spaces accessible to a user
+userRouter.get("/:clerkId/spaces", async (req, res) => {
+  try {
+    const { clerkId } = req.params;
+    
+    // Verify user exists
+    const user = await getUserByClerkId(clerkId);
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    
+    // Find all spaces where this user is in accessibleuserids
+    const db = await getDB();
+    const spaces = await db.collection(Space_Collection)
+      .find({ accessibleuserids: clerkId })
+      .toArray();
+    
+    res.json(spaces);
+  } catch (error) {
+    console.error("Error getting accessible spaces:", error);
+    res.status(500).json({ message: "Error retrieving accessible spaces" });
   }
 });
 
@@ -147,37 +168,6 @@ userRouter.patch("/:clerkId", async (req, res) => {
   } catch (error) {
     console.error("Error updating user:", error);
     res.status(500).json({ message: "Error updating user" });
-  }
-});
-
-// Temporary debug endpoint - add this temporarily to debug
-userRouter.get("/:clerkId/debug", async (req, res) => {
-  try {
-    const { clerkId } = req.params;
-    const db = await getDB();
-    
-    // Get user data
-    const user = await db.collection(USERS_COLLECTION).findOne({ clerkId });
-    
-    // Get all spaces where user is accessible
-    const spacesWhereAccessible = await db.collection(Space_Collection)
-      .find({ accessibleuserids: clerkId })
-      .toArray();
-    
-    // Get all spaces where user is admin
-    const spacesWhereAdmin = await db.collection(Space_Collection)
-      .find({ adminid: clerkId })
-      .toArray();
-    
-    res.json({
-      user: user,
-      spacesWhereAccessible: spacesWhereAccessible,
-      spacesWhereAdmin: spacesWhereAdmin,
-      userAccessibleSpaces: user?.accessibleSpaces || []
-    });
-  } catch (error) {
-    console.error("Debug error:", error);
-    res.status(500).json({ error: error });
   }
 });
 

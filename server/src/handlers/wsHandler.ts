@@ -20,31 +20,15 @@ import {
 } from "./mediaHandler";
 
 export function startWebsocketServer(server: http.Server, path = "/ws") {
-	const wss = new WebSocketServer({
-		server,
-		path,
-		// ✅ ADD: Better configuration for production
-		perMessageDeflate: false,
-		maxPayload: 1024 * 1024, // 1MB
-	});
-
-	console.log(`🚀 WebSocket server started on path: ${path}`);
-
+	const wss = new WebSocketServer({ server, path });
 	wss.on("connection", async (ws, req) => {
-		console.log(`🔗 New WebSocket connection from: ${req.socket.remoteAddress}`);
-
 		const url = req.url || " ";
 		const fullUrl = new URL(url, `http://${req.headers.host}`);
 		const userId = decodeURI(fullUrl.searchParams.get("userId") || "");
-
 		if (userId.length == 0) {
-			console.log("❌ NO userid found in WebSocket connection");
-			ws.close(1008, "User ID required");
+			console.log("NO userid found check again");
 			return;
 		}
-
-		console.log(`✅ WebSocket connected for user: ${userId}`);
-
 		//we make a client obj for each user
 		const clientid = uuidv4().toString();
 		const client = new Client(clientid, userId, ws);
@@ -93,9 +77,6 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 					await restartIce(client, msg);
 					break;
 
-				// case "produce":
-				//   await produce(client, msg);
-				//   break;
 
 				case "joinSpace":
 					await joinSpace(msg.payload.spaceId, userId);
@@ -180,32 +161,21 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 				case "produceMedia":
 					produceMedia(client, msg);
 					break;
-				case "consumeMedia":
-					consumeMedia(client, msg);
-					break;
+        case "consumeMedia":
+          consumeMedia(client, msg);
+          break;
 			}
 		});
 
+		ws.on("close", async () => {
+			await handleDisconnect(client);
+			console.log("Client disconnect succesfully");
+		});
+
 		ws.on("error", async (error) => {
-			console.error(`🚨 WebSocket error for client ${client.userId}:`, error);
+			console.error(`WebSocket error for client ${client.userId}:`, error);
 			await handleDisconnect(client);
 		});
-
-		ws.on("close", async (code, reason) => {
-			console.log(
-				`🔌 WebSocket disconnected for user ${client.userId}. Code: ${code}, Reason: ${reason}`
-			);
-			await handleDisconnect(client);
-		});
-	});
-
-	// ✅ ADD: WebSocket server error handling
-	wss.on("error", (error) => {
-		console.error("🚨 WebSocket Server Error:", error);
-	});
-
-	wss.on("listening", () => {
-		console.log("🎧 WebSocket server is listening");
 	});
 }
 
@@ -257,6 +227,20 @@ async function handleDisconnect(client: Client): Promise<void> {
 				consumers.forEach((consumer) => consumer.close());
 				room.dataConsumers.delete(client.userId);
 			}
+			
+			
+			room.mediaProducers?.forEach((producer, producerId) => {
+    if ((producer as any).appData?.clientId === client.userId) {
+      producer.close();
+      room.mediaProducers!.delete(producerId);
+      console.log(`🗑️ Cleaned up MediaProducer ${producerId} for ${client.userId}`);
+      // notify the others so they can remove that box
+      room.broadcastMessage(null, {
+        type: "mediaProducerClosed",
+        payload: { producerId },
+      });
+    }
+  });
 
 			// Notify other clients that this client left
 

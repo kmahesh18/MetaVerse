@@ -28,39 +28,22 @@ export class Room {
   
 
   addClient(client: Client): void {
-    try {
       if (!client.userId) {
         throw new Error("Cannot add client without userId");
       }
-      
-      console.log(`👤 Adding client ${client.userId} to room ${this.id}`);
+      // Key by userId
       this.clients.set(client.userId, client);
       this.playerPositions.set(client.userId, { posX: 0, posY: 0 });
-      
-      console.log(`✅ Room ${this.id} now has ${this.clients.size} clients`);
-    } catch (error) {
-      console.error("❌ Error adding client to room:", error);
-      throw error;
     }
-  }
   
     removeClient(client: Client): boolean {
-      try {
-        const uid = client.userId;
-        if (!uid || !this.clients.has(uid)) {
-          console.warn(`⚠️ Attempt to remove non-existent client ${uid} from room ${this.id}`);
-          return false;
-        }
-        
-        this.clients.delete(uid);
-        this.playerPositions.delete(uid);
-        
-        console.log(`👋 Removed client ${uid} from room ${this.id}. Remaining: ${this.clients.size}`);
-        return true;
-      } catch (error) {
-        console.error("❌ Error removing client from room:", error);
+      const uid = client.userId;
+      if (!uid || !this.clients.has(uid)) {
         return false;
       }
+      this.clients.delete(uid);
+      this.playerPositions.delete(uid);
+      return true;
   }
 
   getClient(clientId: string): Client | undefined {
@@ -68,37 +51,24 @@ export class Room {
   }
 
   broadcastMessage(senderId: string | null, message: any): void {
-    try {
-      const json = JSON.stringify(message);
-      let sentCount = 0;
-      
-      this.clients.forEach((client) => {
-        if (
-          (senderId === null || client.userId !== senderId) &&
-          client.ws.readyState === client.ws.OPEN
-        ) {
-          client.ws.send(json);
-          sentCount++;
-        }
-      });
-      
-      console.log(`📡 Broadcasted message to ${sentCount} clients in room ${this.id}`);
-    } catch (error) {
-      console.error("❌ Error broadcasting message:", error);
-    }
+    const json = JSON.stringify(message);
+    this.clients.forEach((client) => {
+      if (
+        (senderId === null || client.userId !== senderId) &&
+        client.ws.readyState === client.ws.OPEN
+      ) {
+        client.ws.send(json);
+        console.log(`broadcasted to ${client.userId}`, message);
+      }
+    });
   }
 
   sendToClient(clientId: string, message: Message): void {
-    try {
-      const client = this.clients.get(clientId);
-      if (client && client.ws.readyState === client.ws.OPEN) {
-        client.ws.send(JSON.stringify(message));
-        console.log(`📤 Message sent to client ${clientId}`);
-      } else {
-        console.warn(`⚠️ Cannot send message to client ${clientId} - not found or connection closed`);
-      }
-    } catch (error) {
-      console.error("❌ Error sending message to client:", error);
+    const client = this.clients.get(clientId);
+    console.log(client);
+    if (client && client.ws.readyState === client.ws.OPEN) {
+      client.ws.send(JSON.stringify(message));
+      console.log('msg sent');
     }
   }
 

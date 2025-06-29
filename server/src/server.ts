@@ -13,6 +13,7 @@ import { createMediasoupWorker } from "./mediasoup/setup";
 
 
 async function main(){
+
   dotenv.config();
   
   await createMediasoupWorker();
@@ -22,47 +23,9 @@ async function main(){
   // Attach WS to the HTTP server
   startWebsocketServer(server);
   
-  // ✅ ENHANCED: CORS configuration for production
-  const corsOptions = {
-    origin: [
-      process.env.CLIENT_URL || "http://localhost:5173",
-      process.env.FRONTEND_URL || "http://localhost:5173", 
-      "http://localhost:5173",
-      "http://localhost:3000",
-      "http://localhost:5001",
-      "https://metaverse-three-indol.vercel.app",
-      "https://localhost:5173",
-      // Allow any localhost for development
-      /^http:\/\/localhost:\d+$/,
-      /^https:\/\/localhost:\d+$/
-    ],
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
-    allowedHeaders: [
-      'Content-Type', 
-      'Authorization', 
-      'X-Requested-With',
-      'Accept',
-      'Origin'
-    ],
-    exposedHeaders: ['Content-Length', 'X-Foo', 'X-Bar'],
-    optionsSuccessStatus: 200 // For legacy browser support
-  };
-  
-  // Enable preflight for all routes
-  app.use(cors(corsOptions));
-  app.options('*', cors(corsOptions));
-  
+  // Middleware
+  app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
   app.use(express.json());
-  
-  // ✅ ADD: Health check for WebSocket
-  app.get("/ws-health", (req, res) => {
-    res.json({ 
-      status: "WebSocket server running",
-      timestamp: new Date().toISOString(),
-      cors: "enabled"
-    });
-  });
   
   // API routes
   app.use("/api/user", userRouter);
@@ -72,7 +35,7 @@ async function main(){
   app.use("/api/roomtypes", roomTypesRouter);
   
   // Health check
-  app.get("/", (_req, res) => res.send("Server running with CORS enabled"));
+  app.get("/", (_req, res) => res.send("Server running"));
   
   const PORT = process.env.PORT || 5001;
   
@@ -81,7 +44,6 @@ async function main(){
     .then(() => {
       server.listen(PORT, () => {
         console.log(`🚀 HTTP + WS listening on http://localhost:${PORT}`);
-        console.log(`🌐 CORS enabled for origins:`, corsOptions.origin);
       });
     })
     .catch((err) => {
