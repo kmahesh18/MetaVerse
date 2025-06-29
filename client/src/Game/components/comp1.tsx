@@ -6,6 +6,7 @@ import { types, Device, detectDeviceAsync } from "mediasoup-client";
 import { ChatInterface } from "../../components/ChatInterface";
 import VideoInterface from "../../components/VideoInterface";
 import { BsChat } from "react-icons/bs";
+import { IoVideocamOutline } from "react-icons/io5";
 
 const GameComponent: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -434,33 +435,68 @@ const GameComponent: React.FC = () => {
 
 	return (
 		<>
-			<div ref={containerRef} id="game-container">
-				{/* Show components based on state */}
+			<div 
+				ref={containerRef} 
+				id="game-container"
+				style={{
+					width: "100vw",
+					height: "100vh",
+					position: "relative",
+					overflow: "hidden",
+					background: "#000000"
+				}}
+			>
+				{/* Game will be rendered here */}
+			</div>
 
+			{/* Interface controls */}
+			<div className="video-overlay">
 				<VideoInterface
 					sendTransport={sendTransportRef.current}
-					recvTransport={recvTransportRef.current} // Add this
+					recvTransport={recvTransportRef.current}
 					ws={wsRef.current}
 					device={deviceRef.current}
 					clientId={clientIdRef.current}
 				/>
-				{showChat && wsRef.current && (
-					<ChatInterface
-						ws={wsRef.current}
-						userId={userid}
-						onClose={() => setShowChat(false)}
-					/>
-				)}
 			</div>
-			<div>
+
+			<div className="interface-overlay">
 				<button
 					className="interface-toggle-btn"
-					style={{ left: 24, top: 24 }}
-					onClick={() => setShowChat(!showChat)}
-					title="Toggle Chat">
-					<BsChat size={28} />
+					onClick={() => {
+						if ((window as any).toggleVideo) {
+							(window as any).toggleVideo();
+						}
+					}}
+					title="Toggle Video"
+				>
+					<IoVideocamOutline size={20} />
+					<span>Video</span>
 				</button>
 			</div>
+
+			<div className="chat-controls">
+				<button
+					className="chat-toggle-btn"
+					onClick={() => setShowChat(!showChat)}
+					title="Toggle Chat"
+					style={{
+						background: showChat ? "var(--neon-green)" : "var(--bg-elevated)"
+					}}
+				>
+					<BsChat size={20} />
+					<span>Chat</span>
+				</button>
+			</div>
+
+			{/* Chat Interface */}
+			{showChat && wsRef.current && (
+				<ChatInterface
+					ws={wsRef.current}
+					userId={userid}
+					onClose={() => setShowChat(false)}
+				/>
+			)}
 		</>
 	);
 };
