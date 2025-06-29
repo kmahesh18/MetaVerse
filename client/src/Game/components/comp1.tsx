@@ -46,33 +46,42 @@ const GameComponent: React.FC = () => {
 		}
 	}
 
-	useEffect(() => {
-		if (!spaceId || !roomId || !userid || isInit.current) return;
-		isInit.current = true;
+	 useEffect(() => {
+        if (!spaceId || !roomId || !userid || isInit.current) return;
+        isInit.current = true;
 
-		(async () => {
-			await joinSpace();
+        (async () => {
+            await joinSpace();
 
-			const handlerName = await detectDeviceAsync();
-			deviceRef.current = new Device({ handlerName });
+            const handlerName = await detectDeviceAsync();
+            deviceRef.current = new Device({ handlerName });
 
-			// Fix WebSocket URL construction
-			const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
-			const wsUrl = import.meta.env.VITE_WS_URL || 
-				backendUrl.replace(/^https?:\/\//, '').replace(/^http/, 'ws').replace(/^https/, 'wss') + '/ws';
-			const fullWsUrl = wsUrl.includes('://') ? `${wsUrl}?userId=${encodeURIComponent(userid)}` : 
-				`${backendUrl.startsWith('https') ? 'wss' : 'ws'}://${wsUrl}?userId=${encodeURIComponent(userid)}`;
-			
-			const ws = new WebSocket(fullWsUrl);
-			wsRef.current = ws;
+            // Fix WebSocket URL construction
+            const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+            
+            // Use VITE_WS_URL if available, otherwise construct from backend URL
+            let wsUrl: string;
+            if (import.meta.env.VITE_WS_URL) {
+                wsUrl = import.meta.env.VITE_WS_URL;
+            } else {
+                // Convert HTTP/HTTPS backend URL to WebSocket URL
+                wsUrl = backendUrl.replace(/^http/, 'ws') + '/ws';
+            }
+            
+            const fullWsUrl = `${wsUrl}?userId=${encodeURIComponent(userid)}`;
+            
+            console.log('🔗 Attempting WebSocket connection to:', fullWsUrl);
+            const ws = new WebSocket(fullWsUrl);
+            wsRef.current = ws;
 
 			ws.onopen = () => {
-				ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
-				ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
-			};
+                console.log('✅ WebSocket connected successfully');
+                ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
+                ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
+            };
 
-			ws.onmessage = async (e) => {
-				const msg = JSON.parse(e.data);
+            ws.onmessage = async (e) => {
+                const msg = JSON.parse(e.data);
 
 				if (msg.type === "JoinedRoom") {
 					clientIdRef.current = msg.payload.clientId;
@@ -355,9 +364,17 @@ const GameComponent: React.FC = () => {
 			}
 
 			ws.onerror = (err) => {
-				console.error("WS error:", err);
-			};
-		})();
+                console.error("❌ WebSocket error:", err);
+                console.error("Failed to connect to:", fullWsUrl);
+            };
+
+            ws.onclose = (event) => {
+                console.log('🔌 WebSocket closed:', event.code, event.reason);
+                if (event.code !== 1000) {
+                    console.error('❌ WebSocket closed unexpectedly');
+                }
+            };
+        })();
 
 		return () => {
 			if (wsRef.current) {
