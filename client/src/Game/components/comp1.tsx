@@ -47,38 +47,41 @@ const GameComponent: React.FC = () => {
 	}
 
 	 useEffect(() => {
-        if (!spaceId || !roomId || !userid || isInit.current) return;
-        isInit.current = true;
+    if (!spaceId || !roomId || !userid || isInit.current) return;
+    isInit.current = true;
 
-        (async () => {
-            await joinSpace();
+    (async () => {
+        await joinSpace();
 
-            const handlerName = await detectDeviceAsync();
-            deviceRef.current = new Device({ handlerName });
+        const handlerName = await detectDeviceAsync();
+        deviceRef.current = new Device({ handlerName });
 
-            // Fix WebSocket URL construction
-            const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
-            
-            // Use VITE_WS_URL if available, otherwise construct from backend URL
-            let wsUrl: string;
-            if (import.meta.env.VITE_WS_URL) {
-                wsUrl = import.meta.env.VITE_WS_URL;
-            } else {
-                // Convert HTTP/HTTPS backend URL to WebSocket URL
-                wsUrl = backendUrl.replace(/^http/, 'ws') + '/ws';
-            }
-            
-            const fullWsUrl = `${wsUrl}?userId=${encodeURIComponent(userid)}`;
-            
-            console.log('🔗 Attempting WebSocket connection to:', fullWsUrl);
-            const ws = new WebSocket(fullWsUrl);
-            wsRef.current = ws;
+        // Fix WebSocket URL construction for deployment
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+        
+        let wsUrl: string;
+        if (import.meta.env.VITE_WS_URL) {
+            // For deployed version, append /ws if not already present
+            wsUrl = import.meta.env.VITE_WS_URL.endsWith('/ws') 
+                ? import.meta.env.VITE_WS_URL 
+                : import.meta.env.VITE_WS_URL + '/ws';
+        } else {
+            // Convert HTTP/HTTPS backend URL to WebSocket URL
+            wsUrl = backendUrl.replace(/^http/, 'ws') + '/ws';
+        }
+        
+        const fullWsUrl = `${wsUrl}?userId=${encodeURIComponent(userid)}`;
+        
+        console.log('🔗 Attempting WebSocket connection to:', fullWsUrl);
+        const ws = new WebSocket(fullWsUrl);
+        wsRef.current = ws;
 
-			ws.onopen = () => {
-                console.log('✅ WebSocket connected successfully');
-                ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
-                ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
-            };
+        ws.onopen = () => {
+            console.log('✅ WebSocket connected successfully');
+            ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
+            ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
+        };
+
 
             ws.onmessage = async (e) => {
                 const msg = JSON.parse(e.data);
