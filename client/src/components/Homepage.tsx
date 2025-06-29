@@ -34,7 +34,7 @@ export function Homepage() {
 		const initUser = async () => {
 			if (isSignedIn && user) {
 				try {
-					const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+					const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
 					const response = await fetch(
 						`${backendUrl}/api/user/${user.id}`
 					);

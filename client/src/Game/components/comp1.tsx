@@ -6,7 +6,6 @@ import { types, Device, detectDeviceAsync } from "mediasoup-client";
 import { ChatInterface } from "../../components/ChatInterface";
 import VideoInterface from "../../components/VideoInterface";
 import { BsChat } from "react-icons/bs";
-import { IoVideocamOutline } from "react-icons/io5";
 
 const GameComponent: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -21,21 +20,24 @@ const GameComponent: React.FC = () => {
 
 	const [showChat, setShowChat] = useState(false);
 
-	// WebRTC initializers
+	//webrtc initiliazers
 	const sendTransportRef = useRef<types.Transport | null>(null);
 	const recvTransportRef = useRef<types.Transport | null>(null);
 	const producedataCallbackRef = useRef<any | null>(null);
 	const dataProducerRef = useRef<types.DataProducer | null>(null);
 
-	// Game related refs
+	//game related ref's
 	const roomSceneRef = useRef<any>(null);
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
 	const phaserStartedRef = useRef(false);
 
+
+
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
 		try {
-			await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces/${spaceId}/join`, {
+			const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+			await axios.post(`${backendUrl}/api/spaces/${spaceId}/join`, {
 				clerkId: userid,
 			});
 		} catch (e) {
@@ -54,32 +56,18 @@ const GameComponent: React.FC = () => {
 			deviceRef.current = new Device({ handlerName });
 
 			// Fix WebSocket URL construction
-			const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
-			const protocol = backendUrl.startsWith('https') ? 'wss' : 'ws';
-			const wsBaseUrl = backendUrl.replace(/^https?:\/\//, '');
-			const wsUrl = `${protocol}://${wsBaseUrl}/ws?userId=${encodeURIComponent(userid)}`;
+			const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+			const wsUrl = import.meta.env.VITE_WS_URL || 
+				backendUrl.replace(/^https?:\/\//, '').replace(/^http/, 'ws').replace(/^https/, 'wss') + '/ws';
+			const fullWsUrl = wsUrl.includes('://') ? `${wsUrl}?userId=${encodeURIComponent(userid)}` : 
+				`${backendUrl.startsWith('https') ? 'wss' : 'ws'}://${wsUrl}?userId=${encodeURIComponent(userid)}`;
 			
-			const ws = new WebSocket(wsUrl);
+			const ws = new WebSocket(fullWsUrl);
 			wsRef.current = ws;
-			console.log('🔗 Connecting to WebSocket:', wsUrl);
 
 			ws.onopen = () => {
-				console.log('✅ WebSocket connected successfully');
 				ws.send(JSON.stringify({ type: "joinRoom", payload: { roomId } }));
 				ws.send(JSON.stringify({ type: "getRtpCapabilites" }));
-			};
-
-			ws.onerror = (err) => {
-				console.error("🚨 WebSocket connection error:", err);
-				console.error("🚨 WebSocket URL was:", wsUrl);
-				console.error("🚨 Backend URL:", backendUrl);
-			};
-
-			ws.onclose = (event) => {
-				console.error(`🔌 WebSocket closed. Code: ${event.code}, Reason: ${event.reason}`);
-				if (event.code !== 1000) {
-					console.error("🚨 WebSocket closed unexpectedly");
-				}
 			};
 
 			ws.onmessage = async (e) => {
@@ -93,6 +81,7 @@ const GameComponent: React.FC = () => {
 					await deviceRef.current!.load({ routerRtpCapabilities: msg.payload });
 					ws.send(JSON.stringify({ type: "createWebRtcTransportSend" }));
 					ws.send(JSON.stringify({ type: "createWebRtcTransportRecv" }));
+					return;
 				}
 
 				if (msg.type === "SendWebRtcTransportCreated") {
@@ -148,7 +137,7 @@ const GameComponent: React.FC = () => {
 
 					// Auto-create DataProducer
 					if (!dataProducerRef.current) {
-						console.log("Creating first data producer");
+						console.log("firtst");
 						const streamId = Math.floor(Math.random() * 65535);
 
 						dataProducerRef.current =
@@ -156,9 +145,12 @@ const GameComponent: React.FC = () => {
 								ordered: true,
 								label: "player-sync",
 								protocol: "json",
-								maxPacketLifeTime: undefined,
-								maxRetransmits: undefined,
-								appData: { streamId }
+								sctpStreamParameters: {
+									streamId,
+									ordered: true,
+									maxPacketLifeTime: undefined,
+									maxRetransmits: undefined,
+								},
 							});
 
 						// Monitor DataChannel ready state
@@ -167,7 +159,11 @@ const GameComponent: React.FC = () => {
 								console.log("✅ DataChannel is ready!");
 								return;
 							}
+
 							if (dataProducerRef.current?.readyState === "connecting") {
+								// console.log(
+								// 	"⏳ DataChannel still connecting, checking again in 2s..."
+								// );
 								setTimeout(checkDataChannelState, 2000);
 							} else if (dataProducerRef.current?.readyState === "closed") {
 								console.error("❌ DataChannel closed unexpectedly");
@@ -293,6 +289,7 @@ const GameComponent: React.FC = () => {
 				// ✅ NEW: Handle ICE restart response
 				if (msg.type === "iceRestarted") {
 					const { transportId, iceParameters } = msg.payload;
+
 					// Find the transport and restart ICE with new parameters
 					const transport =
 						transportId === sendTransportRef.current?.id
@@ -315,123 +312,49 @@ const GameComponent: React.FC = () => {
 			};
 
 			async function createPhaserGame() {
-				try {
-					console.log("🎮 Starting Phaser game initialization...");
-					
-					// ✅ FIXED: Import Phaser and room scene properly
-					const [PhaserModule, roomModule] = await Promise.all([
-						import("phaser"),
-						import("../scenes/room"),
-					]);
-					
-					const Phaser = PhaserModule.default || PhaserModule;
-					const { room: RoomScene } = roomModule;
+				// ✅ METHOD 2: Use Phaser Events to get scene reference
+				const [PhaserModule, roomModule] = await Promise.all([
+					import("phaser"),
+					import("../scenes/room"),
+				]);
+				const Phaser = PhaserModule as typeof import("phaser");
+				const { room: RoomScene } = roomModule;
 
-					console.log("📦 Phaser and Room modules loaded successfully");
+				gameRef.current = new Phaser.Game({
+					type: Phaser.AUTO,
+					parent: containerRef.current!,
+					width: window.innerWidth,
+					height: window.innerHeight,
+					backgroundColor: "#000",
+					physics: { default: "arcade", arcade: { gravity: { x: 0, y: 0 } } },
+				});
 
-					// ✅ FIXED: Destroy existing game if any
-					if (gameRef.current) {
-						console.log("🗑️ Destroying existing Phaser game");
-						gameRef.current.destroy(true);
-						gameRef.current = null;
-					}
+				// ✅ METHOD 2: Register scene without auto-start
+				gameRef.current.scene.add("RoomScene", RoomScene, false);
 
-					// ✅ FIXED: Ensure container is available
-					if (!containerRef.current) {
-						console.error("❌ Game container not found");
-						return;
-					}
+				// ✅ METHOD 2: Listen for scene creation event
+				gameRef.current.events.once("create-RoomScene", () => {
+					roomSceneRef.current = gameRef.current!.scene.getScene("RoomScene");
+					console.log("🏁 RoomScene reference acquired:", roomSceneRef.current);
+				});
 
-					// ✅ FIXED: Create Phaser game with proper config
-					const gameConfig = {
-						type: Phaser.AUTO,
-						parent: containerRef.current,
-						width: window.innerWidth,
-						height: window.innerHeight,
-						backgroundColor: "#000000",
-						physics: { 
-							default: "arcade", 
-							arcade: { 
-								gravity: { x: 0, y: 0 },
-								debug: false
-							} 
-						},
-						dom: {
-							createContainer: true
-						},
-						scale: {
-							mode: Phaser.Scale.RESIZE,
-							autoCenter: Phaser.Scale.CENTER_BOTH
-						}
-					};
+				// ✅ METHOD 2: Start scene with data
+				const launchData = {
+					clientId: clientIdRef.current!,
+					RoomId: roomId,
+					userId: userId,
+					ws: wsRef.current!,
+					sendTransport: sendTransportRef.current!,
+					recvTransport: recvTransportRef.current!,
+					dataConsumers: dataConsumersRef.current,
+					dataProducer: dataProducerRef.current!,
+				};
 
-					console.log("🎮 Creating Phaser Game with config:", gameConfig);
-					gameRef.current = new Phaser.Game(gameConfig);
-
-					// ✅ FIXED: Wait for game to be ready
-					gameRef.current.events.once('ready', () => {
-						console.log("🎮 Phaser Game is ready");
-						
-						// Add the room scene
-						gameRef.current.scene.add("RoomScene", RoomScene, false);
-
-						// Listen for scene creation
-						gameRef.current.events.once("create-RoomScene", () => {
-							roomSceneRef.current = gameRef.current.scene.getScene("RoomScene");
-							console.log("🏁 RoomScene reference acquired:", roomSceneRef.current);
-						});
-
-						// Prepare launch data
-						const launchData = {
-							clientId: clientIdRef.current,
-							RoomId: roomId,
-							userId: userid,
-							ws: wsRef.current,
-							sendTransport: sendTransportRef.current,
-							recvTransport: recvTransportRef.current,
-							dataConsumers: dataConsumersRef.current,
-							dataProducer: dataProducerRef.current,
-						};
-
-						console.log("🚀 Starting RoomScene with data:", launchData);
-						
-						// Start the scene
-						try {
-							gameRef.current.scene.start("RoomScene", launchData);
-							console.log("✅ RoomScene started successfully");
-						} catch (sceneError) {
-							console.error("❌ Error starting RoomScene:", sceneError);
-						}
-					});
-
-				} catch (error) {
-					console.error("❌ Error creating Phaser game:", error);
-					console.error("Stack trace:", error);
-				}
+				gameRef.current.scene.start("RoomScene", launchData);
 			}
 
-			// Cleanup function
-			return () => {
-				console.log("🧹 Cleaning up GameComponent");
-				
-				if (wsRef.current) {
-					wsRef.current.send(
-						JSON.stringify({ type: "leaveRoom", payload: { roomId } })
-					);
-					wsRef.current.close();
-					wsRef.current = null;
-				}
-				
-				if (gameRef.current) {
-					console.log("🗑️ Destroying Phaser game");
-					gameRef.current.destroy(true);
-					gameRef.current = null;
-				}
-				
-				// Reset refs
-				roomSceneRef.current = null;
-				dataConsumersRef.current = [];
-				phaserStartedRef.current = false;
+			ws.onerror = (err) => {
+				console.error("WS error:", err);
 			};
 		})();
 
@@ -471,9 +394,9 @@ const GameComponent: React.FC = () => {
 			} else if (transport.connectionState === "failed") {
 				console.error(`❌ ${transportType} WebRTC connection failed!`);
 				console.error(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.error(`Current ICE state: ${transport.connectionState}`);
 				if (connectionTimeout) clearTimeout(connectionTimeout);
 
+				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -494,8 +417,8 @@ const GameComponent: React.FC = () => {
 				);
 				console.log(`Current state: ${transport.connectionState}`);
 				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.log(`ICE connection state: ${transport.connectionState}`);
 
+				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -511,67 +434,33 @@ const GameComponent: React.FC = () => {
 
 	return (
 		<>
-			<div 
-				ref={containerRef} 
-				id="game-container"
-				style={{
-					width: "100vw",
-					height: "100vh",
-					position: "relative",
-					overflow: "hidden",
-					background: "#000000"
-				}}
-			>
-				{/* Game will be rendered here */}
-			</div>
+			<div ref={containerRef} id="game-container">
+				{/* Show components based on state */}
 
-			{/* Interface controls */}
-			<div className="video-overlay">
 				<VideoInterface
 					sendTransport={sendTransportRef.current}
-					recvTransport={recvTransportRef.current}
+					recvTransport={recvTransportRef.current} // Add this
 					ws={wsRef.current}
+					device={deviceRef.current}
 					clientId={clientIdRef.current}
 				/>
+				{showChat && wsRef.current && (
+					<ChatInterface
+						ws={wsRef.current}
+						userId={userid}
+						onClose={() => setShowChat(false)}
+					/>
+				)}
 			</div>
-
-			<div className="interface-overlay">
+			<div>
 				<button
 					className="interface-toggle-btn"
-					onClick={() => {
-						if ((window as any).toggleVideo) {
-							(window as any).toggleVideo();
-						}
-					}}
-					title="Toggle Video"
-				>
-					<IoVideocamOutline size={20} />
-					<span>Video</span>
-				</button>
-			</div>
-
-			<div className="chat-controls">
-				<button
-					className="chat-toggle-btn"
+					style={{ left: 24, top: 24 }}
 					onClick={() => setShowChat(!showChat)}
-					title="Toggle Chat"
-					style={{
-						background: showChat ? "var(--neon-green)" : "var(--bg-elevated)"
-					}}
-				>
-					<BsChat size={20} />
-					<span>Chat</span>
+					title="Toggle Chat">
+					<BsChat size={28} />
 				</button>
 			</div>
-
-			{/* Chat Interface */}
-			{showChat && wsRef.current && (
-				<ChatInterface
-					ws={wsRef.current}
-					userId={userid}
-					onClose={() => setShowChat(false)}
-				/>
-			)}
 		</>
 	);
 };

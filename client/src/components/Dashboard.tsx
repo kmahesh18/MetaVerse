@@ -19,7 +19,7 @@ export function Dashboard() {
   const fetchUserData = useCallback(async () => {
     if (!user) return null;
     try {
-      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
       const response = await fetch(`${backendUrl}/api/user/${user.id}`);
       if (response.status === 404) {
         try {
@@ -59,7 +59,7 @@ export function Dashboard() {
   const fetchAccessibleSpaces = useCallback(async () => {
     if (!user) return [];
     try {
-      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
       console.log(`Fetching spaces for user ${user.id} from ${backendUrl}`);
       
       const response = await fetch(`${backendUrl}/api/user/${user.id}/spaces`);
@@ -171,7 +171,7 @@ export function Dashboard() {
     if (!user) return;
     
     try {
-      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
       
       // Check if user is already active in this space
       const isActive = spaces.find(space => 
@@ -230,7 +230,7 @@ export function Dashboard() {
     
     try {
       setLoading(true);
-      const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
       const response = await axios.post(`${backendUrl}/api/spaces/${spaceId}/leave`, {
         clerkId: user.id
       });

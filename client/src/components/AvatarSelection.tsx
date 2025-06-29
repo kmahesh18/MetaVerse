@@ -15,8 +15,8 @@ export function AvatarSelection() {
   useEffect(() => {
     const fetchAvatars = async () => {
       try {
-        // Change the endpoint to fetch only avatar assets
-        const response = await fetch(`${import.meta.env.VITE_BKPORT}/api/assets/avatars`);
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+        const response = await fetch(`${backendUrl}/api/assets/avatars`);
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
           console.error("Failed to fetch avatars:", errorData);
@@ -42,8 +42,8 @@ export function AvatarSelection() {
       setIsUpdating(true);
       setError(null);
 
-      // Use the PATCH endpoint to update the avatar
-      const userResponse = await fetch(`${import.meta.env.VITE_BKPORT}/api/user/${user.id}/avatar`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const userResponse = await fetch(`${backendUrl}/api/user/${user.id}/avatar`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json'

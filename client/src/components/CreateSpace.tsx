@@ -19,8 +19,8 @@ export function CreateSpace() {
     const fetchRoomTypes = async () => {
       try {
         setLoading(true);
-        // Update to use the backend port from environment variables
-        const response = await axios.get(`${import.meta.env.VITE_BKPORT}/api/roomtypes`);
+        const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+        const response = await axios.get(`${backendUrl}/api/roomtypes`);
         
         // Make sure we're getting an array back
         if (Array.isArray(response.data)) {
@@ -67,7 +67,8 @@ export function CreateSpace() {
     setError(null);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BKPORT}/api/spaces`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      const response = await axios.post(`${backendUrl}/api/spaces`, {
         adminid: user.id,
         selectedRoomTypes: selectedRoomTypes
       });
