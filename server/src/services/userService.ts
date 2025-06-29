@@ -24,15 +24,22 @@ export async function getAccessibleSpaces(
   // Get the user's accessible spaces from the database
   const db = await getDB();
   let accessibleSpaces: string[] = []; 
-  const user = await db
-    .collection(USERS_COLLECTION)
-    .findOne({ clerkId }) as unknown as IUser | null;
-  if (user) {
-    accessibleSpaces = user.accessibleSpaces;
+  
+  try {
+    const user = await db
+      .collection(USERS_COLLECTION)
+      .findOne({ clerkId }) as unknown as IUser | null;
+    
+    if (user && user.accessibleSpaces) {
+      accessibleSpaces = user.accessibleSpaces;
+      console.log(`User ${clerkId} has ${accessibleSpaces.length} accessible spaces:`, accessibleSpaces);
+    } else {
+      console.log(`User ${clerkId} not found or has no accessible spaces`);
+    }
+  } catch (error) {
+    console.error(`Error fetching accessible spaces for user ${clerkId}:`, error);
   }
-  else{
-    console.log("User not found");
-  }
+  
   return accessibleSpaces;
 }
 

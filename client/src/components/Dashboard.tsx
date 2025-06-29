@@ -60,31 +60,55 @@ export function Dashboard() {
     if (!user) return [];
     try {
       const backendUrl = import.meta.env.VITE_BKPORT || 'http://localhost:5001';
+      console.log(`Fetching spaces for user ${user.id} from ${backendUrl}`);
+      
       const response = await fetch(`${backendUrl}/api/user/${user.id}/spaces`);
       if (!response.ok) {
         console.warn("Could not fetch accessible spaces:", response.status);
         return [];
       }
-      const accessibleSpaceIds = await response.json();
-      if (!Array.isArray(accessibleSpaceIds) || accessibleSpaceIds.length === 0) {
+      
+      const spacesData = await response.json();
+      console.log("Raw spaces data from API:", spacesData);
+      
+      // Check if the response is an array of space IDs or actual space objects
+      if (!Array.isArray(spacesData)) {
+        console.warn("Expected array but got:", typeof spacesData, spacesData);
         return [];
       }
-      const spaceDetailsPromises = accessibleSpaceIds.map(async (spaceId) => {
-        try {
-          const spaceResponse = await fetch(`${backendUrl}/api/spaces/${spaceId}`);
-          if (!spaceResponse.ok) {
-            console.warn(`Failed to fetch details for space ${spaceId}: ${spaceResponse.status}`);
+      
+      // If we got space objects directly, return them
+      if (spacesData.length > 0 && spacesData[0].id) {
+        console.log(`Got ${spacesData.length} complete space objects`);
+        return spacesData as ISpace[];
+      }
+      
+      // If we got space IDs, fetch detailed information for each
+      if (spacesData.length > 0 && typeof spacesData[0] === 'string') {
+        console.log(`Got ${spacesData.length} space IDs, fetching details...`);
+        const spaceDetailsPromises = spacesData.map(async (spaceId) => {
+          try {
+            const spaceResponse = await fetch(`${backendUrl}/api/spaces/${spaceId}`);
+            if (!spaceResponse.ok) {
+              console.warn(`Failed to fetch details for space ${spaceId}: ${spaceResponse.status}`);
+              return null;
+            }
+            return await spaceResponse.json();
+          } catch (err) {
+            console.error(`Error fetching details for space ${spaceId}:`, err);
             return null;
           }
-          return await spaceResponse.json();
-        } catch (err) {
-          console.error(`Error fetching details for space ${spaceId}:`, err);
-          return null;
-        }
-      });
-      const spacesDetails = await Promise.all(spaceDetailsPromises);
-      const validSpaces = spacesDetails.filter(space => space !== null) as ISpace[];
-      return validSpaces;
+        });
+        
+        const spacesDetails = await Promise.all(spaceDetailsPromises);
+        const validSpaces = spacesDetails.filter(space => space !== null) as ISpace[];
+        console.log(`Successfully fetched details for ${validSpaces.length} spaces`);
+        return validSpaces;
+      }
+      
+      // Empty array case
+      console.log("No spaces found for user");
+      return [];
     } catch (err) {
       console.error("Error fetching spaces:", err);
       return [];
