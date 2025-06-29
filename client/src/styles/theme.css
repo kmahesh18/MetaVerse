@@ -953,6 +953,16 @@ body {
 
 /* Mobile positioning adjustments */
 @media (max-width: 768px) {
+	.chat-sidebar {
+    width: 100%;
+    max-width: 100%;
+    left: 100%;
+  }
+
+  .chat-sidebar.open {
+    right: 0;
+  }
+  
   .video-overlay {
     top: 15px;
     left: 15px;
