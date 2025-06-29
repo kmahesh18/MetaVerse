@@ -218,12 +218,27 @@ export function ChatInterface({ ws, userId, onClose }: ChatInterfaceProps) {
 								}
 								className="chat-input"
 								maxLength={500}
+								autoComplete="off"
+								autoCorrect="off"
+								autoCapitalize="off"
+								spellCheck="false"
+								style={{
+									fontSize: '16px', // Prevents iOS zoom
+									WebkitAppearance: 'none',
+									borderRadius: '8px'
+								}}
 							/>
 							<button
 								type="submit"
 								className="send-button"
 								disabled={!inputText.trim()}
-								title="Send message">
+								title="Send message"
+								style={{
+									minWidth: '48px',
+									minHeight: '48px',
+									WebkitTapHighlightColor: 'transparent'
+								}}
+							>
 								<MdSend className="send-icon" />
 							</button>
 						</div>

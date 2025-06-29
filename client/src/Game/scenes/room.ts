@@ -188,8 +188,8 @@ export class room extends Scene {
         }
       });
 
-      // Place player sprites
-      this.playerAsset.forEach(( userId) => {
+      // ✅ FIXED: Place player sprites - fix the forEach parameter
+      this.playerAsset.forEach((avatarName, userId) => {
         try {
           const pos = this.playerPositions.get(userId) ?? { posX: 0, posY: 0 };
           this.playerPos = pos.posX === 0 && pos.posY === 0
