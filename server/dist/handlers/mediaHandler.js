@@ -14,13 +14,15 @@ exports.connectWebRtcTransport = connectWebRtcTransport;
 exports.produceData = produceData;
 exports.consumeData = consumeData;
 exports.produceMedia = produceMedia;
+exports.consumeMedia = consumeMedia;
+exports.restartIce = restartIce;
 const setup_1 = require("../mediasoup/setup");
 const userService_1 = require("../services/userService");
 const state_1 = require("../state/state");
 //will need to call it twice in frontend for each client one for recv transport and the other for send transport
 function createWebRtcTransport(client, msg) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("Create webrtc transport reached");
+        // console.log("Create webrtc transport reached");
         if (!client.userId || !client.roomId) {
             return client.sendToSelf({
                 type: "error",
@@ -40,12 +42,23 @@ function createWebRtcTransport(client, msg) {
             preferUdp: true,
             enableSctp: true,
             numSctpStreams: { OS: 1024, MIS: 1024 },
+            // ❌ REMOVE: Custom ICE servers - this was causing the "stuck at connecting" issue
+            // iceServers: [
+            // 	{
+            // 		urls: ["stun:stun.l.google.com:19302"],
+            // 	},
+            // ],
         });
-        // Add server-side transport monitoring
+        // // ✅ ENABLE: Server-side transport monitoring
         // transport.on("icestatechange", (iceState) => {
         // 	console.log(
         // 		`🧊 Transport ${transport.id} ICE state changed to: ${iceState}`
         // 	);
+        // 	// Notify client of ICE state changes
+        // 	client.sendToSelf({
+        // 		type: "transportIceStateChange",
+        // 		payload: { transportId: transport.id, iceState },
+        // 	});
         // });
         // transport.on("iceselectedtuplechange", (iceSelectedTuple) => {
         // 	console.log(
@@ -57,17 +70,17 @@ function createWebRtcTransport(client, msg) {
         // 	console.log(
         // 		`🔒 Transport ${transport.id} DTLS state changed to: ${dtlsState}`
         // 	);
+        // 	// Notify client of DTLS state changes
+        // 	client.sendToSelf({
+        // 		type: "transportDtlsStateChange",
+        // 		payload: { transportId: transport.id, dtlsState },
+        // 	});
         // });
         // transport.on("sctpstatechange", (sctpState) => {
         // 	console.log(
         // 		`📦 Transport ${transport.id} SCTP state changed to: ${sctpState}`
         // 	);
         // });
-        // // Log transport details for debugging
-        // console.log(`🚀 Created transport ${transport.id}`);
-        // console.log(`📡 ICE candidates:`, transport.iceCandidates);
-        // console.log(`🔧 ICE parameters:`, transport.iceParameters);
-        // console.log(`🔒 DTLS parameters:`, transport.dtlsParameters);
         msRoom.allTransportsById.set(transport.id, transport);
         const common = {
             id: transport.id,
@@ -137,7 +150,6 @@ function produceData(client, message) {
             }
             const existingProducer = msRoom.dataProducers.get(client.userId);
             if (existingProducer) {
-                console.log(`Client ${client.id} already has DataProducer ${existingProducer}`);
                 return client.sendToSelf({
                     type: "dataProduced",
                     payload: { dataProducerId: existingProducer.id },
@@ -147,7 +159,7 @@ function produceData(client, message) {
                 sctpStreamParameters,
                 label,
                 protocol,
-                appData: { clientId: client.id },
+                appData: { clientId: client.userId },
             });
             msRoom.dataProducers.set(client.userId, dataProducer);
             client.sendToSelf({
@@ -155,9 +167,11 @@ function produceData(client, message) {
                 payload: { dataProducerId: dataProducer.id },
             });
             const avatarName = yield (0, userService_1.getUserAvatarName)(client.userId);
+            console.log("data produced and the clients are:", msRoom.clients.keys());
             msRoom.clients.forEach((otherClient) => {
-                if (otherClient.id !== client.id) {
+                if (otherClient.userId !== client.userId) {
                     // console.log("called producer with data", client.userId, avatarName);
+                    console.log(`sent to ${otherClient.userId}`);
                     otherClient.sendToSelf({
                         type: "newDataProducer",
                         payload: {
@@ -168,6 +182,28 @@ function produceData(client, message) {
                     });
                 }
             });
+            //for the neww player to consume old player's data
+            const existingProducers = msRoom.dataProducers;
+            console.log("exisiting producerss");
+            for (const [clientId, dataProducer] of existingProducers) {
+                if (clientId == client.userId) {
+                    continue;
+                }
+                const otherClient = msRoom.getClient(clientId);
+                if (!(otherClient === null || otherClient === void 0 ? void 0 : otherClient.userId)) {
+                    console.log("otherclient doesnt have aa valid userId in join room function");
+                    return;
+                }
+                const avatarName = (yield (0, userService_1.getUserAvatarName)(otherClient.userId));
+                client.sendToSelf({
+                    type: "newDataProducer",
+                    payload: {
+                        producerId: dataProducer.id,
+                        userId: otherClient.userId,
+                        avatarName: avatarName,
+                    },
+                });
+            }
         }
         catch (error) {
             console.log("error at produceData func:", error);
@@ -177,20 +213,19 @@ function produceData(client, message) {
 //makes a data stream for the client to recv data using the transports created earlier
 function consumeData(client, message) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("consume data mediahandler reached with details", client.userId, message);
-        if (!client.userId || !client.roomId) {
-            return client.sendToSelf({
-                type: "error",
-                payload: "Must be authenticated and in a room first",
-            });
-        }
-        //get req info
         const { producerId, transportId } = message.payload;
+        if (!client.roomId) {
+            console.log("User not in room");
+            return;
+        }
+        if (!client.userId) {
+            console.log("UserId not found");
+            return;
+        }
         const msRoom = state_1.roomsById.get(client.roomId);
-        console.log("producerId,transportId", producerId, transportId);
-        console.log("error occured at consume data", msRoom.allTransportsById, msRoom.dataProducers);
         const transport = msRoom.allTransportsById.get(transportId);
-        const producer = msRoom.dataProducers.get(client.userId);
+        // find the DataProducer whose .id matches producerId
+        const producer = Array.from(msRoom.dataProducers.values()).find((dp) => dp.id === producerId);
         if (!transport || !producer) {
             return client.sendToSelf({
                 type: "error",
@@ -200,17 +235,15 @@ function consumeData(client, message) {
         const dataConsumer = yield transport.consumeData({
             dataProducerId: producer.id,
         });
-        // initialize array if needed
-        if (!msRoom.dataConsumers.has(client.id)) {
-            msRoom.dataConsumers.set(client.id, []);
+        if (!msRoom.dataConsumers.has(client.userId)) {
+            msRoom.dataConsumers.set(client.userId, []);
         }
-        msRoom.dataConsumers.get(client.id).push(dataConsumer);
-        // console.log("conssumer created with id", dataConsumer.id);
+        msRoom.dataConsumers.get(client.userId).push(dataConsumer);
         client.sendToSelf({
             type: "dataConsumerCreated",
             payload: {
-                producerId,
                 id: dataConsumer.id,
+                producerId: producer.id,
                 sctpStreamParameters: dataConsumer.sctpStreamParameters,
                 label: dataConsumer.label,
                 protocol: dataConsumer.protocol,
@@ -222,7 +255,7 @@ function consumeData(client, message) {
 //mediaproducer for video calls;
 function produceMedia(client, msg) {
     return __awaiter(this, void 0, void 0, function* () {
-        console.log("reached produce with details", msg);
+        // console.log("reached produce media with details", msg);
         if (!client.userId || !client.roomId) {
             return client.sendToSelf({
                 type: "error",
@@ -232,6 +265,7 @@ function produceMedia(client, msg) {
         const { transportId, rtpParameters, kind } = msg.payload;
         const msRoom = state_1.roomsById.get(client.roomId);
         const transport = msRoom.allTransportsById.get(transportId);
+        let producerId = "";
         if (!transport) {
             console.log("transport not found");
             return client.sendToSelf({
@@ -240,35 +274,122 @@ function produceMedia(client, msg) {
             });
         }
         const existingProducer = msRoom.mediaProducers.get(client.userId);
+        console.log(existingProducer);
         if (existingProducer) {
-            console.log(`Client ${client.id} already has DataProducer ${existingProducer.id}`);
-            client.sendToSelf({
-                type: "producer exists",
-                payload: { dataProducerId: existingProducer.id },
-            });
-            return;
+            console.log(`Client ${client.userId} already has meida producer ${existingProducer.id}`);
+            producerId = existingProducer.id;
         }
-        const producer = yield transport.produce({ rtpParameters, kind, appData: { clientId: client.userId } });
-        console.log("producer created with details", producer.id);
-        msRoom.mediaProducers.set(client.userId, producer);
-        console.log(msRoom.mediaProducers.get(client.userId));
+        else {
+            const producer = yield transport.produce({
+                rtpParameters,
+                kind,
+                appData: { clientId: client.userId },
+            });
+            producerId = producer.id;
+            console.log("media producer created with details", producer.id);
+            msRoom.mediaProducers.set(client.userId, producer);
+        }
         client.sendToSelf({
-            type: "producerCreated",
-            payload: { producerId: producer.id },
+            type: "mediaProducerCreated",
+            payload: { producerId: producerId },
         });
         const avatarName = yield (0, userService_1.getUserAvatarName)(client.userId);
         msRoom.clients.forEach((otherClient) => {
-            if (otherClient.id !== client.id) {
+            if (otherClient.userId !== client.userId) {
                 console.log("called producer with data", client.userId, avatarName);
                 otherClient.sendToSelf({
-                    type: "newProducer",
+                    type: "newMediaProducer",
                     payload: {
-                        producerId: producer.id,
+                        producerId: producerId,
                         userId: client.userId,
                         avatarName: avatarName,
                     },
                 });
             }
         });
+    });
+}
+function consumeMedia(client, msg) {
+    return __awaiter(this, void 0, void 0, function* () {
+        // console.log("reached consume media",msg)
+        const { producerId, transportId, rtpCapabilities, userId, avatarName } = msg.payload;
+        if (!client.roomId) {
+            console.log("User not in room");
+            return;
+        }
+        if (!client.userId) {
+            console.log("UserId not found");
+            return;
+        }
+        const msRoom = state_1.roomsById.get(client.roomId);
+        const transport = msRoom.allTransportsById.get(transportId);
+        // find the mediaProducer whose .id matches producerId
+        const producer = Array.from(msRoom.mediaProducers.values()).find((dp) => dp.id === producerId);
+        if (!transport || !producer) {
+            return client.sendToSelf({
+                type: "error",
+                payload: "Transport or producer not found",
+            });
+        }
+        const mediaConsumer = yield transport.consume({
+            producerId: producer.id,
+            rtpCapabilities: rtpCapabilities
+        });
+        if (!msRoom.mediaConsumers.has(client.userId)) {
+            msRoom.mediaConsumers.set(client.userId, []);
+        }
+        msRoom.mediaConsumers.get(client.userId).push(mediaConsumer);
+        client.sendToSelf({
+            type: "mediaConsumerCreated",
+            payload: {
+                id: mediaConsumer.id,
+                producerId: producer.id,
+                userId: userId,
+                avatarName: avatarName,
+                kind: mediaConsumer.kind,
+                appData: mediaConsumer.appData,
+                rtpParameters: mediaConsumer.rtpParameters,
+            },
+        });
+    });
+}
+// ✅ NEW: Handle ICE restart requests
+function restartIce(client, message) {
+    return __awaiter(this, void 0, void 0, function* () {
+        if (!client.userId || !client.roomId) {
+            return client.sendToSelf({
+                type: "error",
+                payload: "Must be authenticated and in a room first",
+            });
+        }
+        const { transportId } = message.payload;
+        const msRoom = state_1.roomsById.get(client.roomId);
+        const transport = msRoom.allTransportsById.get(transportId);
+        if (!transport) {
+            return client.sendToSelf({
+                type: "error",
+                payload: "Transport not found for ICE restart",
+            });
+        }
+        try {
+            // Restart ICE on server side
+            yield transport.restartIce();
+            // Send new ICE parameters back to client
+            client.sendToSelf({
+                type: "iceRestarted",
+                payload: {
+                    transportId: transport.id,
+                    iceParameters: transport.iceParameters,
+                },
+            });
+            console.log(`🔄 ICE restarted for transport ${transportId}`);
+        }
+        catch (error) {
+            console.error(`❌ ICE restart failed for transport ${transportId}:`, error);
+            client.sendToSelf({
+                type: "error",
+                payload: "ICE restart failed",
+            });
+        }
     });
 }

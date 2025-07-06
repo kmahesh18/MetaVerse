@@ -1,4 +1,4 @@
-import { Document, ObjectId } from "mongodb";
+import { Document} from "mongodb";
 
 export interface IAsset extends Document {
   assetId: string;

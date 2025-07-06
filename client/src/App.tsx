@@ -2,9 +2,7 @@
 import { Routes, Route, Link } from "react-router-dom";
 import {
   SignedIn,
-  SignedOut,
   UserButton,
-  RedirectToSignIn,
 } from "@clerk/clerk-react";
 import GameComponent from "./Game/components/comp1";
 import { Homepage } from "./components/Homepage";

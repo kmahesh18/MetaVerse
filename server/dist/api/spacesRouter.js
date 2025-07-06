@@ -93,7 +93,6 @@ exports.spacesRouter.post("/:id/access", (req, res) => __awaiter(void 0, void 0,
 // Join space (Mark user as active)
 exports.spacesRouter.post("/:id/join", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        console.log("Space router reached");
         const { clerkId } = req.body;
         const spaceId = req.params.id;
         if (!clerkId || !spaceId) {

@@ -172,7 +172,6 @@ function getUserAvatarName(clerkId) {
             const user = yield db.collection(UserModel_1.USERS_COLLECTION).findOne({ clerkId: clerkId });
             const avatarId = user === null || user === void 0 ? void 0 : user.avatarId;
             const avatar = yield db.collection(AssetModel_1.ASSET_COLLECTION).findOne({ _id: new mongodb_1.ObjectId(avatarId) });
-            console.log(`clerkId=> ${clerkId} && avatarname=>&${avatar === null || avatar === void 0 ? void 0 : avatar.name}`);
             return avatar === null || avatar === void 0 ? void 0 : avatar.name;
         }
         catch (err) {

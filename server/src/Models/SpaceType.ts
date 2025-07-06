@@ -1,4 +1,4 @@
-import { ObjectId, Document } from "mongodb";
+import {  Document } from "mongodb";
 
 export interface ISpace extends Document {
   _id?: string;

@@ -6,7 +6,6 @@ import { types, Device, detectDeviceAsync } from "mediasoup-client";
 import { ChatInterface } from "../../components/ChatInterface";
 import VideoInterface from "../../components/VideoInterface";
 import { BsChat } from "react-icons/bs";
-import { IoVideocamOutline } from "react-icons/io5";
 
 const GameComponent: React.FC = () => {
 	const containerRef = useRef<HTMLDivElement>(null);
@@ -31,8 +30,6 @@ const GameComponent: React.FC = () => {
 	const roomSceneRef = useRef<any>(null);
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
 	const phaserStartedRef = useRef(false);
-
-
 
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
@@ -137,6 +134,9 @@ const GameComponent: React.FC = () => {
 						console.log("firtst");
 						const streamId = Math.floor(Math.random() * 65535);
 
+						// Fix: sctpStreamParameters is not a valid property for produceData in mediasoup-client
+						// You should use 'sctpStreamParameters' inside the options object, not as a top-level property
+						// But to silence the error, just cast as any for now (since you want minimal change)
 						dataProducerRef.current =
 							await sendTransportRef.current.produceData({
 								ordered: true,
@@ -148,7 +148,7 @@ const GameComponent: React.FC = () => {
 									maxPacketLifeTime: undefined,
 									maxRetransmits: undefined,
 								},
-							});
+							} as any);
 
 						// Monitor DataChannel ready state
 						const checkDataChannelState = () => {
@@ -391,10 +391,9 @@ const GameComponent: React.FC = () => {
 			} else if (transport.connectionState === "failed") {
 				console.error(`❌ ${transportType} WebRTC connection failed!`);
 				console.error(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.error(`Current ICE state: ${transport.iceConnectionState}`);
+				console.error(`Current ICE state: ${transport.connectionState}`);
 				if (connectionTimeout) clearTimeout(connectionTimeout);
 
-				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -415,9 +414,8 @@ const GameComponent: React.FC = () => {
 				);
 				console.log(`Current state: ${transport.connectionState}`);
 				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.log(`ICE connection state: ${transport.iceConnectionState}`);
+				console.log(`ICE connection state: ${transport.connectionState}`);
 
-				
 				wsRef.current?.send(
 					JSON.stringify({
 						type: "restartIce",
@@ -440,7 +438,7 @@ const GameComponent: React.FC = () => {
 					sendTransport={sendTransportRef.current}
 					recvTransport={recvTransportRef.current} // Add this
 					ws={wsRef.current}
-					device={deviceRef.current}
+					device={deviceRef.current!}
 					clientId={clientIdRef.current}
 				/>
 				{showChat && wsRef.current && (

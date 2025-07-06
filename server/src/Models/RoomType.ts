@@ -1,4 +1,4 @@
-import { ObjectId, Document } from "mongodb";
+import {  Document } from "mongodb";
 import { IAsset } from "./AssetModel";
 
 export interface IRoomType extends Document {
