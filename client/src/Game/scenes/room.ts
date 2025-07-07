@@ -109,9 +109,7 @@ export class room extends Scene {
 		// load user avatars and register spritesheets
 		this.load.json(
 			"userAvatarsData",
-			`http://localhost:${import.meta.env.VITE_BKPORT}/api/rooms/${
-				this.roomId
-			}/userAvatars`
+			`http://64.227.158.123:5001/api/rooms/${this.roomId}/userAvatars`
 		);
 		this.load.once(
 			"filecomplete-json-userAvatarsData",

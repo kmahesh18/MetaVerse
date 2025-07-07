@@ -35,10 +35,8 @@ const GameComponent: React.FC = () => {
 		if (!spaceId || !userid) return;
 		try {
 			await axios.post(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}/join`,
-				{
-					clerkId: userid,
-				}
+				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
+				{ clerkId: userid }
 			);
 		} catch (e) {
 			console.error("Failed to join space", e);

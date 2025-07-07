@@ -52,11 +52,11 @@ export function Homepage() {
 			if (isSignedIn && user) {
 				try {
 					const response = await fetch(
-						`https://64.227.158.123:5001/api/user/${user.id}`
+						`http://64.227.158.123:5001/api/user/${user.id}`
 					);
 					if (!response.ok) {
 						const createResponse = await fetch(
-							`https://64.227.158.123:5001/api/user`,
+							`http://64.227.158.123:5001/api/user`,
 							{
 								method: "POST",
 								headers: { "Content-Type": "application/json" },

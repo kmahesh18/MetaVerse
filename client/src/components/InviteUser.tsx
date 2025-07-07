@@ -33,7 +33,7 @@ export function InviteUser() {
 
 			try {
 				const response = await axios.get(
-					`https://64.227.158.123:5001/api/spaces/${spaceId}`
+					`http://64.227.158.123:5001/api/spaces/${spaceId}`
 				);
 				const data = response.data;
 				setSpaceDetails(data);
@@ -85,7 +85,7 @@ export function InviteUser() {
 			]);
 
 			const response = await axios.post(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}/access`,
+				`http://64.227.158.123:5001/api/spaces/${spaceId}/access`,
 				{
 					adminId: user.id,
 					emailId: email,
@@ -112,7 +112,7 @@ export function InviteUser() {
 
 			// Fetch updated space details to show the new user
 			const updatedSpace = await axios.get(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}`
+				`http://64.227.158.123:5001/api/spaces/${spaceId}`
 			);
 			setSpaceDetails(updatedSpace.data);
 		} catch (err) {

@@ -35,7 +35,7 @@ export function JoinSpace() {
 
 		try {
 			const response = await fetch(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}/join`,
+				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
 				{
 					method: "POST",
 					headers: {

@@ -48,7 +48,7 @@ export function AvatarSelection() {
 
 			// Use the PATCH endpoint to update the avatar
 			const userResponse = await fetch(
-				`https://64.227.158.123:5001/api/user/${user.id}/avatar`,
+				`http://64.227.158.123:5001/api/user/${user.id}/avatar`,
 				{
 					method: "PATCH",
 					headers: {

@@ -22,14 +22,14 @@ export function Dashboard() {
 		if (!user) return null;
 		try {
 			const response = await fetch(
-				`https://64.227.158.123:5001/api/user/${user.id}`
+				`http://64.227.158.123:5001/api/user/${user.id}`
 			);
 			if (response.status === 404) {
 				try {
 					const primaryEmail = user.emailAddresses[0].emailAddress || "";
 					// console.log("Creating user with email:", primaryEmail);
 					const createUserResponse = await fetch(
-						`https://64.227.158.123:5001/api/user`,
+						`http://64.227.158.123:5001/api/user`,
 						{
 							method: "POST",
 							headers: {
@@ -67,7 +67,7 @@ export function Dashboard() {
 		if (!user) return [];
 		try {
 			const response = await fetch(
-				`https://64.227.158.123:5001/api/user/${user.id}/spaces`
+				`http://64.227.158.123:5001/api/user/${user.id}/spaces`
 			);
 			if (!response.ok) {
 				console.warn("Could not fetch accessible spaces:", response.status);
@@ -84,7 +84,7 @@ export function Dashboard() {
 			const spaceDetailsPromises = accessibleSpaceIds.map(async (spaceId) => {
 				try {
 					const spaceResponse = await fetch(
-						`https://64.227.158.123:5001/api/spaces/${spaceId}`
+						`http://64.227.158.123:5001/api/spaces/${spaceId}`
 					);
 					if (!spaceResponse.ok) {
 						console.warn(
@@ -188,7 +188,7 @@ export function Dashboard() {
 			if (isActive) {
 				// User is already active, navigate directly to the room
 				const spaceResponse = await axios.get(
-					`https://64.227.158.123:5001/api/spaces/${spaceId}`
+					`http://64.227.158.123:5001/api/spaces/${spaceId}`
 				);
 				const spaceData = spaceResponse.data;
 
@@ -203,7 +203,7 @@ export function Dashboard() {
 
 			// Join the space (add user to active users)
 			const response = await axios.post(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}/join`,
+				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
 				{
 					clerkId: user.id,
 				}
@@ -215,7 +215,7 @@ export function Dashboard() {
 
 			// Get the default room (first room) of the space
 			const spaceResponse = await axios.get(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}`
+				`http://64.227.158.123:5001/api/spaces/${spaceId}`
 			);
 			const spaceData = spaceResponse.data;
 
@@ -246,7 +246,7 @@ export function Dashboard() {
 		try {
 			setLoading(true);
 			const response = await axios.post(
-				`https://64.227.158.123:5001/api/spaces/${spaceId}/leave`,
+				`http://64.227.158.123:5001/api/spaces/${spaceId}/leave`,
 				{
 					clerkId: user.id,
 				}

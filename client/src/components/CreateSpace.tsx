@@ -75,7 +75,7 @@ export function CreateSpace() {
 
 		try {
 			const response = await axios.post(
-				`https://64.227.158.123:5001/api/spaces`,
+				`http://64.227.158.123:5001/api/spaces`,
 				{
 					adminid: user.id,
 					selectedRoomTypes: selectedRoomTypes,
