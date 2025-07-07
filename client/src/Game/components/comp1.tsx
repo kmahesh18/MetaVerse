@@ -34,9 +34,12 @@ const GameComponent: React.FC = () => {
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
 		try {
-			await axios.post(`http://localhost:5001/api/spaces/${spaceId}/join`, {
-				clerkId: userid,
-			});
+			await axios.post(
+				`https://64.227.158.123:5001/api/spaces/${spaceId}/join`,
+				{
+					clerkId: userid,
+				}
+			);
 		} catch (e) {
 			console.error("Failed to join space", e);
 		}
@@ -53,7 +56,7 @@ const GameComponent: React.FC = () => {
 			deviceRef.current = new Device({ handlerName });
 
 			const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-			const wsUrl = `${protocol}://localhost:5001/ws?userId=${encodeURIComponent(
+			const wsUrl = `${protocol}://64.227.158.123:5001/ws?userId=${encodeURIComponent(
 				userid
 			)}`;
 			const ws = new WebSocket(wsUrl);

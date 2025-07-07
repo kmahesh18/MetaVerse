@@ -52,13 +52,11 @@ export function Homepage() {
 			if (isSignedIn && user) {
 				try {
 					const response = await fetch(
-						`http://localhost:${import.meta.env.VITE_BKPORT}/api/user/${
-							user.id
-						}`
+						`https://64.227.158.123:5001/api/user/${user.id}`
 					);
 					if (!response.ok) {
 						const createResponse = await fetch(
-							`http://localhost:${import.meta.env.VITE_BKPORT}/api/user`,
+							`https://64.227.158.123:5001/api/user`,
 							{
 								method: "POST",
 								headers: { "Content-Type": "application/json" },
@@ -135,8 +133,7 @@ export function Homepage() {
 					bottom: 0,
 					pointerEvents: "none",
 					zIndex: 0,
-				}}
-			>
+				}}>
 				<FloatingShapes />
 			</div>
 
@@ -155,8 +152,7 @@ export function Homepage() {
 					position: "relative",
 					overflow: "hidden",
 				}}
-				onMouseMove={handleMouseMove}
-			>
+				onMouseMove={handleMouseMove}>
 				{/* Main content, full width */}
 				<div
 					style={{
@@ -167,8 +163,7 @@ export function Homepage() {
 						margin: "0",
 						textAlign: "center",
 						animation: "fadeIn 0.8s cubic-bezier(.4,2,.6,1)",
-					}}
-				>
+					}}>
 					<h1
 						style={{
 							fontSize: "2.8rem",
@@ -177,8 +172,7 @@ export function Homepage() {
 							color: "#000",
 							textShadow: "2px 2px 0 #fff, 4px 4px 0 #000",
 							animation: "fadeIn 1.2s cubic-bezier(.4,2,.6,1)",
-						}}
-					>
+						}}>
 						MetaVerse
 					</h1>
 					<div
@@ -199,8 +193,7 @@ export function Homepage() {
 							opacity: 0.85,
 							fontWeight: 500,
 							animation: "fadeIn 1.5s cubic-bezier(.4,2,.6,1)",
-						}}
-					>
+						}}>
 						Step into a{" "}
 						<span style={{ color: "#000", fontWeight: 700 }}>
 							black & white
@@ -221,8 +214,7 @@ export function Homepage() {
 								letterSpacing: "1px",
 								animation: "fadeIn 1.2s cubic-bezier(.4,2,.6,1)",
 								display: "inline-block",
-							}}
-						>
+							}}>
 							⚠️ {error}
 						</div>
 					)}
@@ -235,8 +227,7 @@ export function Homepage() {
 							gap: "16px",
 							alignItems: "center",
 							animation: "fadeIn 1.7s cubic-bezier(.4,2,.6,1)",
-						}}
-					>
+						}}>
 						{!isSignedIn ? (
 							<button
 								className="btn-2d"
@@ -255,8 +246,7 @@ export function Homepage() {
 									width: 220,
 									margin: "0 auto",
 								}}
-								onClick={() => openSignIn()}
-							>
+								onClick={() => openSignIn()}>
 								Sign In to Begin
 							</button>
 						) : (
@@ -266,8 +256,7 @@ export function Homepage() {
 									color: "#000",
 									fontWeight: 600,
 									padding: "10px 0",
-								}}
-							>
+								}}>
 								Welcome back, explorer!
 							</div>
 						)}
@@ -285,8 +274,7 @@ export function Homepage() {
 							borderBottom: "2px solid #000",
 							boxShadow: "0 2px 0 #000",
 							animation: "fadeIn 2.2s cubic-bezier(.4,2,.6,1)",
-						}}
-					>
+						}}>
 						<div
 							style={{
 								fontWeight: 700,
@@ -294,8 +282,7 @@ export function Homepage() {
 								marginBottom: "18px",
 								color: "#000",
 								letterSpacing: "1px",
-							}}
-						>
+							}}>
 							Features
 						</div>
 						<ul
@@ -310,8 +297,7 @@ export function Homepage() {
 								justifyContent: "center",
 								flexWrap: "wrap",
 								gap: "28px",
-							}}
-						>
+							}}>
 							<li>👥 Real-time multiplayer</li>
 							<li>👤 Customizable 2D avatars</li>
 							<li>🏢 Virtual meeting spaces</li>
@@ -354,8 +340,7 @@ export function Homepage() {
 						opacity: 0.7,
 						zIndex: 2,
 						animation: "fadeIn 2.2s cubic-bezier(.4,2,.6,1)",
-					}}
-				>
+					}}>
 					<span style={{ fontWeight: 700 }}>MetaVerse</span> &copy;{" "}
 					{new Date().getFullYear()} &mdash; Black & White Edition
 				</footer>

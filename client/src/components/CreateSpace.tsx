@@ -23,7 +23,7 @@ export function CreateSpace() {
 				setLoading(true);
 				// Update to use the backend port from environment variables
 				const response = await axios.get(
-					`http://localhost:${import.meta.env.VITE_BKPORT}/api/roomtypes`
+					`https://64.227.158.123:5001/api/roomtypes`
 				);
 
 				// Make sure we're getting an array back
@@ -75,7 +75,7 @@ export function CreateSpace() {
 
 		try {
 			const response = await axios.post(
-				`http://localhost:${import.meta.env.VITE_BKPORT}/api/spaces`,
+				`https://64.227.158.123:5001/api/spaces`,
 				{
 					adminid: user.id,
 					selectedRoomTypes: selectedRoomTypes,
