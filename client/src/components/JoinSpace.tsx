@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export function JoinSpace() {
 	const { user } = useUser();
 	const navigate = useNavigate();
@@ -34,18 +36,15 @@ export function JoinSpace() {
 		setError(null);
 
 		try {
-			const response = await fetch(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
-				{
-					method: "POST",
-					headers: {
-						"Content-Type": "application/json",
-					},
-					body: JSON.stringify({
-						clerkId: user.id,
-					}),
-				}
-			);
+			const response = await fetch(`${backendUrl}/api/spaces/${spaceId}/join`, {
+				method: "POST",
+				headers: {
+					"Content-Type": "application/json",
+				},
+				body: JSON.stringify({
+					clerkId: user.id,
+				}),
+			});
 
 			if (!response.ok) {
 				const errorData = await response.json();

@@ -31,13 +31,14 @@ const GameComponent: React.FC = () => {
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
 	const phaserStartedRef = useRef(false);
 
+	const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 	async function joinSpace() {
 		if (!spaceId || !userid) return;
 		try {
-			await axios.post(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
-				{ clerkId: userid }
-			);
+			await axios.post(`${backendUrl}/api/spaces/${spaceId}/join`, {
+				clerkId: userid,
+			});
 		} catch (e) {
 			console.error("Failed to join space", e);
 		}
@@ -54,9 +55,10 @@ const GameComponent: React.FC = () => {
 			deviceRef.current = new Device({ handlerName });
 
 			const protocol = window.location.protocol === "https:" ? "wss" : "ws";
-			const wsUrl = `${protocol}://64.227.158.123:5001/ws?userId=${encodeURIComponent(
-				userid
-			)}`;
+			const wsUrl = `${protocol}://${backendUrl.replace(
+				/^https?:\/\//,
+				""
+			)}/ws?userId=${encodeURIComponent(userid)}`;
 			const ws = new WebSocket(wsUrl);
 			wsRef.current = ws;
 

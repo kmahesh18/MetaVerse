@@ -16,15 +16,15 @@ export function CreateSpace() {
 	const [roomCounts, setRoomCounts] = useState<RoomCountMap>({});
 	const [roomTypes, setRoomTypes] = useState<IRoomType[]>([]);
 
+	const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 	// Fetch room types from the API when component mounts
 	useEffect(() => {
 		const fetchRoomTypes = async () => {
 			try {
 				setLoading(true);
 				// Update to use the backend port from environment variables
-				const response = await axios.get(
-					`https://64.227.158.123:5001/api/roomtypes`
-				);
+				const response = await axios.get(`${backendUrl}/api/roomtypes`);
 
 				// Make sure we're getting an array back
 				if (Array.isArray(response.data)) {
@@ -74,13 +74,10 @@ export function CreateSpace() {
 		setError(null);
 
 		try {
-			const response = await axios.post(
-				`http://64.227.158.123:5001/api/spaces`,
-				{
-					adminid: user.id,
-					selectedRoomTypes: selectedRoomTypes,
-				}
-			);
+			const response = await axios.post(`${backendUrl}/api/spaces`, {
+				adminid: user.id,
+				selectedRoomTypes: selectedRoomTypes,
+			});
 
 			const newSpaceId = response.data.id;
 

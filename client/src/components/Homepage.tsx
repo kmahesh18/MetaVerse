@@ -47,26 +47,23 @@ export function Homepage() {
 	const [error, setError] = useState<string | null>(null);
 	const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
 
+	const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 	useEffect(() => {
 		const initUser = async () => {
 			if (isSignedIn && user) {
 				try {
-					const response = await fetch(
-						`http://64.227.158.123:5001/api/user/${user.id}`
-					);
+					const response = await fetch(`${backendUrl}/api/user/${user.id}`);
 					if (!response.ok) {
-						const createResponse = await fetch(
-							`http://64.227.158.123:5001/api/user`,
-							{
-								method: "POST",
-								headers: { "Content-Type": "application/json" },
-								body: JSON.stringify({
-									clerkId: user.id,
-									avatarId: "",
-									emailId: user.emailAddresses[0].emailAddress,
-								}),
-							}
-						);
+						const createResponse = await fetch(`${backendUrl}/api/user`, {
+							method: "POST",
+							headers: { "Content-Type": "application/json" },
+							body: JSON.stringify({
+								clerkId: user.id,
+								avatarId: "",
+								emailId: user.emailAddresses[0].emailAddress,
+							}),
+						});
 						if (!createResponse.ok) {
 							const errorData = await createResponse.json();
 							throw new Error(

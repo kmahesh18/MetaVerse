@@ -10,6 +10,8 @@ interface InvitedUser {
 	timestamp: Date;
 }
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export function InviteUser() {
 	const { user } = useUser();
 	const navigate = useNavigate();
@@ -32,9 +34,7 @@ export function InviteUser() {
 			if (!user || !spaceId) return;
 
 			try {
-				const response = await axios.get(
-					`http://64.227.158.123:5001/api/spaces/${spaceId}`
-				);
+				const response = await axios.get(`${backendUrl}/api/spaces/${spaceId}`);
 				const data = response.data;
 				setSpaceDetails(data);
 
@@ -85,7 +85,7 @@ export function InviteUser() {
 			]);
 
 			const response = await axios.post(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}/access`,
+				`${backendUrl}/api/spaces/${spaceId}/access`,
 				{
 					adminId: user.id,
 					emailId: email,
@@ -112,7 +112,7 @@ export function InviteUser() {
 
 			// Fetch updated space details to show the new user
 			const updatedSpace = await axios.get(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}`
+				`${backendUrl}/api/spaces/${spaceId}`
 			);
 			setSpaceDetails(updatedSpace.data);
 		} catch (err) {

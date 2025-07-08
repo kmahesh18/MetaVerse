@@ -5,6 +5,8 @@ import { ISpace } from "../../../server/src/Models/SpaceType";
 import { IUser } from "../../../server/src/Models/UserModel";
 import axios from "axios";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export function Dashboard() {
 	const { user, isLoaded } = useUser();
 	const navigate = useNavigate();
@@ -21,26 +23,21 @@ export function Dashboard() {
 	const fetchUserData = useCallback(async () => {
 		if (!user) return null;
 		try {
-			const response = await fetch(
-				`http://64.227.158.123:5001/api/user/${user.id}`
-			);
+			const response = await fetch(`${backendUrl}/api/user/${user.id}`);
 			if (response.status === 404) {
 				try {
 					const primaryEmail = user.emailAddresses[0].emailAddress || "";
 					// console.log("Creating user with email:", primaryEmail);
-					const createUserResponse = await fetch(
-						`http://64.227.158.123:5001/api/user`,
-						{
-							method: "POST",
-							headers: {
-								"Content-Type": "application/json",
-							},
-							body: JSON.stringify({
-								clerkId: user.id,
-								emailId: primaryEmail,
-							}),
-						}
-					);
+					const createUserResponse = await fetch(`${backendUrl}/api/user`, {
+						method: "POST",
+						headers: {
+							"Content-Type": "application/json",
+						},
+						body: JSON.stringify({
+							clerkId: user.id,
+							emailId: primaryEmail,
+						}),
+					});
 					if (!createUserResponse.ok) {
 						throw new Error("Failed to create user");
 					}
@@ -66,9 +63,7 @@ export function Dashboard() {
 	const fetchAccessibleSpaces = useCallback(async () => {
 		if (!user) return [];
 		try {
-			const response = await fetch(
-				`http://64.227.158.123:5001/api/user/${user.id}/spaces`
-			);
+			const response = await fetch(`${backendUrl}/api/user/${user.id}/spaces`);
 			if (!response.ok) {
 				console.warn("Could not fetch accessible spaces:", response.status);
 				return [];
@@ -84,7 +79,7 @@ export function Dashboard() {
 			const spaceDetailsPromises = accessibleSpaceIds.map(async (spaceId) => {
 				try {
 					const spaceResponse = await fetch(
-						`http://64.227.158.123:5001/api/spaces/${spaceId}`
+						`${backendUrl}/api/spaces/${spaceId}`
 					);
 					if (!spaceResponse.ok) {
 						console.warn(
@@ -188,7 +183,7 @@ export function Dashboard() {
 			if (isActive) {
 				// User is already active, navigate directly to the room
 				const spaceResponse = await axios.get(
-					`http://64.227.158.123:5001/api/spaces/${spaceId}`
+					`${backendUrl}/api/spaces/${spaceId}`
 				);
 				const spaceData = spaceResponse.data;
 
@@ -203,7 +198,7 @@ export function Dashboard() {
 
 			// Join the space (add user to active users)
 			const response = await axios.post(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}/join`,
+				`${backendUrl}/api/spaces/${spaceId}/join`,
 				{
 					clerkId: user.id,
 				}
@@ -215,7 +210,7 @@ export function Dashboard() {
 
 			// Get the default room (first room) of the space
 			const spaceResponse = await axios.get(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}`
+				`${backendUrl}/api/spaces/${spaceId}`
 			);
 			const spaceData = spaceResponse.data;
 
@@ -246,7 +241,7 @@ export function Dashboard() {
 		try {
 			setLoading(true);
 			const response = await axios.post(
-				`http://64.227.158.123:5001/api/spaces/${spaceId}/leave`,
+				`${backendUrl}/api/spaces/${spaceId}/leave`,
 				{
 					clerkId: user.id,
 				}

@@ -76,11 +76,10 @@ export class room extends Scene {
 	}
 
 	preload() {
+		const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 		// load room data
-		this.load.json(
-			"roomData",
-			`http://localhost:${import.meta.env.VITE_BKPORT}/api/rooms/${this.roomId}`
-		);
+		this.load.json("roomData", `${backendUrl}/api/rooms/${this.roomId}`);
 		this.load.once(
 			"filecomplete-json-roomData",
 			(_key: string, _type: string, data: any) => {
@@ -94,9 +93,7 @@ export class room extends Scene {
 		// load player positions
 		this.load.json(
 			"playersData",
-			`http://localhost:${import.meta.env.VITE_BKPORT}/api/rooms/${
-				this.roomId
-			}/players`
+			`${backendUrl}/api/rooms/${this.roomId}/players`
 		);
 		this.load.once(
 			"filecomplete-json-playersData",
@@ -109,7 +106,7 @@ export class room extends Scene {
 		// load user avatars and register spritesheets
 		this.load.json(
 			"userAvatarsData",
-			`http://64.227.158.123:5001/api/rooms/${this.roomId}/userAvatars`
+			`${backendUrl}/api/rooms/${this.roomId}/userAvatars`
 		);
 		this.load.once(
 			"filecomplete-json-userAvatarsData",

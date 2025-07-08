@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { IAsset } from "../../../server/src/Models/AssetModel";
 
+const backendUrl = import.meta.env.VITE_BACKEND_URL;
+
 export function AvatarSelection() {
 	const [selectedAvatarId, setSelectedAvatarId] = useState<string>("");
 	const [avatars, setAvatars] = useState<IAsset[]>([]);
@@ -16,9 +18,7 @@ export function AvatarSelection() {
 		const fetchAvatars = async () => {
 			try {
 				// Change the endpoint to fetch only avatar assets
-				const response = await fetch(
-					`http://localhost:${import.meta.env.VITE_BKPORT}/api/assets/avatars`
-				);
+				const response = await fetch(`${backendUrl}/api/assets/avatars`);
 				if (!response.ok) {
 					const errorData = await response.json().catch(() => ({}));
 					console.error("Failed to fetch avatars:", errorData);
@@ -48,7 +48,7 @@ export function AvatarSelection() {
 
 			// Use the PATCH endpoint to update the avatar
 			const userResponse = await fetch(
-				`http://64.227.158.123:5001/api/user/${user.id}/avatar`,
+				`${backendUrl}/api/user/${user.id}/avatar`,
 				{
 					method: "PATCH",
 					headers: {
