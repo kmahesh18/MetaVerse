@@ -21,7 +21,7 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		listenIps: [
 			{
 				ip: "0.0.0.0",
-				announcedIp: process.env.ANNOUNCED_IP || "127.0.0.1",
+				announcedIp: process.env.ANNOUNCED_IP || "127.0.0.1", // ❌ This is wrong for production
 			},
 		],
 		enableTcp: true,
@@ -281,8 +281,8 @@ export async function produceMedia(client: Client, msg: any) {
 	const { transportId, rtpParameters, kind } = msg.payload;
 	const msRoom = roomsById.get(client.roomId)!;
 	const transport = msRoom.allTransportsById.get(transportId);
-  let producerId = "";
-	
+	let producerId = "";
+
 	if (!transport) {
 		console.log("transport not found");
 		return client.sendToSelf({
@@ -292,25 +292,23 @@ export async function produceMedia(client: Client, msg: any) {
 	}
 
 	const existingProducer = msRoom.mediaProducers.get(client.userId);
-  console.log(existingProducer);
+	console.log(existingProducer);
 
-  if (existingProducer) {
-    console.log(
-      `Client ${client.userId} already has meida producer ${existingProducer.id}`
-    );
-    producerId = existingProducer.id;
-  }
-  else {
-
-    const producer = await transport.produce({
-      rtpParameters,
-      kind,
-      appData: { clientId: client.userId },
-    });
-    producerId = producer.id;
-    console.log("media producer created with details", producer.id);
-    msRoom.mediaProducers.set(client.userId, producer);
-  }
+	if (existingProducer) {
+		console.log(
+			`Client ${client.userId} already has meida producer ${existingProducer.id}`
+		);
+		producerId = existingProducer.id;
+	} else {
+		const producer = await transport.produce({
+			rtpParameters,
+			kind,
+			appData: { clientId: client.userId },
+		});
+		producerId = producer.id;
+		console.log("media producer created with details", producer.id);
+		msRoom.mediaProducers.set(client.userId, producer);
+	}
 	client.sendToSelf({
 		type: "mediaProducerCreated",
 		payload: { producerId: producerId },
@@ -332,10 +330,10 @@ export async function produceMedia(client: Client, msg: any) {
 	});
 }
 
-
 export async function consumeMedia(client: Client, msg: any) {
-  // console.log("reached consume media",msg)
-	const { producerId, transportId,rtpCapabilities,userId,avatarName} = msg.payload;
+	// console.log("reached consume media",msg)
+	const { producerId, transportId, rtpCapabilities, userId, avatarName } =
+		msg.payload;
 	if (!client.roomId) {
 		console.log("User not in room");
 		return;
@@ -361,7 +359,7 @@ export async function consumeMedia(client: Client, msg: any) {
 
 	const mediaConsumer = await transport.consume({
 		producerId: producer.id,
-		rtpCapabilities:rtpCapabilities
+		rtpCapabilities: rtpCapabilities,
 	});
 
 	if (!msRoom.mediaConsumers.has(client.userId)) {
@@ -374,20 +372,14 @@ export async function consumeMedia(client: Client, msg: any) {
 		payload: {
 			id: mediaConsumer.id,
 			producerId: producer.id,
-			userId:userId,
-			avatarName:avatarName,
+			userId: userId,
+			avatarName: avatarName,
 			kind: mediaConsumer.kind,
 			appData: mediaConsumer.appData,
 			rtpParameters: mediaConsumer.rtpParameters,
 		},
 	});
 }
-
-
-
-
-
-
 
 // ✅ NEW: Handle ICE restart requests
 export async function restartIce(client: Client, message: any) {

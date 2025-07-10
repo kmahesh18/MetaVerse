@@ -14,8 +14,8 @@ COPY . .
 # Build TypeScript
 RUN npm run build
 
-# Expose port (Fly will bind this)
-EXPOSE 3000
+# Expose port 5001 (matching your .env PORT)
+EXPOSE 5001
 
 # Start the server
 CMD [ "npm", "run", "start" ]
