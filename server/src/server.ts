@@ -11,45 +11,54 @@ import http from "http";
 import { startWebsocketServer } from "./handlers/wsHandler";
 import { createMediasoupWorker } from "./mediasoup/setup";
 
+async function main() {
+	dotenv.config();
 
-async function main(){
+	await createMediasoupWorker();
+	const app = express();
+	const server = http.createServer(app);
 
-  dotenv.config();
-  
-  await createMediasoupWorker();
-  const app = express();
-  const server = http.createServer(app);
-  
-  // Attach WS to the HTTP server
-  startWebsocketServer(server);
-  
-  // Middleware
-  app.use(cors({ origin: process.env.CLIENT_URL || "*", credentials: true }));
-  app.use(express.json());
-  
-  // API routes
-  app.use("/api/user", userRouter);
-  app.use("/api/assets", assetRouter);
-  app.use("/api/rooms", roomRouter);
-  app.use("/api/spaces", spacesRouter);
-  app.use("/api/roomtypes", roomTypesRouter);
-  
-  // Health check
-  app.get("/", (_req, res) => res.send("Server running"));
-  
-  const PORT = process.env.PORT || 5001;
-  
-  // Connect DB, then start *this* server
-  connectDB()
-    .then(() => {
-      server.listen(PORT, () => {
-        console.log(`🚀 HTTP + WS listening on http://localhost:${PORT}`);
-      });
-    })
-    .catch((err) => {
-      console.error("Failed to connect to database:", err);
-      process.exit(1);
-    });
+	// Attach WS to the HTTP server
+	startWebsocketServer(server);
+
+	// Middleware
+	// Updated CORS configuration
+	const corsOptions = {
+		origin: [
+			"http://localhost:5173", // Local development
+			"https://meta-verse-pink.vercel.app", // Your deployed frontend
+			// Add any other frontend URLs you might use
+		],
+		credentials: true,
+		optionsSuccessStatus: 200,
+	};
+
+	app.use(cors(corsOptions));
+	app.use(express.json());
+
+	// API routes
+	app.use("/api/user", userRouter);
+	app.use("/api/assets", assetRouter);
+	app.use("/api/rooms", roomRouter);
+	app.use("/api/spaces", spacesRouter);
+	app.use("/api/roomtypes", roomTypesRouter);
+
+	// Health check
+	app.get("/", (_req, res) => res.send("Server running"));
+
+	const PORT = process.env.PORT || 5001;
+
+	// Connect DB, then start *this* server
+	connectDB()
+		.then(() => {
+			server.listen(PORT, () => {
+				console.log(`🚀 HTTP + WS listening on http://localhost:${PORT}`);
+			});
+		})
+		.catch((err) => {
+			console.error("Failed to connect to database:", err);
+			process.exit(1);
+		});
 }
 
 main();
