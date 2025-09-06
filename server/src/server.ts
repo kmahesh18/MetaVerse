@@ -25,8 +25,11 @@ async function main() {
 	// Updated CORS configuration
 	const corsOptions = {
 		origin: [
-			"http://localhost:5173", // Local development
+			process.env.CLIENT_URL || "*",
 			"https://meta-verse-pink.vercel.app", // Your deployed frontend
+			"https://app.rurouni.tech",
+			"http://localhost:5173", // Local development
+			"http://localhost:3000",
 			// Add any other frontend URLs you might use
 		],
 		credentials: true,
