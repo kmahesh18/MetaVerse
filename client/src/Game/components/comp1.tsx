@@ -375,61 +375,20 @@ const GameComponent: React.FC = () => {
 		transport: types.Transport,
 		transportType: string
 	) {
-		let iceGatheringComplete = false;
-		let connectionTimeout: NodeJS.Timeout;
+		console.log(
+			`🔍 ${transportType} transport initial state:`,
+			transport.connectionState
+		);
 
-		// Monitor ICE gathering
-		transport.on("icegatheringstatechange", () => {
-			if (transport.iceGatheringState === "complete") {
-				iceGatheringComplete = true;
-				// console.log(`✅ ${transportType} ICE gathering completed`);
+		transport.on("connectionstatechange", (state) => {
+			console.log(`🔄 ${transportType} transport state changed to:`, state);
+
+			if (state === "failed" || state === "disconnected") {
+				console.error(`❌ ${transportType} transport failed/disconnected`);
+			} else if (state === "connected") {
+				console.log(`✅ ${transportType} transport connected!`);
 			}
 		});
-
-		// Monitor connection state
-		transport.on("connectionstatechange", () => {
-			if (transport.connectionState === "connected") {
-				// console.log(`✅ ${transportType} WebRTC connected!`);
-				if (connectionTimeout) clearTimeout(connectionTimeout);
-			} else if (transport.connectionState === "failed") {
-				console.error(`❌ ${transportType} WebRTC connection failed!`);
-				console.error(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.error(`Current ICE state: ${transport.connectionState}`);
-				if (connectionTimeout) clearTimeout(connectionTimeout);
-
-				wsRef.current?.send(
-					JSON.stringify({
-						type: "restartIce",
-						payload: {
-							transportId: transport.id,
-							transportType: transportType,
-						},
-					})
-				);
-			}
-		});
-
-		// Set a timeout for connection
-		connectionTimeout = setTimeout(() => {
-			if (transport.connectionState !== "connected") {
-				console.error(
-					`⏰ ${transportType} connection timeout after 30 seconds`
-				);
-				console.log(`Current state: ${transport.connectionState}`);
-				console.log(`ICE gathering complete: ${iceGatheringComplete}`);
-				console.log(`ICE connection state: ${transport.connectionState}`);
-
-				wsRef.current?.send(
-					JSON.stringify({
-						type: "restartIce",
-						payload: {
-							transportId: transport.id,
-							transportType: transportType,
-						},
-					})
-				);
-			}
-		}, 30000);
 	}
 
 	return (

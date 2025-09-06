@@ -438,7 +438,7 @@ export class room extends Scene {
 			this.ws.send(msg);
 		}
 
-		// DataProducer
+		// DataProducer with retry logic
 		if (this.dataProducer && !this.dataProducer.closed) {
 			const dataChannel = (this.dataProducer as any)._dataChannel;
 			if (dataChannel && dataChannel.readyState === "open") {
@@ -447,12 +447,13 @@ export class room extends Scene {
 				} catch (error) {
 					console.error("🚨 DataProducer.send failed:", error);
 				}
+			} else if (dataChannel && dataChannel.readyState === "connecting") {
+				// ✅ NEW: Wait for DataChannel to open
+				console.log("⏳ DataChannel connecting, retrying in 1s...");
+				setTimeout(() => this.sendUpdates(isMoving), 1000);
 			} else {
 				console.log("data producer", this.dataProducer);
-				console.log(
-					"⏳ DataProducer channel not open. State:",
-					dataChannel?.readyState
-				);
+				console.log("❌ DataProducer channel state:", dataChannel?.readyState);
 			}
 		} else {
 			console.log("hello", this.dataProducer);
@@ -475,7 +476,13 @@ export class room extends Scene {
 		const dataChannel = (this.dataProducer as any)._dataChannel;
 		if (dataChannel) {
 			dataChannel.addEventListener("open", () => {
-				console.log("🔗 DataProducer DataChannel opened!");
+				console.log("🔗 DataChannel opened!");
+			});
+			dataChannel.addEventListener("close", () => {
+				console.log("❌ DataChannel closed!");
+			});
+			dataChannel.addEventListener("error", () => {
+				console.error("🚨 DataChannel error:");
 			});
 		} else {
 			console.log("Data producer not opened");

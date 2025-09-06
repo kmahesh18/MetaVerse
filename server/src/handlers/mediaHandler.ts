@@ -4,7 +4,7 @@ import { mediasoupRouter } from "../mediasoup/setup";
 import { getUserAvatarName } from "../services/userService";
 import { roomsById } from "../state/state";
 
-//will need to call it twice in frontend for each client one for recv transport and the other for send transport
+//gotta call it twice in frontend for each client one for recv transport and the other for send transport
 export async function createWebRtcTransport(client: Client, msg: any) {
 	// console.log("Create webrtc transport reached");
 
@@ -21,7 +21,7 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		listenIps: [
 			{
 				ip: "0.0.0.0",
-				announcedIp: process.env.ANNOUNCED_IP || "127.0.0.1", // ❌ This is wrong for production
+				announcedIp: process.env.ANNOUNCED_IP || "127.0.0.1",
 			},
 		],
 		enableTcp: true,
@@ -29,12 +29,6 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		preferUdp: true,
 		enableSctp: true,
 		numSctpStreams: { OS: 1024, MIS: 1024 },
-		// ❌ REMOVE: Custom ICE servers - this was causing the "stuck at connecting" issue
-		// iceServers: [
-		// 	{
-		// 		urls: ["stun:stun.l.google.com:19302"],
-		// 	},
-		// ],
 	});
 
 	// // ✅ ENABLE: Server-side transport monitoring
@@ -381,7 +375,7 @@ export async function consumeMedia(client: Client, msg: any) {
 	});
 }
 
-// ✅ NEW: Handle ICE restart requests
+//  Handle ICE restart requests
 export async function restartIce(client: Client, message: any) {
 	if (!client.userId || !client.roomId) {
 		return client.sendToSelf({
