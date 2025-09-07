@@ -220,21 +220,24 @@ export class room extends Scene {
 		dataConsumer.on("message", (data: any) => {
 			try {
 				const msg = JSON.parse(data);
+				console.log("📨 Received via DataChannel:", msg);
+
 				if (msg.type === "playerMovementUpdate") {
-					console.log("got playermoment update ", msg);
 					this.handleRemotePlayerUpdates(msg);
+				} else if (msg.type === "test") {
+					console.log("🧪 DataChannel test message received!");
 				} else {
-					console.log(`🔗 New DC received unknown message type:`, msg.type);
+					console.log(`🔗 Unknown message type:`, msg.type);
 				}
 			} catch (error) {
-				console.error(`🚨 New DC message parse error:`, error);
+				console.error(`🚨 Message parse error:`, error);
 				console.log(`🚨 Raw data:`, data);
 			}
 		});
 
-		dataConsumer.on("error", (e) => console.error("🚨 New DC error:", e));
-		dataConsumer.on("close", () => console.log("❌ New DataConsumer closed"));
-		dataConsumer.on("open", () => console.log("✅ New DataConsumer opened"));
+		dataConsumer.on("error", (e) => console.error("🚨 DataConsumer error:", e));
+		dataConsumer.on("close", () => console.log("❌ DataConsumer closed"));
+		dataConsumer.on("open", () => console.log("✅ DataConsumer opened"));
 
 		this.dataConsumers.push(dataConsumer);
 	}
@@ -427,6 +430,18 @@ export class room extends Scene {
 		this.currentPlayer.play(animKey, true);
 	}
 
+	// ✅ ADD: Handle DataChannel open event
+	public handleDataChannelOpen() {
+		console.log("🎮 Room: DataChannel opened!");
+		// Reset retry state
+		this.dataChannelRetryCount = 0;
+		if (this.dataChannelRetryTimeout) {
+			clearTimeout(this.dataChannelRetryTimeout);
+			this.dataChannelRetryTimeout = null;
+		}
+	}
+
+	// ✅ IMPROVED: Better sendUpdates method
 	private sendUpdates(isMoving: boolean) {
 		const msg = JSON.stringify({
 			type: "playerMovementUpdate",
@@ -439,54 +454,45 @@ export class room extends Scene {
 			},
 		});
 
-		// WebSocket fallback - always try this first
+		// ✅ WebSocket fallback
 		if (this.ws?.readyState === WebSocket.OPEN) {
 			this.ws.send(msg);
 		}
 
-		// DataProducer with improved retry logic
+		// ✅ DataProducer - prioritize WebRTC
 		if (this.dataProducer && !this.dataProducer.closed) {
 			const dataChannel = (this.dataProducer as any)._dataChannel;
 
 			if (dataChannel && dataChannel.readyState === "open") {
 				try {
 					this.dataProducer.send(msg);
-					// Reset retry count on success
+					console.log("📤 Sent via DataChannel:", msg);
 					this.dataChannelRetryCount = 0;
 				} catch (error) {
 					console.error("🚨 DataProducer.send failed:", error);
+					// Fallback to WebSocket
+					if (this.ws?.readyState === WebSocket.OPEN) {
+						this.ws.send(msg);
+					}
 				}
 			} else if (dataChannel && dataChannel.readyState === "connecting") {
-				// ✅ IMPROVED: Single retry with limit
+				// Wait for DataChannel to open, but don't spam retries
 				if (
 					!this.dataChannelRetryTimeout &&
 					this.dataChannelRetryCount < this.maxRetries
 				) {
 					this.dataChannelRetryCount++;
 					console.log(
-						`⏳ DataChannel connecting (attempt ${this.dataChannelRetryCount}/${this.maxRetries}), retrying in 2s...`
+						`⏳ DataChannel connecting (attempt ${this.dataChannelRetryCount}/${this.maxRetries})`
 					);
 
 					this.dataChannelRetryTimeout = setTimeout(() => {
 						this.dataChannelRetryTimeout = null;
-
-						// Check current state before retrying
-						const currentState = (this.dataProducer as any)._dataChannel
-							?.readyState;
-						if (currentState === "connecting") {
-							this.sendUpdates(isMoving);
-						} else if (currentState === "open") {
-							console.log("✅ DataChannel opened during retry!");
-							this.sendUpdates(isMoving);
-						}
-					}, 2000);
-				} else if (this.dataChannelRetryCount >= this.maxRetries) {
-					console.warn(
-						"⚠️ Max DataChannel retries reached, switching to WebSocket only"
-					);
+						this.sendUpdates(isMoving);
+					}, 3000); // Increased timeout
 				}
 			} else {
-				console.log("❌ DataProducer channel state:", dataChannel?.readyState);
+				console.log("❌ DataChannel not available, using WebSocket only");
 			}
 		}
 	}
@@ -538,7 +544,7 @@ export class room extends Scene {
 				console.log("❌ DataChannel closed");
 			});
 
-			dataChannel.addEventListener("error", (event) => {
+			dataChannel.addEventListener("error", () => {
 				console.error("🚨 DataChannel error:", event);
 			});
 
@@ -593,36 +599,40 @@ export class room extends Scene {
 
 	private handleRemotePlayerUpdates(msg: any) {
 		const { playerUserId, pos, direction, isMoving } = msg.payload;
-		console.log(msg);
-		// console.log("current player",this.currentPlayer);
+
 		if (playerUserId === this.userId) {
-			return;
+			return; // Don't update self
 		}
 
-		const other = this.gameObjects.get(
+		console.log(`🔄 Updating player ${playerUserId}:`, {
+			pos,
+			direction,
+			isMoving,
+		});
+
+		const otherPlayer = this.gameObjects.get(
 			playerUserId
 		) as Phaser.GameObjects.Sprite;
-		// console.log("moved player",other);
-		if (!other) {
-			console.log(
-				`🎮 No sprite found for client ${playerUserId}. Available sprites:`,
-				Array.from(this.gameObjects.keys())
-			);
-			console.log("userid", this.userId);
+		if (!otherPlayer) {
+			console.warn(`🎮 Player ${playerUserId} not found in gameObjects`);
 			return;
 		}
-		if (isMoving) {
-			other.setPosition(pos.posX, pos.posY);
-		}
-		const key = isMoving
+
+		// Update position
+		otherPlayer.setPosition(pos.posX, pos.posY);
+
+		// Update animation
+		const animKey = isMoving
 			? `${playerUserId}-${direction}-run`
 			: `${playerUserId}-${direction}-idle`;
-		if (this.anims.exists(key)) {
-			other.play(key, true);
+
+		if (this.anims.exists(animKey)) {
+			otherPlayer.play(animKey, true);
 		} else {
-			console.log(`🎮 Animation not found: ${key}. Available anims:`);
+			console.warn(`🎮 Animation ${animKey} not found`);
 		}
 
+		// Update stored position
 		this.playerPositions.set(playerUserId, pos);
 	}
 }

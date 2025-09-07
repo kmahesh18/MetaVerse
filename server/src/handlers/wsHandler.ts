@@ -77,7 +77,6 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 					await restartIce(client, msg);
 					break;
 
-
 				case "joinSpace":
 					await joinSpace(msg.payload.spaceId, userId);
 					break;
@@ -125,33 +124,40 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 						}
 						room.playerPositions.set(client.userId, pos);
 
+						// ✅ Broadcast to ALL clients in room via DataProducers
 						room.dataProducers.forEach((producer, producerId) => {
-							// Find which client owns this producer
-							const ownerClient = Array.from(room.clients.values()).find(
-								(c) => {
-									// You might need to track which client owns which producer
-									return true; // For now, broadcast to all
-								}
-							);
+							try {
+								const message = JSON.stringify({
+									type: "playerMovementUpdate",
+									payload: {
+										isMoving: isMoving,
+										playerUserId: playerUserId,
+										pos: pos,
+										direction: direction,
+										timestamp: Date.now(),
+									},
+								});
 
-							if (ownerClient && ownerClient.userId !== client.userId) {
-								try {
-									producer.send(
-										JSON.stringify({
-											type: "playerMovementUpdate",
-											payload: {
-												isMoving: isMoving,
-												playerUserId: playerUserId,
-												pos: pos,
-												direction: direction,
-												timestamp: Date.now(),
-											},
-										})
-									);
-								} catch (error) {
-									console.log("Error broadcasting via DataProducer:", error);
-								}
+								producer.send(message);
+								console.log(`📤 Broadcasted to producer ${producerId}`);
+							} catch (error) {
+								console.error(
+									`🚨 Failed to send to producer ${producerId}:`,
+									error
+								);
 							}
+						});
+
+						// Also broadcast via WebSocket as fallback
+						room.broadcastMessage(client.userId, {
+							type: "playerMovementUpdate",
+							payload: {
+								isMoving: isMoving,
+								playerUserId: playerUserId,
+								pos: pos,
+								direction: direction,
+								timestamp: Date.now(),
+							},
 						});
 					}
 					break;
@@ -161,9 +167,9 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 				case "produceMedia":
 					produceMedia(client, msg);
 					break;
-        case "consumeMedia":
-          consumeMedia(client, msg);
-          break;
+				case "consumeMedia":
+					consumeMedia(client, msg);
+					break;
 			}
 		});
 
@@ -227,20 +233,21 @@ async function handleDisconnect(client: Client): Promise<void> {
 				consumers.forEach((consumer) => consumer.close());
 				room.dataConsumers.delete(client.userId);
 			}
-			
-			
+
 			room.mediaProducers?.forEach((producer, producerId) => {
-    if ((producer as any).appData?.clientId === client.userId) {
-      producer.close();
-      room.mediaProducers!.delete(producerId);
-      console.log(`🗑️ Cleaned up MediaProducer ${producerId} for ${client.userId}`);
-      // notify the others so they can remove that box
-      room.broadcastMessage(null, {
-        type: "mediaProducerClosed",
-        payload: { producerId },
-      });
-    }
-  });
+				if ((producer as any).appData?.clientId === client.userId) {
+					producer.close();
+					room.mediaProducers!.delete(producerId);
+					console.log(
+						`🗑️ Cleaned up MediaProducer ${producerId} for ${client.userId}`
+					);
+					// notify the others so they can remove that box
+					room.broadcastMessage(null, {
+						type: "mediaProducerClosed",
+						payload: { producerId },
+					});
+				}
+			});
 
 			// Notify other clients that this client left
 

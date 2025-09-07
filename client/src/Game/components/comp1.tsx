@@ -137,9 +137,6 @@ const GameComponent: React.FC = () => {
 						console.log("firtst");
 						const streamId = Math.floor(Math.random() * 65535);
 
-						// Fix: sctpStreamParameters is not a valid property for produceData in mediasoup-client
-						// You should use 'sctpStreamParameters' inside the options object, not as a top-level property
-						// But to silence the error, just cast as any for now (since you want minimal change)
 						dataProducerRef.current =
 							await sendTransportRef.current.produceData({
 								ordered: true,
@@ -153,25 +150,58 @@ const GameComponent: React.FC = () => {
 								},
 							} as any);
 
-						// Monitor DataChannel ready state
-						const checkDataChannelState = () => {
-							if (dataProducerRef.current?.readyState === "open") {
-								console.log("✅ DataChannel is ready!");
-								return;
-							}
+						// ✅ IMPROVED: Better DataChannel monitoring
+						const dataChannel = (dataProducerRef.current as any)._dataChannel;
+						if (dataChannel) {
+							dataChannel.addEventListener("open", () => {
+								console.log("✅ DataChannel opened successfully!");
+								// Notify room scene
+								if (roomSceneRef.current) {
+									roomSceneRef.current.handleDataChannelOpen();
+								}
+							});
 
-							if (dataProducerRef.current?.readyState === "connecting") {
-								// console.log(
-								// 	"⏳ DataChannel still connecting, checking again in 2s..."
-								// );
-								setTimeout(checkDataChannelState, 2000);
-							} else if (dataProducerRef.current?.readyState === "closed") {
-								console.error("❌ DataChannel closed unexpectedly");
-							}
-						};
+							dataChannel.addEventListener("close", () => {
+								console.log("❌ DataChannel closed");
+							});
 
-						// Start monitoring
-						checkDataChannelState();
+							dataChannel.addEventListener("error", () => {
+								console.error("🚨 DataChannel error:");
+							});
+
+							// Monitor state changes
+							const checkState = () => {
+								if (dataChannel.readyState === "open") {
+									console.log("✅ DataChannel is ready!");
+								} else if (dataChannel.readyState === "connecting") {
+									console.log("⏳ DataChannel still connecting...");
+								} else {
+									console.log("❌ DataChannel state:", dataChannel.readyState);
+								}
+							};
+
+							// Check every 2 seconds
+							const stateCheckInterval = setInterval(checkState, 2000);
+
+							// Clean up interval when component unmounts
+							return () => clearInterval(stateCheckInterval);
+						}
+
+						// ✅ Send initial message to test DataChannel
+						setTimeout(() => {
+							if (dataProducerRef.current && !dataProducerRef.current.closed) {
+								const testMsg = JSON.stringify({
+									type: "test",
+									payload: { message: "DataChannel test" },
+								});
+								try {
+									dataProducerRef.current.send(testMsg);
+									console.log("📤 Test message sent via DataChannel");
+								} catch (error) {
+									console.error("🚨 Test message failed:", error);
+								}
+							}
+						}, 3000);
 					}
 				}
 
@@ -391,6 +421,33 @@ const GameComponent: React.FC = () => {
 		});
 	}
 
+	// Add state monitoring
+	const [dataChannelState, setDataChannelState] = useState<string>("unknown");
+
+	useEffect(() => {
+		if (dataProducerRef.current) {
+			const dataChannel = (dataProducerRef.current as any)._dataChannel;
+			if (dataChannel) {
+				const updateState = () => {
+					setDataChannelState(dataChannel.readyState);
+					console.log("🔍 DataChannel state:", dataChannel.readyState);
+				};
+
+				dataChannel.addEventListener("open", updateState);
+				dataChannel.addEventListener("close", updateState);
+				dataChannel.addEventListener("error", updateState);
+
+				// Initial state
+				updateState();
+
+				// Periodic check
+				const interval = setInterval(updateState, 2000);
+				return () => clearInterval(interval);
+			}
+		}
+	}, [dataProducerRef.current]);
+
+	// Display state in UI for debugging
 	return (
 		<>
 			<div ref={containerRef} id="game-container">
@@ -419,6 +476,17 @@ const GameComponent: React.FC = () => {
 					title="Toggle Chat">
 					<BsChat size={28} />
 				</button>
+			</div>
+			<div
+				style={{
+					position: "absolute",
+					top: 10,
+					right: 10,
+					background: "rgba(0,0,0,0.8)",
+					color: "white",
+					padding: "5px",
+				}}>
+				DataChannel: {dataChannelState}
 			</div>
 		</>
 	);
