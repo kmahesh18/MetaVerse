@@ -36,6 +36,11 @@ export class room extends Scene {
 	private proximityCircle: Phaser.GameObjects.Graphics | null = null;
 	private showProximityCircle = false;
 
+	// ✅ ADD: Prevent multiple retry timeouts
+	private dataChannelRetryTimeout: NodeJS.Timeout | null = null;
+	private dataChannelRetryCount: number = 0;
+	private maxRetries: number = 5;
+
 	constructor() {
 		super({ key: "RoomScene" });
 	}
@@ -160,6 +165,7 @@ export class room extends Scene {
 		this.setupControls();
 		this.setupDataProducer();
 		this.setupInitialDataConsumers();
+		this.setupDataChannelMonitoring();
 	}
 
 	update() {
@@ -433,31 +439,55 @@ export class room extends Scene {
 			},
 		});
 
-		// WebSocket fallback
+		// WebSocket fallback - always try this first
 		if (this.ws?.readyState === WebSocket.OPEN) {
 			this.ws.send(msg);
 		}
 
-		// DataProducer with retry logic
+		// DataProducer with improved retry logic
 		if (this.dataProducer && !this.dataProducer.closed) {
 			const dataChannel = (this.dataProducer as any)._dataChannel;
+
 			if (dataChannel && dataChannel.readyState === "open") {
 				try {
 					this.dataProducer.send(msg);
+					// Reset retry count on success
+					this.dataChannelRetryCount = 0;
 				} catch (error) {
 					console.error("🚨 DataProducer.send failed:", error);
 				}
 			} else if (dataChannel && dataChannel.readyState === "connecting") {
-				// ✅ NEW: Wait for DataChannel to open
-				console.log("⏳ DataChannel connecting, retrying in 1s...");
-				setTimeout(() => this.sendUpdates(isMoving), 1000);
+				// ✅ IMPROVED: Single retry with limit
+				if (
+					!this.dataChannelRetryTimeout &&
+					this.dataChannelRetryCount < this.maxRetries
+				) {
+					this.dataChannelRetryCount++;
+					console.log(
+						`⏳ DataChannel connecting (attempt ${this.dataChannelRetryCount}/${this.maxRetries}), retrying in 2s...`
+					);
+
+					this.dataChannelRetryTimeout = setTimeout(() => {
+						this.dataChannelRetryTimeout = null;
+
+						// Check current state before retrying
+						const currentState = (this.dataProducer as any)._dataChannel
+							?.readyState;
+						if (currentState === "connecting") {
+							this.sendUpdates(isMoving);
+						} else if (currentState === "open") {
+							console.log("✅ DataChannel opened during retry!");
+							this.sendUpdates(isMoving);
+						}
+					}, 2000);
+				} else if (this.dataChannelRetryCount >= this.maxRetries) {
+					console.warn(
+						"⚠️ Max DataChannel retries reached, switching to WebSocket only"
+					);
+				}
 			} else {
-				console.log("data producer", this.dataProducer);
 				console.log("❌ DataProducer channel state:", dataChannel?.readyState);
 			}
-		} else {
-			console.log("hello", this.dataProducer);
-			console.log("DataProducer not available or closed");
 		}
 	}
 
@@ -486,6 +516,39 @@ export class room extends Scene {
 			});
 		} else {
 			console.log("Data producer not opened");
+		}
+	}
+
+	private setupDataChannelMonitoring() {
+		if (!this.dataProducer) return;
+
+		const dataChannel = (this.dataProducer as any)._dataChannel;
+		if (dataChannel) {
+			dataChannel.addEventListener("open", () => {
+				console.log("🔗 DataChannel opened successfully!");
+				// Clear any pending retry
+				if (this.dataChannelRetryTimeout) {
+					clearTimeout(this.dataChannelRetryTimeout);
+					this.dataChannelRetryTimeout = null;
+				}
+				this.dataChannelRetryCount = 0;
+			});
+
+			dataChannel.addEventListener("close", () => {
+				console.log("❌ DataChannel closed");
+			});
+
+			dataChannel.addEventListener("error", (event) => {
+				console.error("🚨 DataChannel error:", event);
+			});
+
+			// Monitor ready state changes
+			const checkState = () => {
+				console.log("🔍 DataChannel state:", dataChannel.readyState);
+			};
+
+			// Check state periodically
+			setInterval(checkState, 5000);
 		}
 	}
 

@@ -33,7 +33,20 @@ function main() {
         // Attach WS to the HTTP server
         (0, wsHandler_1.startWebsocketServer)(server);
         // Middleware
-        app.use((0, cors_1.default)({ origin: process.env.CLIENT_URL || "*", credentials: true }));
+        // Updated CORS configuration
+        const corsOptions = {
+            origin: [
+                process.env.CLIENT_URL || "*",
+                "https://meta-verse-pink.vercel.app", // Your deployed frontend
+                "https://app.rurouni.tech",
+                "http://localhost:5173", // Local development
+                "http://localhost:3000",
+                // Add any other frontend URLs you might use
+            ],
+            credentials: true,
+            optionsSuccessStatus: 200,
+        };
+        app.use((0, cors_1.default)(corsOptions));
         app.use(express_1.default.json());
         // API routes
         app.use("/api/user", userRouter_1.userRouter);

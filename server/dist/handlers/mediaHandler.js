@@ -19,7 +19,7 @@ exports.restartIce = restartIce;
 const setup_1 = require("../mediasoup/setup");
 const userService_1 = require("../services/userService");
 const state_1 = require("../state/state");
-//will need to call it twice in frontend for each client one for recv transport and the other for send transport
+//gotta call it twice in frontend for each client one for recv transport and the other for send transport
 function createWebRtcTransport(client, msg) {
     return __awaiter(this, void 0, void 0, function* () {
         // console.log("Create webrtc transport reached");
@@ -42,12 +42,6 @@ function createWebRtcTransport(client, msg) {
             preferUdp: true,
             enableSctp: true,
             numSctpStreams: { OS: 1024, MIS: 1024 },
-            // ❌ REMOVE: Custom ICE servers - this was causing the "stuck at connecting" issue
-            // iceServers: [
-            // 	{
-            // 		urls: ["stun:stun.l.google.com:19302"],
-            // 	},
-            // ],
         });
         // // ✅ ENABLE: Server-side transport monitoring
         // transport.on("icestatechange", (iceState) => {
@@ -333,7 +327,7 @@ function consumeMedia(client, msg) {
         }
         const mediaConsumer = yield transport.consume({
             producerId: producer.id,
-            rtpCapabilities: rtpCapabilities
+            rtpCapabilities: rtpCapabilities,
         });
         if (!msRoom.mediaConsumers.has(client.userId)) {
             msRoom.mediaConsumers.set(client.userId, []);
@@ -353,7 +347,7 @@ function consumeMedia(client, msg) {
         });
     });
 }
-// ✅ NEW: Handle ICE restart requests
+//  Handle ICE restart requests
 function restartIce(client, message) {
     return __awaiter(this, void 0, void 0, function* () {
         if (!client.userId || !client.roomId) {
