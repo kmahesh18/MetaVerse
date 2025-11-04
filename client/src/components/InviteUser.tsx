@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import axios from "axios";
+import "./InviteUser.css";
 
 interface InvitedUser {
 	email: string;
@@ -144,19 +145,11 @@ export function InviteUser() {
 
 	if (!isAdmin && error) {
 		return (
-			<div
-				className="container-2d"
-				style={{ maxWidth: "600px", margin: "40px auto" }}>
-				<h1 className="title-2d">Invite Users</h1>
-				<div
-					style={{
-						background: "#3d0000",
-						padding: "10px",
-						marginBottom: "20px",
-						border: "2px solid #ff0000",
-					}}>
-					<p className="text-2d">{error}</p>
-					<p className="text-2d" style={{ marginTop: "10px" }}>
+			<div className="invite-access-denied">
+				<h1>Invite Users</h1>
+				<div className="invite-alert invite-alert-error">
+					<p>{error}</p>
+					<p style={{ marginTop: "10px" }}>
 						Redirecting to dashboard...
 					</p>
 				</div>
@@ -165,120 +158,74 @@ export function InviteUser() {
 	}
 
 	return (
-		<div
-			className="container-2d"
-			style={{ maxWidth: "800px", margin: "40px auto" }}>
-			<h1 className="title-2d" style={{ marginBottom: "20px" }}>
+		<div className="invite-user-page">
+			<h1 className="invite-user-title">
 				Invite Users to Your Space
 			</h1>
 
 			{error && (
-				<div
-					style={{
-						background: "#3d0000",
-						padding: "10px",
-						marginBottom: "20px",
-						border: "2px solid #ff0000",
-					}}>
-					<p className="text-2d">{error}</p>
+				<div className="invite-alert invite-alert-error">
+					<p>{error}</p>
 				</div>
 			)}
 
 			{success && (
-				<div
-					style={{
-						background: "#003d00",
-						padding: "10px",
-						marginBottom: "20px",
-						border: "2px solid #00ff00",
-					}}>
-					<p className="text-2d">{success}</p>
+				<div className="invite-alert invite-alert-success">
+					<p>{success}</p>
 				</div>
 			)}
 
-			<div style={{ display: "flex", gap: "20px", flexWrap: "wrap" }}>
-				<div style={{ flex: "1", minWidth: "300px" }}>
+			<div className="invite-content-grid">
+				<div className="invite-form-section">
 					<form onSubmit={handleSubmit}>
-						<div className="form-group" style={{ marginBottom: "20px" }}>
+						<div className="invite-form-group">
 							<label
 								htmlFor="email"
-								className="text-2d"
-								style={{
-									display: "block",
-									marginBottom: "5px",
-									fontSize: "16px",
-								}}>
+								className="invite-form-label">
 								User Email:
 							</label>
 							<input
 								type="email"
 								id="email"
-								className="input-2d"
-								style={{ width: "100%" }}
+								className="invite-form-input"
 								value={email}
 								onChange={(e) => setEmail(e.target.value)}
 								placeholder="Enter the email of the user you want to invite"
 							/>
-							<p
-								className="text-2d"
-								style={{
-									fontSize: "12px",
-									marginTop: "5px",
-									color: "var(--highlight)",
-								}}>
+							<p className="invite-form-hint">
 								The user must have an account in the system
 							</p>
 						</div>
 
-						<div style={{ marginTop: "20px", display: "flex", gap: "10px" }}>
+						<div className="invite-button-group">
 							<button
 								type="submit"
-								className="btn-2d"
-								disabled={loading || !isAdmin || !email}
-								style={{
-									background: email ? "var(--highlight)" : "var(--accent)",
-									color: "var(--secondary)",
-									opacity: email ? 1 : 0.7,
-									padding: "10px 20px",
-								}}>
+								className="invite-btn invite-btn-primary"
+								disabled={loading || !isAdmin || !email}>
 								{loading ? "Inviting..." : "Invite User"}
 							</button>
 							<button
 								type="button"
-								className="btn-2d"
-								onClick={() => navigate("/dashboard")}
-								style={{ padding: "10px 20px" }}>
+								className="invite-btn invite-btn-secondary"
+								onClick={() => navigate("/dashboard")}>
 								Back to Dashboard
 							</button>
 						</div>
 					</form>
 
-					<div
-						style={{
-							marginTop: "30px",
-							padding: "15px",
-							border: "1px solid var(--accent)",
-						}}>
-						<h3
-							className="text-2d"
-							style={{ marginBottom: "10px", fontSize: "16px" }}>
+					<div className="invite-space-info">
+						<h3 className="invite-space-info-title">
 							Space Information
 						</h3>
-						<p
-							className="text-2d"
-							style={{ fontSize: "14px", marginBottom: "5px" }}>
+						<p className="invite-space-info-item">
 							<strong>Space ID:</strong> {spaceId}
 						</p>
 						{spaceDetails && (
 							<div>
-								<p
-									className="text-2d"
-									style={{ fontSize: "14px", marginBottom: "5px" }}>
+								<p className="invite-space-info-item">
 									<strong>Admin:</strong> You
 								</p>
-								<p
-									className="text-2d"
-									style={{ fontSize: "14px", marginBottom: "5px" }}>
+								<p className="invite-space-info-item">
 									<strong>Accessible Users:</strong>{" "}
 									{spaceDetails.accessibleuserids?.length || 1}
 								</p>
@@ -287,73 +234,30 @@ export function InviteUser() {
 					</div>
 				</div>
 
-				<div style={{ flex: "1", minWidth: "300px" }}>
-					<h3
-						className="text-2d"
-						style={{ marginBottom: "15px", fontSize: "18px" }}>
+				<div className="invite-list-section">
+					<h3 className="invite-list-title">
 						Recent Invites
 					</h3>
 
 					{invitedUsers.length === 0 ? (
-						<div
-							style={{
-								padding: "15px",
-								border: "1px dashed var(--accent)",
-								textAlign: "center",
-							}}>
-							<p className="text-2d" style={{ color: "var(--highlight)" }}>
-								No invites sent yet
-							</p>
+						<div className="invite-list-empty">
+							<p>No invites sent yet</p>
 						</div>
 					) : (
-						<div style={{ maxHeight: "300px", overflowY: "auto" }}>
+						<div className="invite-list-container">
 							{invitedUsers.map((invite, index) => (
 								<div
 									key={`${invite.email}-${index}`}
-									style={{
-										padding: "10px",
-										marginBottom: "10px",
-										border: `1px solid ${
-											invite.status === "success"
-												? "#00aa00"
-												: invite.status === "error"
-												? "#aa0000"
-												: "#aaaa00"
-										}`,
-										borderRadius: "4px",
-										background:
-											invite.status === "success"
-												? "rgba(0,170,0,0.1)"
-												: invite.status === "error"
-												? "rgba(170,0,0,0.1)"
-												: "rgba(170,170,0,0.1)",
-									}}>
-									<div
-										style={{
-											display: "flex",
-											justifyContent: "space-between",
-										}}>
-										<p
-											className="text-2d"
-											style={{ fontSize: "14px", fontWeight: "bold" }}>
+									className={`invite-item invite-item-${invite.status}`}>
+									<div className="invite-item-header">
+										<p className="invite-item-email">
 											{invite.email}
 										</p>
-										<p className="text-2d" style={{ fontSize: "12px" }}>
+										<p className="invite-item-time">
 											{new Date(invite.timestamp).toLocaleTimeString()}
 										</p>
 									</div>
-									<p
-										className="text-2d"
-										style={{
-											fontSize: "12px",
-											marginTop: "4px",
-											color:
-												invite.status === "success"
-													? "#00aa00"
-													: invite.status === "error"
-													? "#ff0000"
-													: "#aaaa00",
-										}}>
+									<p className={`invite-item-message invite-item-message-${invite.status}`}>
 										{invite.status === "pending"
 											? "Sending invite..."
 											: invite.message ||

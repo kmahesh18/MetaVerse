@@ -1,0 +1,363 @@
+/* InviteUser Component Styles - Professional Gaming Theme */
+
+/* Full page background */
+body:has(.invite-user-page) {
+  background: #0a0a0a;
+  min-height: 100vh;
+}
+
+.invite-user-page {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 30px;
+  background: #1a1a1a;
+  border: 2px solid #666666;
+  border-radius: 8px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.invite-user-title {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ffffff;
+  margin-bottom: 30px;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  border-bottom: 2px solid #888888;
+  padding-bottom: 15px;
+}
+
+/* Alert Messages */
+.invite-alert {
+  padding: 15px 20px;
+  margin-bottom: 25px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  animation: slideIn 0.3s ease;
+}
+
+.invite-alert-error {
+  background: #2a2a2a;
+  border: 2px solid #888888;
+  color: #cccccc;
+}
+
+.invite-alert-success {
+  background: #2a2a2a;
+  border: 2px solid #aaaaaa;
+  color: #ffffff;
+}
+
+/* Layout Grid */
+.invite-content-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
+}
+
+@media (max-width: 768px) {
+  .invite-content-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Form Section */
+.invite-form-section {
+  background: #0f0f0f;
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 25px;
+}
+
+.invite-form-group {
+  margin-bottom: 25px;
+}
+
+.invite-form-label {
+  display: block;
+  margin-bottom: 10px;
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.invite-form-input {
+  width: 100%;
+  padding: 12px 15px;
+  background: #0a0a0a;
+  border: 2px solid #666;
+  border-radius: 4px;
+  color: #ffffff;
+  font-size: 16px;
+  transition: all 0.3s ease;
+}
+
+.invite-form-input:focus {
+  outline: none;
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+.invite-form-input::placeholder {
+  color: #666;
+}
+
+.invite-form-hint {
+  margin-top: 8px;
+  font-size: 13px;
+  color: #999;
+  font-style: italic;
+}
+
+/* Buttons */
+.invite-button-group {
+  display: flex;
+  gap: 15px;
+  margin-top: 25px;
+}
+
+.invite-btn {
+  padding: 12px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  border: 2px solid;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.invite-btn-primary {
+  background: #ffffff;
+  color: #0a0a0a;
+  border-color: #ffffff;
+}
+
+.invite-btn-primary:hover:not(:disabled) {
+  background: #0a0a0a;
+  color: #ffffff;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.invite-btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.invite-btn-secondary {
+  background: #0a0a0a;
+  color: #ffffff;
+  border-color: #666;
+}
+
+.invite-btn-secondary:hover {
+  border-color: #ffffff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
+}
+
+/* Space Info Card */
+.invite-space-info {
+  margin-top: 30px;
+  padding: 20px;
+  background: #0a0a0a;
+  border: 2px solid #666;
+  border-radius: 6px;
+}
+
+.invite-space-info-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 15px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.invite-space-info-item {
+  font-size: 14px;
+  color: #ccc;
+  margin-bottom: 10px;
+  line-height: 1.6;
+}
+
+.invite-space-info-item strong {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+/* Invites List Section */
+.invite-list-section {
+  background: #0f0f0f;
+  border: 2px solid #333;
+  border-radius: 6px;
+  padding: 25px;
+}
+
+.invite-list-title {
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 20px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.invite-list-empty {
+  padding: 40px 20px;
+  border: 2px dashed #666;
+  border-radius: 6px;
+  text-align: center;
+  color: #999;
+  font-size: 15px;
+}
+
+.invite-list-container {
+  max-height: 400px;
+  overflow-y: auto;
+  padding-right: 10px;
+}
+
+/* Custom Scrollbar */
+.invite-list-container::-webkit-scrollbar {
+  width: 8px;
+}
+
+.invite-list-container::-webkit-scrollbar-track {
+  background: #0a0a0a;
+  border-radius: 4px;
+}
+
+.invite-list-container::-webkit-scrollbar-thumb {
+  background: #666;
+  border-radius: 4px;
+}
+
+.invite-list-container::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* Invite Item Card */
+.invite-item {
+  padding: 15px;
+  margin-bottom: 12px;
+  border-radius: 6px;
+  border: 2px solid;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.4s ease;
+}
+
+.invite-item:hover {
+  transform: translateX(5px);
+}
+
+.invite-item-pending {
+  background: rgba(255, 255, 255, 0.03);
+  border-color: #888888;
+}
+
+.invite-item-success {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: #aaaaaa;
+}
+
+.invite-item-error {
+  background: rgba(255, 255, 255, 0.02);
+  border-color: #666666;
+}
+
+.invite-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 10px;
+}
+
+.invite-item-email {
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.invite-item-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.invite-item-message {
+  font-size: 13px;
+  margin-top: 8px;
+  font-weight: 500;
+}
+
+.invite-item-message-pending {
+  color: #ffff66;
+}
+
+.invite-item-message-success {
+  color: #66ff66;
+}
+
+.invite-item-message-error {
+  color: #ff6666;
+}
+
+/* Animations */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Loading State */
+.invite-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  font-size: 18px;
+  color: #ffffff;
+}
+
+/* Access Denied */
+.invite-access-denied {
+  max-width: 600px;
+  margin: 40px auto;
+  padding: 30px;
+  background: rgba(255, 0, 0, 0.1);
+  border: 2px solid #ff0000;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.invite-access-denied h1 {
+  color: #ff6666;
+  font-size: 24px;
+  margin-bottom: 20px;
+}
+
+.invite-access-denied p {
+  color: #ff9999;
+  font-size: 16px;
+  margin-bottom: 15px;
+}

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { BsChat } from "react-icons/bs";
 import { MdPublic, MdWifiTethering, MdSend, MdClose } from "react-icons/md";
 import { IoLocationOutline } from "react-icons/io5";
+import "./ChatInterface.css";
 
 interface ChatMessage {
 	senderId: string;
@@ -206,27 +207,25 @@ export function ChatInterface({ ws, userId, onClose }: ChatInterfaceProps) {
 				{/* Chat Input */}
 				<div className="chat-input-container">
 					<form onSubmit={sendMessage} className="chat-input-form">
-						<div className="input-wrapper">
-							<input
-								type="text"
-								value={inputText}
-								onChange={(e) => setInputText(e.target.value)}
-								placeholder={
-									chatMode === "public"
-										? "Type a public message..."
-										: "Type a proximity message..."
-								}
-								className="chat-input"
-								maxLength={500}
-							/>
-							<button
-								type="submit"
-								className="send-button"
-								disabled={!inputText.trim()}
-								title="Send message">
-								<MdSend className="send-icon" />
-							</button>
-						</div>
+						<input
+							type="text"
+							value={inputText}
+							onChange={(e) => setInputText(e.target.value)}
+							placeholder={
+								chatMode === "public"
+									? "Type a public message..."
+									: "Type a proximity message..."
+							}
+							className="chat-input"
+							maxLength={500}
+						/>
+						<button
+							type="submit"
+							className="chat-send-btn"
+							disabled={!inputText.trim()}
+							title="Send message">
+							<MdSend />
+						</button>
 					</form>
 				</div>
 			</div>

@@ -1,9 +1,10 @@
 // src/App.tsx
-import { Routes, Route, Link } from "react-router-dom";
+import { Routes, Route, Link, useLocation } from "react-router-dom";
 import {
   SignedIn,
   UserButton,
 } from "@clerk/clerk-react";
+import { useEffect } from "react";
 import GameComponent from "./Game/components/comp1";
 import { Homepage } from "./components/Homepage";
 import { AvatarSelection } from "./components/AvatarSelection";
@@ -12,32 +13,44 @@ import { CreateSpace } from "./components/CreateSpace";
 import { JoinSpace } from "./components/JoinSpace";
 import { InviteUser } from "./components/InviteUser";
 import "./App.css";
-import "./styles/theme.css";
+import "./global.css";
 
 function App() {
+  const location = useLocation();
   const isGameRoute = /^\/space\/[^/]+\/room\/[^/]+/.test(location.pathname);
-  console.log(isGameRoute);
+  const isHomepage = location.pathname === '/';
+  const isSelectAvatar = location.pathname === '/select-avatar';
+  
+  // Show navbar only on specific pages (not on homepage, game, or avatar selection)
+  const showNavbar = !isGameRoute && !isHomepage && !isSelectAvatar;
+  
+  // Add/remove game-mode class based on route
+  useEffect(() => {
+    if (isGameRoute) {
+      document.body.classList.add('game-mode');
+    } else {
+      document.body.classList.remove('game-mode');
+    }
+    
+    // Add has-navbar class when navbar is shown
+    if (showNavbar) {
+      document.body.classList.add('has-navbar');
+    } else {
+      document.body.classList.remove('has-navbar');
+    }
+  }, [isGameRoute, showNavbar]);
+  
+  console.log("Current route:", location.pathname, "Show navbar:", showNavbar);
+  
   return (
     <>
-      {!isGameRoute && (
-        <nav
-          className="container-2d"
-          style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            background: "var(--secondary)",
-            marginBottom: "20px",
-          }}
-        >
-          <Link to="/" className="btn-2d">
-            Home
+      {showNavbar && (
+        <nav className="navbar-slim">
+          <Link to="/dashboard" className="nav-link">
+            🏠 DASHBOARD
           </Link>
           <SignedIn>
-            <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
-              <Link to="/dashboard" className="btn-2d">
-                Dashboard
-              </Link>
+            <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
               <UserButton afterSignOutUrl="/" />
             </div>
           </SignedIn>

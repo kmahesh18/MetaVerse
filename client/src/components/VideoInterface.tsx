@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
-import { IoVideocamOutline } from "react-icons/io5";
+import { IoVideocamOutline, IoVideocamOffOutline } from "react-icons/io5";
 import { types } from "mediasoup-client";
+import "./VideoInterface.css";
 
 interface VideoInterfaceProps {
 	sendTransport: types.Transport | null;
@@ -153,7 +154,6 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 		if (showVideo) {
 			// === Pause sending ===
 			if (producerRef.current && !producerRef.current.closed) {
-				// just pause the RTP track, don’t replace with null
 				producerRef.current.pause();
 			}
 			if (videoEl) {
@@ -163,37 +163,38 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 			setShowVideo(false);
 		} else {
 			// === Resume / start sending ===
-			if (producerRef.current && !producerRef.current.closed) {
-				producerRef.current.resume();
-			} else {
-				// grab camera
-				const stream = await navigator.mediaDevices.getUserMedia({
+			let stream = localStream;
+			
+			if (!stream || stream.getTracks().length === 0) {
+				// grab camera if we don't have a stream
+				stream = await navigator.mediaDevices.getUserMedia({
 					video: true,
 					audio: false,
 				});
-				const videoTrack = stream.getVideoTracks()[0];
+				setLocalStream(stream);
+			}
+			
+			const videoTrack = stream.getVideoTracks()[0];
 
+			if (producerRef.current && !producerRef.current.closed) {
+				producerRef.current.resume();
+			} else if (sendTransport) {
 				// create producer on sendTransport
-				producerRef.current = await sendTransport!.produce({
+				producerRef.current = await sendTransport.produce({
 					track: videoTrack,
 					appData: { clientId },
 				});
-
-				// stash for cleanup
-				setLocalStream(stream);
 			}
 
 			// restart local preview
-			if (videoEl) {
-				videoEl.srcObject = localStream!;
-				await videoEl.play().catch(() => {});
+			if (videoEl && stream) {
+				videoEl.srcObject = stream;
+				await videoEl.play().catch((err) => console.warn("Play error:", err));
 			}
 
 			setShowVideo(true);
 		}
-	}
-
-	// async function handleToggle() {
+	}	// async function handleToggle() {
 	// 	const videoEl = videoRef.current;
 
 	// 	if (showVideo) {
@@ -248,11 +249,11 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 			</div>
 
 			<button
-				className="interface-toggle-btn"
+				className={`interface-toggle-btn ${!showVideo ? 'video-off' : ''}`}
 				style={{ left: 92, top: 24 }}
 				onClick={handleToggle}
-				title="Toggle Video">
-				<IoVideocamOutline size={28} />
+				title={showVideo ? "Turn Video Off" : "Turn Video On"}>
+				{showVideo ? <IoVideocamOutline size={28} /> : <IoVideocamOffOutline size={28} />}
 			</button>
 
 			{/* ============ Remote Video Grid ============ */}

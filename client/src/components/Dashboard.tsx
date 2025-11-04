@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ISpace } from "../../../server/src/Models/SpaceType";
 import { IUser } from "../../../server/src/Models/UserModel";
 import axios from "axios";
+import "./Dashboard.css";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -15,6 +16,7 @@ export function Dashboard() {
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [userData, setUserData] = useState<IUser | null>(null);
+	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [showNotification, setShowNotification] = useState<string | null>(
 		location.state?.notification || null
 	);
@@ -130,6 +132,22 @@ export function Dashboard() {
 					navigate("/select-avatar");
 					return;
 				}
+
+				// Fetch avatar details
+				if (userDataResult.avatarId) {
+					try {
+						const avatarResponse = await fetch(
+							`${backendUrl}/api/assets/${userDataResult.avatarId}`
+						);
+						if (avatarResponse.ok) {
+							const avatarData = await avatarResponse.json();
+							setAvatarUrl(avatarData.previewUrl);
+						}
+					} catch (err) {
+						console.error("Error fetching avatar:", err);
+					}
+				}
+
 				const spacesData = await fetchAccessibleSpaces();
 				setSpaces(spacesData);
 				setLoading(false);
@@ -294,17 +312,10 @@ export function Dashboard() {
 
 	if (!isLoaded || loading) {
 		return (
-			<div
-				className="container-2d"
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					height: "100vh",
-					background: "var(--secondary)",
-				}}>
-				<p className="text-2d" style={{ fontSize: "18px" }}>
-					Loading...
+			<div className="centered-container">
+				<div className="loading-2d"></div>
+				<p className="text-2d" style={{ marginTop: "20px" }}>
+					Loading your dashboard...
 				</p>
 			</div>
 		);
@@ -312,368 +323,170 @@ export function Dashboard() {
 
 	if (error) {
 		return (
-			<div
-				className="container-2d"
-				style={{
-					maxWidth: "600px",
-					margin: "40px auto",
-					background: "var(--secondary)",
-					borderColor: "#ff0000",
-				}}>
-				<p
-					className="text-2d"
-					style={{ color: "#ff0000", marginBottom: "20px" }}>
-					Error: {error}
-				</p>
-				<button className="btn-2d" onClick={() => window.location.reload()}>
-					Retry
-				</button>
+			<div className="centered-container">
+				<div className="card-2d" style={{ maxWidth: "600px" }}>
+					<div className="error-message">
+						Error: {error}
+					</div>
+					<button className="btn-2d" onClick={() => window.location.reload()}>
+						Retry
+					</button>
+				</div>
 			</div>
 		);
 	}
 
 	return (
-		<div
-			className="container-2d"
-			style={{
-				maxWidth: "1000px",
-				margin: "40px auto",
-				background: "var(--secondary)",
-				padding: "30px",
-				position: "relative",
-			}}>
+		<div className="dashboard-container">
 			{showNotification && (
-				<div
-					style={{
-						position: "absolute",
-						top: "10px",
-						right: "10px",
-						background: "var(--highlight)",
-						color: "var(--secondary)",
-						padding: "10px 15px",
-						borderRadius: "4px",
-						zIndex: 100,
-						maxWidth: "300px",
-					}}>
-					<p>{showNotification}</p>
+				<div className="notification-toast">
+					<span>{showNotification}</span>
 					<button
-						style={{
-							position: "absolute",
-							top: "5px",
-							right: "5px",
-							background: "transparent",
-							border: "none",
-							color: "var(--secondary)",
-							cursor: "pointer",
-							fontSize: "12px",
-						}}
+						className="notification-close"
 						onClick={() => setShowNotification(null)}>
 						✕
 					</button>
 				</div>
 			)}
 
-			<div
-				style={{
-					display: "flex",
-					alignItems: "center",
-					gap: "20px",
-					marginBottom: "30px",
-					borderBottom: "2px solid var(--accent)",
-					paddingBottom: "20px",
-				}}>
-				<div
-					style={{
-						width: "80px",
-						height: "80px",
-						borderRadius: "50%",
-						overflow: "hidden",
-						border: "3px solid var(--text)",
-						display: "flex",
-						justifyContent: "center",
-						alignItems: "center",
-						background: "var(--accent)",
-					}}>
-					{userData?.avatarId && (
-						<img
-							src={`/assets/${userData.avatarId}.png`}
-							alt="Your avatar"
-							style={{
-								width: "100%",
-								height: "100%",
-								objectFit: "cover",
-							}}
-						/>
-					)}
+			<div className="dashboard-header">
+				<div className="dashboard-welcome">
+					<div className="dashboard-avatar">
+						{avatarUrl ? (
+							<img
+								src={avatarUrl}
+								alt="Your avatar"
+								style={{
+									width: "100%",
+									height: "100%",
+									objectFit: "cover",
+								}}
+							/>
+						) : (
+							<span>👤</span>
+						)}
+					</div>
+					<div className="dashboard-user-info">
+						<h1>Welcome, {user?.firstName || "User"}</h1>
+						<p>Manage Your Virtual Spaces</p>
+					</div>
 				</div>
 
-				<div>
-					<h1
-						className="title-2d"
-						style={{ marginBottom: "5px", fontSize: "22px" }}>
-						Welcome, {user?.firstName || "User"}
-					</h1>
-					<p className="text-2d" style={{ color: "var(--highlight)" }}>
-						Manage Your Virtual Spaces
-					</p>
-				</div>
-			</div>
-
-			<div
-				className="action-buttons"
-				style={{
-					display: "flex",
-					gap: "15px",
-					marginBottom: "30px",
-					justifyContent: "flex-start",
-				}}>
-				<button
-					className="btn-2d"
-					onClick={() => navigate("/create-space")}
-					style={{
-						fontSize: "14px",
-						padding: "10px 20px",
-						background: "var(--highlight)",
-						color: "var(--secondary)",
-					}}>
-					+ Create New Space
-				</button>
-				<button
-					className="btn-2d"
-					onClick={handleJoinSpace}
-					style={{
-						fontSize: "14px",
-						padding: "10px 20px",
-						opacity: 0.7,
-					}}>
-					Join Space (Coming Soon)
-				</button>
-			</div>
-
-			<h2
-				className="title-2d"
-				style={{ fontSize: "18px", marginBottom: "20px" }}>
-				Your Spaces
-			</h2>
-
-			{spaces.length === 0 ? (
-				<div
-					style={{
-						textAlign: "center",
-						margin: "60px 0",
-						padding: "30px",
-						border: "2px dashed var(--accent)",
-						background: "rgba(255, 255, 255, 0.05)",
-					}}>
-					<p className="text-2d" style={{ marginBottom: "10px" }}>
-						You haven't joined any spaces yet.
-					</p>
-					<p
-						className="text-2d"
-						style={{ marginBottom: "20px", color: "var(--highlight)" }}>
-						Create or join one to get started!
-					</p>
+				<div className="dashboard-actions">
 					<button
 						className="btn-2d"
-						onClick={() => navigate("/create-space")}
-						style={{
-							background: "var(--highlight)",
-							color: "var(--secondary)",
-						}}>
-						Create Your First Space
+						onClick={() => navigate("/create-space")}>
+						+ Create New Space
+					</button>
+					<button
+						className="btn-secondary"
+						onClick={handleJoinSpace}
+						style={{ opacity: 0.7 }}>
+						Join Space (Coming Soon)
 					</button>
 				</div>
-			) : (
-				<div
-					className="space-grid"
-					style={{
-						display: "grid",
-						gridTemplateColumns: "repeat(auto-fill, minmax(280px, 1fr))",
-						gap: "20px",
-					}}>
-					{spaces.map((space) => {
-						// console.log("Rendering space:", space); // Log each space being rendered
-						// console.log("Admin check:", {
-						//   spaceAdminId: space.adminid,
-						//   userId: user?.id,
-						//   isAdmin: space.adminid === user?.id
-						// });
+			</div>
 
-						return (
-							<div
-								key={space.id}
-								className="space-card"
-								style={{
-									cursor: "pointer",
-									padding: "20px",
-									background: "var(--secondary)",
-									border:
-										space.adminid === user?.id
-											? "2px solid var(--highlight)"
-											: "2px solid var(--text)",
-									borderRadius: "4px",
-								}}>
-								<div
-									style={{
-										display: "flex",
-										justifyContent: "space-between",
-										alignItems: "center",
-										marginBottom: "15px",
-									}}>
-									<h3
-										className="text-2d"
-										style={{
-											fontSize: "18px",
-											fontWeight: "bold",
-										}}>
-										Space
-									</h3>
-									<span
-										style={{
-											fontSize: "12px",
-											padding: "4px 8px",
-											border:
-												space.adminid === user?.id
-													? "1px solid var(--highlight)"
-													: "1px solid var(--accent)",
-											borderRadius: "4px",
-											textTransform: "capitalize",
-											background:
-												space.adminid === user?.id
-													? "var(--highlight)"
-													: "var(--accent)",
-											color: "var(--secondary)",
-										}}>
-										{space.adminid === user?.id ? "Admin" : "Member"}
-									</span>
-								</div>
+			<div className="dashboard-section">
+				<h2>Your Spaces</h2>
 
-								<div
-									style={{
-										display: "flex",
-										flexDirection: "column",
-										gap: "5px",
-									}}>
-									<p
-										className="text-2d"
-										style={{
-											fontSize: "12px",
-											color: "var(--highlight)",
-											marginBottom: "5px",
-										}}>
-										Rooms:{" "}
-										{Array.isArray(space.roomids) ? space.roomids.length : 0}
-									</p>
-									<p
-										className="text-2d"
-										style={{
-											fontSize: "12px",
-											color: "var(--highlight)",
-										}}>
-										Active users:{" "}
-										{Array.isArray(space.activeuserids)
-											? space.activeuserids.length
-											: 0}
-									</p>
-									<p
-										className="text-2d"
-										style={{
-											fontSize: "12px",
-											color:
-												Array.isArray(space.activeuserids) &&
-												space.activeuserids.includes(user?.id || "")
-													? "#00ff00"
-													: "#ffaa00",
-											marginTop: "5px",
-										}}>
-										Status:{" "}
-										{Array.isArray(space.activeuserids) &&
-										space.activeuserids.includes(user?.id || "")
-											? "Active"
-											: "Accessible"}
-									</p>
-								</div>
+				{spaces.length === 0 ? (
+					<div
+						className="card-2d"
+						style={{
+							textAlign: "center",
+							padding: "60px 30px",
+							background: "var(--bg-primary)",
+						}}>
+						<p className="text-2d" style={{ marginBottom: "10px", fontSize: "1.2rem" }}>
+							You haven't joined any spaces yet.
+						</p>
+						<p className="subtitle-2d" style={{ marginBottom: "30px" }}>
+							Create or join one to get started!
+						</p>
+						<button
+							className="btn-2d"
+							onClick={() => navigate("/create-space")}>
+							Create Your First Space
+						</button>
+					</div>
+				) : (
+					<div className="space-grid">
+						{spaces.map((space) => {
+							const isAdmin = space.adminid === user?.id;
+							const isActive = space.activeuserids?.includes(user?.id || "");
 
+							return (
 								<div
-									style={{
-										marginTop: "15px",
-										display: "flex",
-										justifyContent: "space-between",
-										flexWrap: "wrap",
-										gap: "8px",
-									}}>
-									{/* Debug admin status */}
+									key={space.id}
+									className="space-card">
 									<div
 										style={{
-											fontSize: "10px",
-											color: "#999",
-											marginBottom: "5px",
-											width: "100%",
+											display: "flex",
+											justifyContent: "space-between",
+											alignItems: "center",
+											marginBottom: "15px",
 										}}>
-										Admin ID: {space.adminid?.substring(0, 8)}... | Your ID:{" "}
-										{user?.id?.substring(0, 8)}...
+										<h3 className="subtitle-2d" style={{ fontSize: "1.2rem" }}>
+											Space
+										</h3>
+										<span className={`badge-2d ${isAdmin ? 'badge-admin' : ''}`}>
+											{isAdmin ? "👑 Admin" : "Member"}
+										</span>
 									</div>
 
-									{space.adminid === user?.id && (
-										<button
-											className="btn-2d"
-											style={{
-												fontSize: "12px",
-												padding: "6px 12px",
-												background: "var(--highlight)",
-												color: "var(--secondary)",
-											}}
-											onClick={(e) => {
-												e.stopPropagation();
-												handleInviteUser(space.id);
-											}}>
-											Invite Users
-										</button>
-									)}
+									<div style={{ marginBottom: "20px" }}>
+										<p className="text-2d" style={{ marginBottom: "8px" }}>
+											🚪 Rooms: {Array.isArray(space.roomids) ? space.roomids.length : 0}
+										</p>
+										<p className="text-2d" style={{ marginBottom: "8px" }}>
+											👥 Active users: {Array.isArray(space.activeuserids) ? space.activeuserids.length : 0}
+										</p>
+										<p>
+											<span className={`badge-2d ${isActive ? 'badge-active' : 'badge-error'}`}>
+												{isActive ? "⚡ Active" : "💤 Accessible"}
+											</span>
+										</p>
+									</div>
 
-									<div style={{ display: "flex", gap: "8px" }}>
+									<div className="action-buttons" style={{ marginTop: "20px" }}>
+										{isAdmin && (
+											<button
+												className="btn-small btn-outline"
+												onClick={(e) => {
+													e.stopPropagation();
+													handleInviteUser(space.id);
+												}}>
+												📨 Invite Users
+											</button>
+										)}
+
 										<button
-											className="btn-2d"
-											style={{
-												fontSize: "12px",
-												padding: "6px 12px",
-												background: space.activeuserids?.includes(
-													user?.id || ""
-												)
-													? "var(--highlight)"
-													: "var(--accent)",
-											}}
+											className="btn-small"
 											onClick={(e) => {
 												e.stopPropagation();
 												handleEnterSpace(space.id);
 											}}>
-											{space.activeuserids?.includes(user?.id || "")
-												? "Enter Space →"
-												: "Join Space →"}
+											{isActive ? "🎮 Enter Space" : "🚀 Join Space"}
 										</button>
 
-										{space.activeuserids?.includes(user?.id || "") && (
+										{isActive && (
 											<button
-												className="btn-2d"
-												style={{
-													fontSize: "12px",
-													padding: "6px 12px",
-													background: "var(--accent)",
-												}}
+												className="btn-small btn-secondary"
 												onClick={(e) => {
 													e.stopPropagation();
 													handleLeaveSpace(space.id);
 												}}>
-												Leave Space
+												👋 Leave
 											</button>
 										)}
 									</div>
 								</div>
-							</div>
-						);
-					})}
-				</div>
-			)}
+							);
+						})}
+					</div>
+				)}
+			</div>
 		</div>
 	);
 }

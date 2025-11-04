@@ -1,0 +1,233 @@
+/* Global Base Styles - Professional Gaming Theme */
+
+/* Import Gamified Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700;900&display=swap');
+
+/* CSS Variables */
+:root {
+	/* Core Colors */
+	--bg-primary: #0a0a0a;
+	--bg-secondary: #1a1a1a;
+	--bg-tertiary: #2a2a2a;
+	--fg-primary: #ffffff;
+	--fg-secondary: #e0e0e0;
+	--fg-muted: #888888;
+	
+	/* Borders */
+	--border-primary: #333333;
+	--border-secondary: #444444;
+	--border-highlight: #ffffff;
+	--border-width: 2px;
+	
+	/* Status Colors */
+	--status-success: #ffffff;
+	--status-error: #888888;
+	--status-warning: #cccccc;
+	--status-info: #aaaaaa;
+	
+	/* Shadows & Effects */
+	--shadow-sm: 2px 2px 0 #333;
+	--shadow-md: 4px 4px 0 #333;
+	--shadow-lg: 6px 6px 0 #333;
+	--shadow-glow: 0 0 20px rgba(255, 255, 255, 0.2);
+	--shadow-inset: inset 2px 2px 0 rgba(0, 0, 0, 0.3);
+	
+	/* Spacing */
+	--space-xs: 4px;
+	--space-sm: 8px;
+	--space-md: 16px;
+	--space-lg: 24px;
+	--space-xl: 32px;
+	--space-2xl: 48px;
+	
+	/* Typography */
+	--font-primary: 'Inter', 'Courier New', monospace;
+	--font-mono: 'Courier New', monospace;
+	
+	/* Transitions */
+	--transition-base: 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	--transition-fast: 0.15s ease-out;
+}
+
+/* Base Reset */
+*, *::before, *::after {
+	margin: 0;
+	padding: 0;
+	box-sizing: border-box;
+}
+
+html {
+	font-size: 16px;
+	-webkit-font-smoothing: antialiased;
+	scroll-behavior: smooth;
+}
+
+body {
+	font-family: var(--font-primary);
+	color: var(--fg-primary);
+	background: var(--bg-primary);
+	line-height: 1.6;
+	overflow-x: hidden;
+	min-height: 100vh;
+	padding-top: 0;
+}
+
+body.game-mode {
+	padding-top: 0;
+}
+
+body.has-navbar {
+	padding-top: 50px;
+}
+
+button {
+	font-family: var(--font-primary);
+	cursor: pointer;
+}
+
+h1, h2, h3, h4, h5, h6 {
+	font-weight: 800;
+	line-height: 1.2;
+	letter-spacing: 1px;
+}
+
+/* Navbar Styles */
+.navbar-slim {
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	height: 50px;
+	background: #0a0a0a;
+	border-bottom: 2px solid #666666;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	padding: 0 24px;
+	z-index: 1000;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+}
+
+.navbar-content {
+	display: flex;
+	align-items: center;
+	gap: 24px;
+	width: 100%;
+}
+
+.navbar-home {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	color: #ffffff;
+	text-decoration: none;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 1.5px;
+	font-size: 0.875rem;
+	transition: all 0.3s ease;
+	padding: 8px 16px;
+	border: 2px solid #666666;
+	background: #1a1a1a;
+}
+
+.navbar-home:hover {
+	border-color: #ffffff;
+	background: #2a2a2a;
+}
+
+.navbar-user {
+	margin-left: auto;
+}
+
+/* Animations */
+@keyframes fadeIn {
+	from {
+		opacity: 0;
+	}
+	to {
+		opacity: 1;
+	}
+}
+
+@keyframes fadeInUp {
+	from {
+		opacity: 0;
+		transform: translateY(20px);
+	}
+	to {
+		opacity: 1;
+		transform: translateY(0);
+	}
+}
+
+@keyframes slideIn {
+	from {
+		transform: translateX(-100%);
+	}
+	to {
+		transform: translateX(0);
+	}
+}
+
+/* Loading Spinner */
+.loading-spinner {
+	border: 4px solid #333333;
+	border-top-color: #ffffff;
+	border-radius: 50%;
+	width: 40px;
+	height: 40px;
+	animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+/* Utility Classes */
+.text-center {
+	text-align: center;
+}
+
+.flex {
+	display: flex;
+}
+
+.flex-center {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+}
+
+.gap-sm {
+	gap: 8px;
+}
+
+.gap-md {
+	gap: 16px;
+}
+
+.gap-lg {
+	gap: 24px;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+	body.has-navbar {
+		padding-top: 50px;
+	}
+
+	.navbar-slim {
+		padding: 0 16px;
+	}
+
+	.navbar-home {
+		font-size: 0.75rem;
+		padding: 6px 12px;
+	}
+}

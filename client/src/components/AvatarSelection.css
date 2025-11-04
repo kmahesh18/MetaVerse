@@ -1,0 +1,231 @@
+/* AvatarSelection Component Styles - Professional Gaming Theme */
+
+/* Full page background */
+body:has(.avatar-selection-container) {
+	background: #0a0a0a;
+	min-height: 100vh;
+}
+
+.avatar-selection-container {
+	max-width: 1000px;
+	margin: 60px auto;
+	padding: 50px;
+	background: #1a1a1a;
+	border: 2px solid #666666;
+	box-shadow: 0 4px 16px rgba(0, 0, 0, 0.5);
+}
+
+.avatar-selection-title {
+	font-size: 2.5rem;
+	font-weight: 800;
+	color: #ffffff;
+	text-transform: uppercase;
+	letter-spacing: 3px;
+	margin-bottom: 40px;
+	padding-bottom: 20px;
+	border-bottom: 2px solid #888888;
+}
+
+/* Error Message */
+.avatar-error {
+	background: #2a2a2a;
+	border: 2px solid #666666;
+	padding: 16px;
+	margin-bottom: 24px;
+	color: #cccccc;
+	font-weight: 600;
+	border-radius: 4px;
+}
+
+/* Avatar Grid */
+.avatar-grid {
+	display: grid;
+	grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+	gap: 24px;
+	margin-bottom: 40px;
+}
+
+/* Avatar Card */
+.avatar-card {
+	background: #0f0f0f;
+	border: 2px solid #555555;
+	padding: 20px;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	gap: 12px;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-card:hover:not(.avatar-card-disabled) {
+	transform: translateY(-4px);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+	border-color: #aaaaaa;
+}
+
+.avatar-card-selected {
+	border-color: #ffffff;
+	border-width: 3px;
+	background: #2a2a2a;
+}
+
+.avatar-card-disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+}
+
+/* Avatar Image Container */
+.avatar-image-container {
+	width: 100px;
+	height: 100px;
+	background: #0a0a0a;
+	border: 2px solid #333333;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	overflow: hidden;
+	border-radius: 4px;
+}
+
+.avatar-image {
+	width: 100%;
+	height: 100%;
+	object-fit: contain;
+}
+
+/* Avatar Name */
+.avatar-name {
+	color: #cccccc;
+	font-size: 0.875rem;
+	text-align: center;
+	text-transform: uppercase;
+	letter-spacing: 1px;
+	font-weight: 600;
+}
+
+.avatar-card-selected .avatar-name {
+	color: #ffffff;
+	font-weight: 700;
+}
+
+/* Continue Button */
+.avatar-continue-btn {
+	width: 100%;
+	max-width: 300px;
+	margin: 32px auto 0;
+	display: block;
+	padding: 16px 32px;
+	font-size: 1.1rem;
+	font-weight: 700;
+	text-transform: uppercase;
+	letter-spacing: 2px;
+	background: #ffffff;
+	color: #0a0a0a;
+	border: 2px solid #ffffff;
+	cursor: pointer;
+	transition: all 0.3s ease;
+	box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.avatar-continue-btn:hover:not(:disabled) {
+	transform: translateY(-2px);
+	box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5);
+	background: #cccccc;
+}
+
+.avatar-continue-btn:disabled {
+	opacity: 0.4;
+	cursor: not-allowed;
+	background: #555555;
+	border-color: #555555;
+	color: #888888;
+}
+
+/* Loading State */
+.avatar-loading {
+	display: flex;
+	flex-direction: column;
+	justify-content: center;
+	align-items: center;
+	min-height: 100vh;
+	background: #0a0a0a;
+	gap: 20px;
+}
+
+.avatar-loading-spinner {
+	width: 60px;
+	height: 60px;
+	border: 4px solid #333333;
+	border-top-color: #ffffff;
+	border-radius: 50%;
+	animation: spin 1s linear infinite;
+}
+
+.avatar-loading-text {
+	color: #cccccc;
+	font-size: 1.1rem;
+	letter-spacing: 1px;
+	font-weight: 600;
+}
+
+/* Empty State */
+.avatar-empty {
+	text-align: center;
+	padding: 60px 20px;
+	background: #0f0f0f;
+	border: 2px dashed #666666;
+	border-radius: 8px;
+}
+
+.avatar-empty-text {
+	color: #888888;
+	font-size: 1rem;
+	margin-bottom: 12px;
+	letter-spacing: 0.5px;
+}
+
+/* Animations */
+@keyframes spin {
+	from {
+		transform: rotate(0deg);
+	}
+	to {
+		transform: rotate(360deg);
+	}
+}
+
+@keyframes shake {
+	0%, 100% {
+		transform: translateX(0);
+	}
+	10%, 30%, 50%, 70%, 90% {
+		transform: translateX(-5px);
+	}
+	20%, 40%, 60%, 80% {
+		transform: translateX(5px);
+	}
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+	.avatar-selection-container {
+		padding: 24px;
+		margin: 20px;
+	}
+
+	.avatar-grid {
+		grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+		gap: 16px;
+	}
+
+	.avatar-image-container {
+		width: 100px;
+		height: 100px;
+	}
+
+	.avatar-selection-title {
+		font-size: 1.8rem;
+	}
+}

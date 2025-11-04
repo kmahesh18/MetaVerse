@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
 import { IAsset } from "../../../server/src/Models/AssetModel";
+import "./AvatarSelection.css";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;
 
@@ -81,24 +82,19 @@ export function AvatarSelection() {
 
 	if (isLoading) {
 		return (
-			<div
-				className="container-2d"
-				style={{
-					display: "flex",
-					justifyContent: "center",
-					alignItems: "center",
-					minHeight: "300px",
-				}}>
-				Loading avatars...
+			<div className="avatar-loading">
+				<div className="avatar-loading-spinner"></div>
+				<p className="avatar-loading-text">Loading avatars...</p>
 			</div>
 		);
 	}
 
 	if (avatars.length === 0 && !error) {
 		return (
-			<div className="container-2d" style={{ textAlign: "center" }}>
-				<p className="text-2d">No avatars available in the database.</p>
-				<p className="text-2d">
+			<div className="avatar-selection-container">
+				<h1 className="avatar-selection-title">Select Your Avatar</h1>
+				<p className="avatar-error">No avatars available in the database.</p>
+				<p className="avatar-error">
 					Please add some avatars to the assets collection first.
 				</p>
 			</div>
@@ -106,65 +102,45 @@ export function AvatarSelection() {
 	}
 
 	return (
-		<div className="container-2d">
-			<h2 className="title-2d">Select Your Avatar</h2>
+		<div className="avatar-selection-container">
+			<h1 className="avatar-selection-title">Select Your Avatar</h1>
 
 			{error && (
-				<div
-					className="error-message text-2d"
-					style={{
-						color: "red",
-						marginBottom: "20px",
-						background: "#3d0000",
-						padding: "10px",
-						border: "2px solid #ff0000",
-					}}>
+				<div className="avatar-error">
 					{error}
 				</div>
 			)}
 
-			<div
-				style={{
-					display: "grid",
-					gridTemplateColumns: "repeat(2, 1fr)",
-					gap: "20px",
-				}}>
+			<div className="avatar-grid">
 				{avatars.map((avatar) => (
 					<div
 						key={avatar._id ? avatar._id.toString() : `avatar-${avatar.name}`}
-						className="container-2d"
-						style={{
-							cursor: isUpdating ? "not-allowed" : "pointer",
-							border:
-								selectedAvatarId === (avatar._id?.toString() || "")
-									? "4px solid white"
-									: undefined,
-							opacity: isUpdating ? 0.7 : 1,
-							background: "var(--secondary)",
-						}}
+						className={`avatar-card ${
+							selectedAvatarId === (avatar._id?.toString() || "")
+								? "avatar-card-selected"
+								: ""
+						} ${isUpdating ? "avatar-card-disabled" : ""}`}
 						onClick={() =>
 							!isUpdating &&
 							avatar._id &&
 							setSelectedAvatarId(avatar._id.toString())
 						}>
-						<img
-							src={avatar.previewUrl}
-							alt={avatar.name}
-							style={{ width: "100px" }}
-						/>
-						<p className="text-2d">{avatar.name}</p>
+						<div className="avatar-image-container">
+							<img
+								src={avatar.previewUrl}
+								alt={avatar.name}
+								className="avatar-image"
+							/>
+						</div>
+						<p className="avatar-name">{avatar.name}</p>
 					</div>
 				))}
 			</div>
 
 			<button
-				className="btn-2d"
+				className="avatar-continue-btn"
 				onClick={handleAvatarSelect}
-				disabled={!selectedAvatarId || isUpdating}
-				style={{
-					opacity: isUpdating ? 0.7 : 1,
-					marginTop: "20px",
-				}}>
+				disabled={!selectedAvatarId || isUpdating}>
 				{isUpdating ? "Saving..." : "Continue"}
 			</button>
 		</div>
