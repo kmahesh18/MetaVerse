@@ -1,7 +1,9 @@
 import { MongoClient, Db, ServerApiVersion } from "mongodb";
 import dotenv from "dotenv";
+import path from "path";
 
-dotenv.config();
+// Load .env from root directory (parent of server folder)
+dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 let db: Db;
 let client: MongoClient;

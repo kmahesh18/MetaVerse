@@ -1,8 +1,7 @@
 import { useUser } from "@clerk/clerk-react";
 import { useState, useEffect, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ISpace } from "../../../server/src/Models/SpaceType";
-import { IUser } from "../../../server/src/Models/UserModel";
+import { ISpace, IUser } from "../../../shared/types";
 import axios from "axios";
 import "./Dashboard.css";
 
@@ -15,7 +14,7 @@ export function Dashboard() {
 	const [spaces, setSpaces] = useState<ISpace[]>([]);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
-	const [userData, setUserData] = useState<IUser | null>(null);
+	// const [userData, setUserData] = useState<IUser | null>(null);
 	const [avatarUrl, setAvatarUrl] = useState<string | null>(null);
 	const [showNotification, setShowNotification] = useState<string | null>(
 		location.state?.notification || null
@@ -127,7 +126,7 @@ export function Dashboard() {
 				if (!userDataResult) {
 					return;
 				}
-				setUserData(userDataResult);
+				// setUserData(userDataResult);
 				if (!userDataResult.avatarId) {
 					navigate("/select-avatar");
 					return;

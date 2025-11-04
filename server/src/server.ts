@@ -1,6 +1,7 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
+import path from "path";
 import { connectDB } from "./db";
 import { userRouter } from "./api/userRouter";
 import { assetRouter } from "./api/assetRouter";
@@ -12,7 +13,8 @@ import { startWebsocketServer } from "./handlers/wsHandler";
 import { createMediasoupWorker } from "./mediasoup/setup";
 
 async function main() {
-	dotenv.config();
+	// Load .env from root directory (parent of server folder)
+	dotenv.config({ path: path.resolve(__dirname, "../../.env") });
 
 	await createMediasoupWorker();
 	const app = express();
@@ -29,7 +31,8 @@ async function main() {
 			"https://meta-verse-pink.vercel.app", // Your deployed frontend
 			"https://app.rurouni.tech",
 			"http://localhost:5173", // Local development
-			"http://localhost:3000",
+			"http://localhost:3000", // Server URL
+			"http://localhost:3001", // Docker client URL
 			// Add any other frontend URLs you might use
 		],
 		credentials: true,

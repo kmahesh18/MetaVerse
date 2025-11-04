@@ -1,5 +1,5 @@
 import { Scene } from "phaser";
-import { IAsset } from "../../../../server/src/Models/AssetModel";
+import { IAsset } from "../../../../shared/types";
 import { types } from "mediasoup-client";
 
 type PlayerPos = { posX: number; posY: number };
@@ -65,7 +65,7 @@ export class room extends Scene {
 		this.recvTransport = data.recvTransport;
 
 		if (!this.ws) {
-			console.warn("no ws connection found ");
+			console.warn("⚠️  No WebSocket connection found");
 			return;
 		}
 
@@ -73,11 +73,49 @@ export class room extends Scene {
 			userId: this.userId,
 			clientId: this.clientId,
 			roomId: this.roomId,
-			dataProducer: this.dataProducer,
+			hasDataProducer: !!this.dataProducer,
 			dataConsumersCount: this.dataConsumers.length,
+			hasWS: !!this.ws,
 		});
 
+		// Set up WebSocket listeners for server events
+		this.setupWebSocketListeners();
 		this.setupInitialDataConsumers();
+	}
+
+	private setupWebSocketListeners() {
+		if (!this.ws) return;
+
+		this.ws.addEventListener("message", (event) => {
+			try {
+				const msg = JSON.parse(event.data);
+
+				// Handle player/producer disconnections
+				if (msg.type === "clientLeft" || msg.type === "dataProducerClosed") {
+					const userId = msg.payload.userId || msg.payload.clientId;
+					console.log(`👋 Player ${userId} left the room`);
+					
+					// Remove player sprite
+					const playerSprite = this.gameObjects.get(userId);
+					if (playerSprite) {
+						playerSprite.destroy();
+						this.gameObjects.delete(userId);
+					}
+					
+					// Remove position data
+					this.playerPositions.delete(userId);
+				}
+				
+				// Handle WebSocket fallback for movement updates
+				if (msg.type === "playerMovementUpdate") {
+					this.handleRemotePlayerUpdates(msg);
+				}
+			} catch (error) {
+				// Ignore parse errors for non-JSON messages
+			}
+		});
+
+		console.log("✅ WebSocket listeners set up");
 	}
 
 	preload() {
@@ -454,26 +492,26 @@ export class room extends Scene {
 			},
 		});
 
-		// ✅ WebSocket fallback
-		if (this.ws?.readyState === WebSocket.OPEN) {
-			this.ws.send(msg);
-		}
+		let sentViaDataChannel = false;
+		let sentViaWebSocket = false;
 
-		// ✅ DataProducer - prioritize WebRTC
+		// ✅ DataProducer - PRIMARY method for position updates
 		if (this.dataProducer && !this.dataProducer.closed) {
 			const dataChannel = (this.dataProducer as any)._dataChannel;
 
 			if (dataChannel && dataChannel.readyState === "open") {
 				try {
 					this.dataProducer.send(msg);
-					console.log("📤 Sent via DataChannel:", msg);
+					sentViaDataChannel = true;
 					this.dataChannelRetryCount = 0;
+					
+					// Periodic debug logging (every 50th message)
+					if (Math.random() < 0.02) {
+						console.log("📤 Sent via DataChannel:", { pos: this.playerPos, dir: this.currentDirection });
+					}
 				} catch (error) {
 					console.error("🚨 DataProducer.send failed:", error);
-					// Fallback to WebSocket
-					if (this.ws?.readyState === WebSocket.OPEN) {
-						this.ws.send(msg);
-					}
+					sentViaDataChannel = false;
 				}
 			} else if (dataChannel && dataChannel.readyState === "connecting") {
 				// Wait for DataChannel to open, but don't spam retries
@@ -489,18 +527,40 @@ export class room extends Scene {
 					this.dataChannelRetryTimeout = setTimeout(() => {
 						this.dataChannelRetryTimeout = null;
 						this.sendUpdates(isMoving);
-					}, 3000); // Increased timeout
+					}, 3000);
 				}
 			} else {
-				console.log("❌ DataChannel not available, using WebSocket only");
+				if (Math.random() < 0.01) { // Occasional logging
+					console.log("⚠️  DataChannel not ready, state:", dataChannel?.readyState);
+				}
 			}
+		}
+
+		// ✅ WebSocket fallback - ALWAYS send for reliability in development
+		if (this.ws?.readyState === WebSocket.OPEN) {
+			try {
+				this.ws.send(msg);
+				sentViaWebSocket = true;
+			} catch (error) {
+				console.error("🚨 WebSocket.send failed:", error);
+			}
+		}
+
+		// Log if neither method worked
+		if (!sentViaDataChannel && !sentViaWebSocket) {
+			console.error("❌ Failed to send position update via both DataChannel and WebSocket");
 		}
 	}
 
 	private setupDataProducer() {
-		if (!this.dataProducer) return;
+		if (!this.dataProducer) {
+			console.warn("⚠️  No DataProducer to setup");
+			return;
+		}
 
-		this.dataProducer.on("error", (e) => console.error("🚨 DP error:", e));
+		console.log(`🔧 Setting up DataProducer: ${this.dataProducer.id.substr(0, 8)}`);
+
+		this.dataProducer.on("error", (e) => console.error("🚨 DataProducer error:", e));
 		this.dataProducer.on("close", () => {
 			console.log("❌ DataProducer closed");
 			this.dataProducer = null;
@@ -511,22 +571,38 @@ export class room extends Scene {
 
 		const dataChannel = (this.dataProducer as any)._dataChannel;
 		if (dataChannel) {
+			console.log(`  📡 DataChannel initial state: ${dataChannel.readyState}`);
+			
 			dataChannel.addEventListener("open", () => {
 				console.log("🔗 DataChannel opened!");
+				this.dataChannelRetryCount = 0;
+				if (this.dataChannelRetryTimeout) {
+					clearTimeout(this.dataChannelRetryTimeout);
+					this.dataChannelRetryTimeout = null;
+				}
 			});
+			
 			dataChannel.addEventListener("close", () => {
 				console.log("❌ DataChannel closed!");
 			});
-			dataChannel.addEventListener("error", () => {
-				console.error("🚨 DataChannel error:");
+			
+			dataChannel.addEventListener("error", (event: any) => {
+				console.error("🚨 DataChannel error:", event);
+			});
+			
+			dataChannel.addEventListener("bufferedamountlow", () => {
+				console.log("📉 DataChannel buffer cleared");
 			});
 		} else {
-			console.log("Data producer not opened");
+			console.warn("⚠️  DataChannel not accessible from DataProducer");
 		}
 	}
 
 	private setupDataChannelMonitoring() {
-		if (!this.dataProducer) return;
+		if (!this.dataProducer) {
+			console.warn("⚠️  No DataProducer for monitoring");
+			return;
+		}
 
 		const dataChannel = (this.dataProducer as any)._dataChannel;
 		if (dataChannel) {
@@ -544,31 +620,48 @@ export class room extends Scene {
 				console.log("❌ DataChannel closed");
 			});
 
-			dataChannel.addEventListener("error", () => {
+			dataChannel.addEventListener("error", (event: any) => {
 				console.error("🚨 DataChannel error:", event);
 			});
 
-			// Monitor ready state changes
+			// Monitor ready state changes - check periodically
+			let lastState = dataChannel.readyState;
 			const checkState = () => {
-				console.log("🔍 DataChannel state:", dataChannel.readyState);
+				const currentState = dataChannel.readyState;
+				if (currentState !== lastState) {
+					console.log(`� DataChannel state changed: ${lastState} → ${currentState}`);
+					lastState = currentState;
+				}
 			};
 
-			// Check state periodically
-			setInterval(checkState, 5000);
+			// Check state every 5 seconds
+			const monitorInterval = setInterval(checkState, 5000);
+
+			// Clean up interval when scene is destroyed
+			this.events.on('shutdown', () => {
+				clearInterval(monitorInterval);
+			});
+		} else {
+			console.warn("⚠️  DataChannel not accessible for monitoring");
 		}
 	}
 
 	private setupInitialDataConsumers() {
+		console.log(`🔧 Setting up ${this.dataConsumers.length} initial DataConsumers`);
+		
 		if (this.dataConsumers.length > 0) {
-			console.log("consumers", this.dataConsumers);
 			this.dataConsumers.forEach((dataConsumer, index) => {
 				if (!dataConsumer.closed) {
+					console.log(`  📥 Setting up DataConsumer ${index + 1}/${this.dataConsumers.length}: ${dataConsumer.id.substr(0, 8)}`);
+					
 					dataConsumer.on("message", (data: any) => {
 						try {
 							const msg = JSON.parse(data);
-							console.log(msg);
+							
 							if (msg.type === "playerMovementUpdate") {
 								this.handleRemotePlayerUpdates(msg);
+							} else if (msg.type === "test") {
+								console.log("🧪 DataChannel test message received!");
 							} else {
 								console.log(
 									`🔗 DC${index} received unknown message type:`,
@@ -584,16 +677,18 @@ export class room extends Scene {
 					dataConsumer.on("error", (e) =>
 						console.error(`🚨 DC${index} error:`, e)
 					);
-					dataConsumer.on("close", () =>
-						console.log(`❌ DataConsumer ${index} closed`)
-					);
-					dataConsumer.on("open", () =>
-						console.log(`✅ DataConsumer ${index} opened`)
-					);
+					dataConsumer.on("close", () => {
+						console.log(`❌ DataConsumer ${index} closed`);
+					});
+					dataConsumer.on("open", () => {
+						console.log(`✅ DataConsumer ${index} opened`);
+					});
+				} else {
+					console.warn(`⚠️  DataConsumer ${index} is already closed`);
 				}
 			});
 		} else {
-			console.log("👤 No initial DataConsumers - likely first player");
+			console.log("👤 No initial DataConsumers - likely first player in room");
 		}
 	}
 
@@ -604,22 +699,43 @@ export class room extends Scene {
 			return; // Don't update self
 		}
 
-		console.log(`🔄 Updating player ${playerUserId}:`, {
-			pos,
-			direction,
-			isMoving,
-		});
+		// Periodic debug logging (every ~30th message)
+		if (Math.random() < 0.03) {
+			console.log(`🔄 Updating player ${playerUserId}:`, {
+				pos: `(${pos.posX.toFixed(0)}, ${pos.posY.toFixed(0)})`,
+				direction,
+				isMoving,
+			});
+		}
 
 		const otherPlayer = this.gameObjects.get(
 			playerUserId
 		) as Phaser.GameObjects.Sprite;
+		
 		if (!otherPlayer) {
-			console.warn(`🎮 Player ${playerUserId} not found in gameObjects`);
+			console.warn(`⚠️  Player ${playerUserId} not found in gameObjects`);
 			return;
 		}
 
-		// Update position
-		otherPlayer.setPosition(pos.posX, pos.posY);
+		// Update position with smooth interpolation for better visuals
+		const currentX = otherPlayer.x;
+		const currentY = otherPlayer.y;
+		const distance = Math.hypot(pos.posX - currentX, pos.posY - currentY);
+
+		// If distance is large, teleport; otherwise, move smoothly
+		if (distance > 100) {
+			// Teleport for large distances (probably reconnect or lag)
+			otherPlayer.setPosition(pos.posX, pos.posY);
+		} else {
+			// Smooth movement for small distances
+			this.tweens.add({
+				targets: otherPlayer,
+				x: pos.posX,
+				y: pos.posY,
+				duration: 100, // 100ms smooth transition
+				ease: 'Linear'
+			});
+		}
 
 		// Update animation
 		const animKey = isMoving
@@ -629,7 +745,7 @@ export class room extends Scene {
 		if (this.anims.exists(animKey)) {
 			otherPlayer.play(animKey, true);
 		} else {
-			console.warn(`🎮 Animation ${animKey} not found`);
+			console.warn(`⚠️  Animation ${animKey} not found`);
 		}
 
 		// Update stored position

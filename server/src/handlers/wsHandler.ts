@@ -21,17 +21,26 @@ import {
 
 export function startWebsocketServer(server: http.Server, path = "/ws") {
 	const wss = new WebSocketServer({ server, path });
+	
+	console.log(`🔌 WebSocket server started on path: ${path}`);
+	
 	wss.on("connection", async (ws, req) => {
 		const url = req.url || " ";
 		const fullUrl = new URL(url, `http://${req.headers.host}`);
 		const userId = decodeURI(fullUrl.searchParams.get("userId") || "");
+		
 		if (userId.length == 0) {
-			console.log("NO userid found check again");
+			console.log("❌ WebSocket connection rejected: No userId provided");
+			ws.close(1008, "userId required");
 			return;
 		}
+		
 		//we make a client obj for each user
 		const clientid = uuidv4().toString();
 		const client = new Client(clientid, userId, ws);
+		
+		console.log(`✅ WebSocket connected: userId=${userId}, clientId=${clientid.substr(0, 8)}`);
+		
 		ws.on("message", async (raw) => {
 			let msg;
 			try {
@@ -49,6 +58,12 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 					payload: "Invalid JSON format",
 				});
 			}
+			
+			// Log non-movement messages for debugging
+			if (msg.type !== "playerMovementUpdate") {
+				console.log(`📨 WS message from ${userId}: ${msg.type}`);
+			}
+			
 			let res;
 			switch (msg.type) {
 				case "getRtpCapabilites":
@@ -117,48 +132,45 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 
 					// Update position in room
 					const room = roomsById.get(client.roomId);
-					if (room) {
-						if (!client.userId) {
-							console.log("error at player moment update");
-							return;
-						}
+					if (room && client.userId) {
+						// Update stored position
 						room.playerPositions.set(client.userId, pos);
 
-						// ✅ Broadcast to ALL clients in room via DataProducers
-						room.dataProducers.forEach((producer, producerId) => {
-							try {
-								const message = JSON.stringify({
-									type: "playerMovementUpdate",
-									payload: {
-										isMoving: isMoving,
-										playerUserId: playerUserId,
-										pos: pos,
-										direction: direction,
-										timestamp: Date.now(),
-									},
-								});
+						const movementMsg = {
+							type: "playerMovementUpdate",
+							payload: {
+								isMoving: isMoving,
+								playerUserId: client.userId, // Use actual client.userId
+								pos: pos,
+								direction: direction,
+								timestamp: Date.now(),
+							},
+						};
 
-								producer.send(message);
-								console.log(`📤 Broadcasted to producer ${producerId}`);
+						// ✅ PRIMARY: Broadcast via DataProducers (WebRTC DataChannel)
+						let dataChannelSuccess = false;
+						room.dataProducers.forEach((producer, producerUserId) => {
+							// Don't send to self
+							if (producerUserId === client.userId) return;
+
+							try {
+								producer.send(JSON.stringify(movementMsg));
+								dataChannelSuccess = true;
 							} catch (error) {
 								console.error(
-									`🚨 Failed to send to producer ${producerId}:`,
+									`🚨 Failed to send movement to DataProducer ${producerUserId}:`,
 									error
 								);
 							}
 						});
 
-						// Also broadcast via WebSocket as fallback
-						room.broadcastMessage(client.userId, {
-							type: "playerMovementUpdate",
-							payload: {
-								isMoving: isMoving,
-								playerUserId: playerUserId,
-								pos: pos,
-								direction: direction,
-								timestamp: Date.now(),
-							},
-						});
+						// ✅ FALLBACK: Also broadcast via WebSocket for reliability
+						room.broadcastMessage(client.userId, movementMsg);
+
+						// Periodic debug logging (every 30th message to avoid spam)
+						if (Math.random() < 0.03) { // ~3% of messages
+							console.log(`🚶 Movement update from ${client.userId}: pos(${pos.posX.toFixed(0)}, ${pos.posY.toFixed(0)}), dir: ${direction}, moving: ${isMoving}, via DataChannel: ${dataChannelSuccess}`);
+						}
 					}
 					break;
 
@@ -174,88 +186,124 @@ export function startWebsocketServer(server: http.Server, path = "/ws") {
 		});
 
 		ws.on("close", async () => {
+			console.log(`🔌 WebSocket closed for user: ${client.userId}`);
 			await handleDisconnect(client);
-			console.log("Client disconnect succesfully");
 		});
 
 		ws.on("error", async (error) => {
-			console.error(`WebSocket error for client ${client.userId}:`, error);
+			console.error(`❌ WebSocket error for client ${client.userId}:`, error);
 			await handleDisconnect(client);
 		});
 	});
+	
+	// Log WebSocket server stats periodically
+	setInterval(() => {
+		console.log(`📊 WebSocket Stats: ${wss.clients.size} connected clients, ${roomsById.size} active rooms`);
+	}, 60000); // Every minute
 }
 
 // Update your handleDisconnect function:
 
 async function handleDisconnect(client: Client): Promise<void> {
-	console.log(`Handling disconnect for client ${client.userId}`);
+	console.log(`🚪 Handling disconnect for client ${client.userId}`);
+
+	if (!client.userId) {
+		console.warn("⚠️  Client has no userId, skipping cleanup");
+		return;
+	}
 
 	if (client.roomId) {
 		const room = roomsById.get(client.roomId);
 		if (room) {
-			// ✅ CLEAN UP: Close and remove client's DataProducer
+			// ✅ Notify other clients BEFORE cleanup
 			room.broadcastMessage(null, {
 				type: "clientLeft",
 				payload: { clientId: client.userId },
 			});
-			room.dataProducers.forEach((producer, producerId) => {
-				if ((producer as any).appData?.clientId === client.userId) {
-					producer.close();
-					room.dataProducers.delete(producerId);
-					console.log(
-						`Cleaned up DataProducer ${producerId} for disconnected client ${client.userId}`
-					);
 
-					// ✅ NOTIFY: Tell other clients this producer is gone
+			// ✅ CLEAN UP: Close and remove client's DataProducers
+			const clientDataProducer = room.dataProducers.get(client.userId);
+			if (clientDataProducer && !clientDataProducer.closed) {
+				console.log(`  🗑️ Closing DataProducer for ${client.userId}`);
+				clientDataProducer.close();
+				room.dataProducers.delete(client.userId);
+
+				// ✅ NOTIFY: Tell other clients this producer is gone
+				room.broadcastMessage(null, {
+					type: "dataProducerClosed",
+					payload: { producerId: clientDataProducer.id, userId: client.userId },
+				});
+			}
+
+			// ✅ CLEAN UP: Close and remove client's MediaProducers (audio/video)
+			const producersToDelete: string[] = [];
+			room.mediaProducers.forEach((producer, key) => {
+				if (client.userId && key.startsWith(client.userId)) {
+					console.log(`  🗑️ Closing MediaProducer ${producer.kind} for ${client.userId}`);
+					if (!producer.closed) {
+						producer.close();
+					}
+					producersToDelete.push(key);
+
+					// Notify others
 					room.broadcastMessage(null, {
-						type: "dataProducerClosed",
-						payload: { producerId },
+						type: "mediaProducerClosed",
+						payload: { producerId: producer.id, userId: client.userId },
 					});
 				}
 			});
+			producersToDelete.forEach(key => room.mediaProducers.delete(key));
 
-			// Remove from clients map
-			room.removeClient(client);
-
-			// Close any transports for this client
-			const transports = Array.from(room.allTransportsById.values()).filter(
-				(transport) => transport.appData?.clientId === client.userId
-			);
-			transports.forEach((transport) => transport.close());
-
-			// Close any data consumers for this client
-			if (!client.userId) {
-				console.log("userId not found at handleDisonnect in wshandler");
-				return;
-			}
+			// ✅ CLEAN UP: Close data consumers for this client
 			const consumers = room.dataConsumers.get(client.userId);
 			if (consumers) {
-				consumers.forEach((consumer) => consumer.close());
+				console.log(`  🗑️ Closing ${consumers.length} DataConsumers for ${client.userId}`);
+				consumers.forEach((consumer) => {
+					if (!consumer.closed) {
+						consumer.close();
+					}
+				});
 				room.dataConsumers.delete(client.userId);
 			}
 
-			room.mediaProducers?.forEach((producer, producerId) => {
-				if ((producer as any).appData?.clientId === client.userId) {
-					producer.close();
-					room.mediaProducers!.delete(producerId);
-					console.log(
-						`🗑️ Cleaned up MediaProducer ${producerId} for ${client.userId}`
-					);
-					// notify the others so they can remove that box
-					room.broadcastMessage(null, {
-						type: "mediaProducerClosed",
-						payload: { producerId },
-					});
+			// ✅ CLEAN UP: Close media consumers for this client
+			const mediaConsumers = room.mediaConsumers.get(client.userId);
+			if (mediaConsumers) {
+				console.log(`  🗑️ Closing ${mediaConsumers.length} MediaConsumers for ${client.userId}`);
+				mediaConsumers.forEach((consumer) => {
+					if (!consumer.closed) {
+						consumer.close();
+					}
+				});
+				room.mediaConsumers.delete(client.userId);
+			}
+
+			// ✅ CLEAN UP: Close any transports for this client
+			const transportsToDelete: string[] = [];
+			room.allTransportsById.forEach((transport, transportId) => {
+				if (transport.appData?.clientId === client.userId) {
+					console.log(`  🗑️ Closing Transport ${transportId.substr(0, 8)} for ${client.userId}`);
+					if (!transport.closed) {
+						transport.close();
+					}
+					transportsToDelete.push(transportId);
 				}
 			});
+			transportsToDelete.forEach(id => room.allTransportsById.delete(id));
 
-			// Notify other clients that this client left
+			// Remove from clients map
+			room.removeClient(client);
+			console.log(`  ✅ Removed ${client.userId} from room ${client.roomId}`);
 
 			// Clean up empty room
 			if (room.isEmpty()) {
 				roomsById.delete(client.roomId);
-				console.log(`Room ${client.roomId} deleted (was empty)`);
+				console.log(`🗑️ Room ${client.roomId} deleted (was empty)`);
+			} else {
+				console.log(`  📊 Room ${client.roomId} now has ${room.clients.size} clients`);
 			}
 		}
 	}
+
+	console.log(`✅ Disconnect handled for ${client.userId}`);
 }

@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useUser } from "@clerk/clerk-react";
-import { IAsset } from "../../../server/src/Models/AssetModel";
+import { IAsset } from "../../../shared/types";
 import "./AvatarSelection.css";
 
 const backendUrl = import.meta.env.VITE_BACKEND_URL;

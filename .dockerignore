@@ -1,0 +1,76 @@
+# ===================================
+# .dockerignore - Exclude from Docker builds
+# ===================================
+
+# Dependencies
+node_modules
+npm-debug.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Environment files (use build args instead)
+.env
+.env.local
+.env.*.local
+.env.production
+.env.development
+
+# Build outputs
+dist
+build
+.next
+out
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Testing
+coverage
+.nyc_output
+*.test.js
+*.spec.js
+__tests__
+__mocks__
+
+# Documentation
+*.md
+!README.md
+docs
+diagrams
+
+# Logs
+logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Misc
+.prettierrc
+.eslintrc
+.editorconfig
+*.excalidraw
+
+# Docker files (don't include in other Docker builds)
+Dockerfile*
+docker-compose*.yml
+.dockerignore
+
+# CI/CD
+.github
+.gitlab-ci.yml
+.travis.yml
+
+# OS
+Thumbs.db

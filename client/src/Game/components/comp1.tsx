@@ -48,6 +48,22 @@ const GameComponent: React.FC = () => {
 		if (!spaceId || !roomId || !userid || isInit.current) return;
 		isInit.current = true;
 
+		// ✅ Add beforeunload handler for page refresh/close
+		const handleBeforeUnload = () => {
+			console.log("🔄 Page unloading, cleaning up...");
+			if (wsRef.current && wsRef.current.readyState === WebSocket.OPEN) {
+				// Send leave room message
+				wsRef.current.send(
+					JSON.stringify({
+						type: "leaveRoom",
+						payload: { roomId },
+					})
+				);
+			}
+		};
+
+		window.addEventListener("beforeunload", handleBeforeUnload);
+
 		(async () => {
 			await joinSpace();
 
@@ -388,16 +404,28 @@ const GameComponent: React.FC = () => {
 			};
 		})();
 
+		// Cleanup function
 		return () => {
+			console.log("🧹 Cleaning up GameComponent...");
+			
+			// Remove beforeunload listener
+			window.removeEventListener("beforeunload", handleBeforeUnload);
+			
 			if (wsRef.current) {
 				wsRef.current.send(
 					JSON.stringify({ type: "leaveRoom", payload: { roomId } })
 				);
+				console.log(`🔌 Closing WebSocket (state: ${wsRef.current.readyState})`);
 				wsRef.current.close();
 			}
 			if (gameRef.current) {
+				console.log("🎮 Destroying Phaser game instance");
 				gameRef.current.destroy(true);
 			}
+			
+			// Clear refs
+			isInit.current = false;
+			phaserStartedRef.current = false;
 		};
 	}, [spaceId, roomId, userid]);
 

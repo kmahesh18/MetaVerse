@@ -40,7 +40,8 @@ function main() {
                 "https://meta-verse-pink.vercel.app", // Your deployed frontend
                 "https://app.rurouni.tech",
                 "http://localhost:5173", // Local development
-                "http://localhost:3000",
+                "http://localhost:3000", // Server URL
+                "http://localhost:3001", // Docker client URL
                 // Add any other frontend URLs you might use
             ],
             credentials: true,
