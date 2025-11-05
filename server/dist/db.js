@@ -17,7 +17,9 @@ exports.getDB = getDB;
 exports.closeDB = closeDB;
 const mongodb_1 = require("mongodb");
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config();
+const path_1 = __importDefault(require("path"));
+// Load .env from root directory (parent of server folder)
+dotenv_1.default.config({ path: path_1.default.resolve(__dirname, "../../.env") });
 let db;
 let client;
 function connectDB() {

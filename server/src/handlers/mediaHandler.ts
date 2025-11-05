@@ -3,6 +3,7 @@ import { Client } from "../classes/Client";
 import { mediasoupRouter } from "../mediasoup/setup";
 import { getUserAvatarName } from "../services/userService";
 import { roomsById } from "../state/state";
+import { getTurnCredentials } from "../services/turnService";
 
 /**
  * Get announced IP for WebRTC transport
@@ -91,27 +92,12 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 
 	console.log(`✅ WebRTC transport created: ${transport.id.substr(0, 8)} for user ${client.userId}`);
 
-	// TURN server configuration to be sent to client
-	// Include both UDP and TCP for better connectivity
-	const iceServers = [
-		{
-			urls: ['stun:stun.l.google.com:19302'], // Google's free STUN server
-		},
-		{
-			urls: [
-				'turn:global.turn.twilio.com:3478?transport=udp',
-				'turn:global.turn.twilio.com:3478?transport=tcp',
-				'turn:global.turn.twilio.com:443?transport=tcp' // Fallback for restrictive networks
-			],
-			username: process.env.TURN_USERNAME || '',
-			credential: process.env.TURN_CREDENTIAL || '',
-		},
-	];
-
-	console.log(`🌐 Sending TURN config to ${client.userId}:`, {
-		hasUsername: !!process.env.TURN_USERNAME,
-		hasCredential: !!process.env.TURN_CREDENTIAL,
-		urls: iceServers[1].urls
+	// Get fresh time-limited TURN credentials from Twilio
+	const turnConfig = await getTurnCredentials();
+	
+	console.log(`🌐 Sending ICE servers to ${client.userId}:`, {
+		serverCount: turnConfig.iceServers.length,
+		hasTurn: turnConfig.iceServers.some(s => s.urls?.toString().includes('turn:'))
 	});
 
 	const common = {
@@ -120,7 +106,7 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		iceParameters: transport.iceParameters,
 		dtlsParameters: transport.dtlsParameters,
 		sctpParameters: transport.sctpParameters,
-		iceServers, // Include TURN server config for client
+		iceServers: turnConfig.iceServers, // Include TURN server config for client
 	};
 
 	if (msg.type === "createWebRtcTransportSend") {

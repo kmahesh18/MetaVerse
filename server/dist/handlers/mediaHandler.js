@@ -19,6 +19,7 @@ exports.restartIce = restartIce;
 const setup_1 = require("../mediasoup/setup");
 const userService_1 = require("../services/userService");
 const state_1 = require("../state/state");
+const turnService_1 = require("../services/turnService");
 /**
  * Get announced IP for WebRTC transport
  * For development: 127.0.0.1
@@ -52,7 +53,7 @@ function createWebRtcTransport(client, msg) {
             ],
             enableTcp: true,
             enableUdp: true,
-            preferUdp: true,
+            preferUdp: false, // Prefer TCP for Railway compatibility
             enableSctp: true,
             numSctpStreams: { OS: 1024, MIS: 1024 },
             // Additional settings for better connectivity
@@ -84,12 +85,19 @@ function createWebRtcTransport(client, msg) {
         });
         msRoom.allTransportsById.set(transport.id, transport);
         console.log(`✅ WebRTC transport created: ${transport.id.substr(0, 8)} for user ${client.userId}`);
+        // Get fresh time-limited TURN credentials from Twilio
+        const turnConfig = yield (0, turnService_1.getTurnCredentials)();
+        console.log(`🌐 Sending ICE servers to ${client.userId}:`, {
+            serverCount: turnConfig.iceServers.length,
+            hasTurn: turnConfig.iceServers.some(s => { var _a; return (_a = s.urls) === null || _a === void 0 ? void 0 : _a.toString().includes('turn:'); })
+        });
         const common = {
             id: transport.id,
             iceCandidates: transport.iceCandidates,
             iceParameters: transport.iceParameters,
             dtlsParameters: transport.dtlsParameters,
             sctpParameters: transport.sctpParameters,
+            iceServers: turnConfig.iceServers, // Include TURN server config for client
         };
         if (msg.type === "createWebRtcTransportSend") {
             console.log(`📤 Sending Send Transport params to ${client.userId}`);

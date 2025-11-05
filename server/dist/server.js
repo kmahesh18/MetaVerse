@@ -15,6 +15,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const dotenv_1 = __importDefault(require("dotenv"));
+const path_1 = __importDefault(require("path"));
 const db_1 = require("./db");
 const userRouter_1 = require("./api/userRouter");
 const assetRouter_1 = require("./api/assetRouter");
@@ -26,7 +27,8 @@ const wsHandler_1 = require("./handlers/wsHandler");
 const setup_1 = require("./mediasoup/setup");
 function main() {
     return __awaiter(this, void 0, void 0, function* () {
-        dotenv_1.default.config();
+        // Load .env from root directory (parent of server folder)
+        dotenv_1.default.config({ path: path_1.default.resolve(__dirname, "../../.env") });
         yield (0, setup_1.createMediasoupWorker)();
         const app = (0, express_1.default)();
         const server = http_1.default.createServer(app);
