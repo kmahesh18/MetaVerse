@@ -41,7 +41,7 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 		],
 		enableTcp: true,
 		enableUdp: true,
-		preferUdp: true,
+		preferUdp: false, // Prefer TCP for Railway compatibility
 		enableSctp: true,
 		numSctpStreams: { OS: 1024, MIS: 1024 },
 		// Additional settings for better connectivity
@@ -91,12 +91,25 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 
 	console.log(`✅ WebRTC transport created: ${transport.id.substr(0, 8)} for user ${client.userId}`);
 
+	// TURN server configuration to be sent to client
+	const iceServers = [
+		{
+			urls: ['stun:stun.l.google.com:19302'], // Google's free STUN server
+		},
+		{
+			urls: process.env.TURN_SERVER_URL || 'turn:global.turn.twilio.com:3478?transport=tcp',
+			username: process.env.TURN_USERNAME || '',
+			credential: process.env.TURN_CREDENTIAL || '',
+		},
+	];
+
 	const common = {
 		id: transport.id,
 		iceCandidates: transport.iceCandidates,
 		iceParameters: transport.iceParameters,
 		dtlsParameters: transport.dtlsParameters,
 		sctpParameters: transport.sctpParameters,
+		iceServers, // Include TURN server config for client
 	};
 
 	if (msg.type === "createWebRtcTransportSend") {

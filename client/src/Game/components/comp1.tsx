@@ -97,24 +97,24 @@ const GameComponent: React.FC = () => {
 					return;
 				}
 
-				if (msg.type === "SendWebRtcTransportCreated") {
-					const {
-						id,
-						iceParameters,
-						iceCandidates,
-						dtlsParameters,
-						sctpParameters,
-					} = msg.payload;
+			if (msg.type === "SendWebRtcTransportCreated") {
+				const {
+					id,
+					iceParameters,
+					iceCandidates,
+					dtlsParameters,
+					sctpParameters,
+					iceServers, // TURN server config from server
+				} = msg.payload;
 
-					sendTransportRef.current = deviceRef.current!.createSendTransport({
-						id,
-						iceParameters,
-						iceCandidates,
-						dtlsParameters,
-						sctpParameters,
-					});
-
-					// ✅ ENABLE: Client-side ICE monitoring
+				sendTransportRef.current = deviceRef.current!.createSendTransport({
+					id,
+					iceParameters,
+					iceCandidates,
+					dtlsParameters,
+					sctpParameters,
+					iceServers, // Pass TURN server config to transport
+				});					// ✅ ENABLE: Client-side ICE monitoring
 					monitorICEConnection(sendTransportRef.current, "Send");
 
 					sendTransportRef.current.on(
@@ -227,24 +227,24 @@ const GameComponent: React.FC = () => {
 					console.log("DataProducer ready!");
 				}
 
-				if (msg.type === "RecvWebRtcTransportCreated") {
-					const {
-						id,
-						iceParameters,
-						iceCandidates,
-						dtlsParameters,
-						sctpParameters,
-					} = msg.payload;
+			if (msg.type === "RecvWebRtcTransportCreated") {
+				const {
+					id,
+					iceParameters,
+					iceCandidates,
+					dtlsParameters,
+					sctpParameters,
+					iceServers, // TURN server config from server
+				} = msg.payload;
 
-					recvTransportRef.current = deviceRef.current!.createRecvTransport({
-						id,
-						iceParameters,
-						iceCandidates,
-						dtlsParameters,
-						sctpParameters,
-					});
-
-					// ✅ ENABLE: Client-side ICE monitoring
+				recvTransportRef.current = deviceRef.current!.createRecvTransport({
+					id,
+					iceParameters,
+					iceCandidates,
+					dtlsParameters,
+					sctpParameters,
+					iceServers, // Pass TURN server config to transport
+				});					// ✅ ENABLE: Client-side ICE monitoring
 					monitorICEConnection(recvTransportRef.current, "Recv");
 
 					recvTransportRef.current.on(
