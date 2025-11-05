@@ -97,7 +97,11 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 			urls: ['stun:stun.l.google.com:19302'], // Google's free STUN server
 		},
 		{
-			urls: process.env.TURN_SERVER_URL || 'turn:global.turn.twilio.com:3478?transport=tcp',
+			urls: [
+				process.env.TURN_SERVER_URL || 'turn:global.turn.twilio.com:3478?transport=tcp',
+				'turn:global.turn.twilio.com:3478?transport=udp',
+				'turn:global.turn.twilio.com:443?transport=tcp', // Fallback for restrictive firewalls
+			],
 			username: process.env.TURN_USERNAME || '',
 			credential: process.env.TURN_CREDENTIAL || '',
 		},
