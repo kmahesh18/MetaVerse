@@ -5,7 +5,6 @@ import "./VideoInterface.css";
 
 interface VideoInterfaceProps {
 	sendTransport: types.Transport | null;
-	recvTransport: types.Transport | null;
 	device: types.Device;
 	ws: WebSocket | null;
 	clientId: string | null;
@@ -15,7 +14,6 @@ interface VideoInterfaceProps {
 
 const VideoInterface: React.FC<VideoInterfaceProps> = ({
 	sendTransport,
-	recvTransport,
 	ws,
 	clientId,
 	produceCallbackRef,
@@ -24,8 +22,6 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 	const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 	const [showVideo, setShowVideo] = useState(false);
 	const producerRef = useRef<types.Producer | null>(null);
-	const [consumerStreams, setConsumerStreams] = useState<MediaStream[]>([]);
-	const streamMap = new Map();
 
 	useEffect(() => {
 		const videoEl = videoRef.current;
@@ -186,25 +182,6 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 				title={showVideo ? "Turn Video Off" : "Turn Video On"}>
 				{showVideo ? <IoVideocamOutline size={28} /> : <IoVideocamOffOutline size={28} />}
 			</button>
-
-			{/* ============ Remote Video Grid ============ */}
-			<div className="remote-videos-grid">
-				{consumerStreams.map((stream, idx) => (
-					<div key={idx} className="video-tile">
-						<video
-							autoPlay
-							playsInline
-							ref={(el) => {
-								if (el && el.srcObject !== stream) {
-									el.srcObject = stream;
-									el.play().catch(() => {});
-								}
-							}}
-							className="video-element"
-						/>
-					</div>
-				))}
-			</div>
 		</>
 	);
 };

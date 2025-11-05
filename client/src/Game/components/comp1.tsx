@@ -595,17 +595,16 @@ const GameComponent: React.FC = () => {
 	return (
 		<>
 			<div ref={containerRef} id="game-container">
-			{/* Show components based on state */}
+		{/* Show components based on state */}
 
-			<VideoInterface
-				sendTransport={sendTransportRef.current}
-				recvTransport={recvTransportRef.current} // Add this
-				ws={wsRef.current}
-				device={deviceRef.current!}
-				clientId={clientIdRef.current}
-				produceCallbackRef={videoProduceCallbackRef}
-			/>
-				{showChat && wsRef.current && (
+		<VideoInterface
+			sendTransport={sendTransportRef.current}
+			ws={wsRef.current}
+			device={deviceRef.current!}
+			clientId={clientIdRef.current}
+			produceCallbackRef={videoProduceCallbackRef}
+		/>
+			{showChat && wsRef.current && (
 					<ChatInterface
 						ws={wsRef.current}
 						userId={userid}
