@@ -25,10 +25,12 @@ const GameComponent: React.FC = () => {
 	const recvTransportRef = useRef<types.Transport | null>(null);
 	const producedataCallbackRef = useRef<any | null>(null);
 	const dataProducerRef = useRef<types.DataProducer | null>(null);
+	const videoProduceCallbackRef = useRef<any | null>(null);
 
 	//game related ref's
 	const roomSceneRef = useRef<any>(null);
 	const dataConsumersRef = useRef<types.DataConsumer[]>([]);
+	const mediaConsumersRef = useRef<Record<string, Record<string, types.Consumer>>>({});
 	const phaserStartedRef = useRef(false);
 
 	const backendUrl = import.meta.env.VITE_BACKEND_URL;
@@ -107,17 +109,27 @@ const GameComponent: React.FC = () => {
 					iceServers, // TURN server config from server
 				} = msg.payload;
 
-				sendTransportRef.current = deviceRef.current!.createSendTransport({
-					id,
-					iceParameters,
-					iceCandidates,
-					dtlsParameters,
-					sctpParameters,
-					iceServers, // Pass TURN server config to transport
-				});					// ✅ ENABLE: Client-side ICE monitoring
-					monitorICEConnection(sendTransportRef.current, "Send");
+			sendTransportRef.current = deviceRef.current!.createSendTransport({
+				id,
+				iceParameters,
+				iceCandidates,
+				dtlsParameters,
+				sctpParameters,
+				iceServers, // Pass TURN server config to transport
+			});
 
-					sendTransportRef.current.on(
+			// ✅ ENABLE: Client-side ICE monitoring
+			monitorICEConnection(sendTransportRef.current, "Send");
+
+			// Add connection state monitoring
+			sendTransportRef.current.on("connectionstatechange", (state) => {
+				console.log(`📡 Send Transport connection state: ${state}`);
+				if (state === "failed" || state === "disconnected") {
+					console.error("❌ Send transport failed! TURN server may not be working.");
+				}
+			});
+
+			sendTransportRef.current.on(
 						"connect",
 						({ dtlsParameters }, callback) => {
 							ws.send(
@@ -221,11 +233,41 @@ const GameComponent: React.FC = () => {
 					}
 				}
 
-				if (msg.type === "dataProduced" && producedataCallbackRef.current) {
-					producedataCallbackRef.current({ id: msg.payload.dataProducerId });
-					producedataCallbackRef.current = null;
-					console.log("DataProducer ready!");
+			if (msg.type === "dataProduced" && producedataCallbackRef.current) {
+				producedataCallbackRef.current({ id: msg.payload.dataProducerId });
+				producedataCallbackRef.current = null;
+				console.log("DataProducer ready!");
+			}
+
+			// ✅ HANDLE: Video/Audio producer created
+			if (msg.type === "mediaProducerCreated" || msg.type === "mediaProducerExists") {
+				console.log("video/audio producer created", msg);
+				if (videoProduceCallbackRef.current) {
+					videoProduceCallbackRef.current({ id: msg.payload.producerId });
+					videoProduceCallbackRef.current = null;
 				}
+			}
+
+			// ✅ HANDLE: New media producer from another player (consume their video/audio)
+			if (msg.type === "newMediaProducer") {
+				console.log("📹 New media producer from", msg.payload.userId);
+				const { userId, avatarName, producerId } = msg.payload;
+				
+				if (recvTransportRef.current && deviceRef.current) {
+					wsRef.current?.send(
+						JSON.stringify({
+							type: "consumeMedia",
+							payload: {
+								producerId: producerId,
+								transportId: recvTransportRef.current.id,
+								rtpCapabilities: deviceRef.current.rtpCapabilities,
+								userId: userId,
+								avatarName: avatarName,
+							},
+						})
+					);
+				}
+			}
 
 			if (msg.type === "RecvWebRtcTransportCreated") {
 				const {
@@ -237,17 +279,27 @@ const GameComponent: React.FC = () => {
 					iceServers, // TURN server config from server
 				} = msg.payload;
 
-				recvTransportRef.current = deviceRef.current!.createRecvTransport({
-					id,
-					iceParameters,
-					iceCandidates,
-					dtlsParameters,
-					sctpParameters,
-					iceServers, // Pass TURN server config to transport
-				});					// ✅ ENABLE: Client-side ICE monitoring
-					monitorICEConnection(recvTransportRef.current, "Recv");
+			recvTransportRef.current = deviceRef.current!.createRecvTransport({
+				id,
+				iceParameters,
+				iceCandidates,
+				dtlsParameters,
+				sctpParameters,
+				iceServers, // Pass TURN server config to transport
+			});
 
-					recvTransportRef.current.on(
+			// ✅ ENABLE: Client-side ICE monitoring
+			monitorICEConnection(recvTransportRef.current, "Recv");
+
+			// Add connection state monitoring
+			recvTransportRef.current.on("connectionstatechange", (state) => {
+				console.log(`📡 Recv Transport connection state: ${state}`);
+				if (state === "failed" || state === "disconnected") {
+					console.error("❌ Recv transport failed! TURN server may not be working.");
+				}
+			});
+
+			recvTransportRef.current.on(
 						"connect",
 						({ dtlsParameters }, callback) => {
 							ws.send(
@@ -289,16 +341,80 @@ const GameComponent: React.FC = () => {
 						);
 					}
 
-					// ✅ FORWARD TO SCENE: If scene exists, notify it
+			// ✅ FORWARD TO SCENE: If scene exists, notify it
+			if (
+				roomSceneRef.current &&
+				typeof roomSceneRef.current.handleNewDataProducer === "function"
+			) {
+				roomSceneRef.current.handleNewDataProducer(msg);
+			}
+		}
+
+		// ✅ HANDLE: New MediaProducers (video/audio) from other players
+		if (msg.type === "newMediaProducer") {
+			console.log(`🎥 New ${msg.payload.kind} producer from user: ${msg.payload.userId}`);
+			const { producerId, userId, avatarName } = msg.payload;
+			
+			if (recvTransportRef.current && deviceRef.current) {
+				// Request to consume this media producer
+				ws.send(
+					JSON.stringify({
+						type: "consumeMedia",
+						payload: {
+							producerId: producerId,
+							transportId: recvTransportRef.current.id,
+							rtpCapabilities: deviceRef.current.rtpCapabilities,
+							userId: userId,
+							avatarName: avatarName,
+						},
+					})
+				);
+			}
+		}
+
+		// ✅ HANDLE: MediaConsumer creation (when we receive video/audio from others)
+		if (msg.type === "mediaConsumerCreated") {
+			console.log(`📥 MediaConsumer created for ${msg.payload.kind} from ${msg.payload.userId}`);
+			const { id, producerId, userId, avatarName, kind, rtpParameters } = msg.payload;
+			
+			try {
+				const mediaConsumer = await recvTransportRef.current!.consume({
+					id,
+					producerId,
+					kind,
+					rtpParameters,
+				});
+
+				// Resume the consumer to start receiving media
+				await mediaConsumer.resume();
+
+				console.log(`✅ ${kind} consumer active for user ${userId}`);
+
+				// Store the consumer
+				if (!mediaConsumersRef.current[userId]) {
+					mediaConsumersRef.current[userId] = {};
+				}
+				mediaConsumersRef.current[userId][kind] = mediaConsumer;
+
+				// Get the media track and display it
+				const track = mediaConsumer.track;
+				if (track) {
+					console.log(`🎬 Got ${kind} track from ${userId}`);
+					
+					// Forward to scene to display the video/audio
 					if (
 						roomSceneRef.current &&
-						typeof roomSceneRef.current.handleNewDataProducer === "function"
+						typeof roomSceneRef.current.handleRemoteMedia === "function"
 					) {
-						roomSceneRef.current.handleNewDataProducer(msg);
+						roomSceneRef.current.handleRemoteMedia(userId, kind, track, avatarName);
 					}
 				}
+			} catch (error) {
+				console.error(`❌ Failed to consume ${kind}:`, error);
+			}
+		}
 
-				// ✅ HANDLE: DataConsumer creation
+		// ✅ HANDLE: DataConsumer creation				// ✅ HANDLE: DataConsumer creation
 				if (msg.type === "dataConsumerCreated") {
 					const { id, producerId, sctpStreamParameters, label, protocol } =
 						msg.payload;
@@ -479,15 +595,16 @@ const GameComponent: React.FC = () => {
 	return (
 		<>
 			<div ref={containerRef} id="game-container">
-				{/* Show components based on state */}
+			{/* Show components based on state */}
 
-				<VideoInterface
-					sendTransport={sendTransportRef.current}
-					recvTransport={recvTransportRef.current} // Add this
-					ws={wsRef.current}
-					device={deviceRef.current!}
-					clientId={clientIdRef.current}
-				/>
+			<VideoInterface
+				sendTransport={sendTransportRef.current}
+				recvTransport={recvTransportRef.current} // Add this
+				ws={wsRef.current}
+				device={deviceRef.current!}
+				clientId={clientIdRef.current}
+				produceCallbackRef={videoProduceCallbackRef}
+			/>
 				{showChat && wsRef.current && (
 					<ChatInterface
 						ws={wsRef.current}

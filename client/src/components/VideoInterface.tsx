@@ -10,19 +10,19 @@ interface VideoInterfaceProps {
 	ws: WebSocket | null;
 	clientId: string | null;
 	onClose?: () => void;
+	produceCallbackRef: React.MutableRefObject<any | null>;
 }
 
 const VideoInterface: React.FC<VideoInterfaceProps> = ({
 	sendTransport,
-	device,
 	recvTransport,
 	ws,
 	clientId,
+	produceCallbackRef,
 }) => {
 	const videoRef = useRef<HTMLVideoElement>(null);
 	const [localStream, setLocalStream] = useState<MediaStream | null>(null);
 	const [showVideo, setShowVideo] = useState(false);
-	const produceCallbackRef = useRef<any | null>(null);
 	const producerRef = useRef<types.Producer | null>(null);
 	const [consumerStreams, setConsumerStreams] = useState<MediaStream[]>([]);
 	const streamMap = new Map();
@@ -69,75 +69,6 @@ const VideoInterface: React.FC<VideoInterfaceProps> = ({
 			sendTransport.off("produce", handleProduce);
 		};
 	}, [sendTransport, ws]);
-
-	useEffect(() => {
-		if (!ws) return;
-		(async () => {
-			ws.onmessage = async (e) => {
-				const msg = JSON.parse(e.data);
-				console.log(msg);
-				if (msg.type === "mediaProducerCreated") {
-					console.log("video interface reached", msg);
-					if (produceCallbackRef.current) {
-						produceCallbackRef.current({ id: msg.payload.producerId });
-						produceCallbackRef.current = null;
-					}
-				} else if (msg.type === "mediaProducerExists") {
-					console.log("video interface reached", msg);
-					if (produceCallbackRef.current) {
-						produceCallbackRef.current({ id: msg.payload.producerId });
-
-						produceCallbackRef.current = null;
-					}
-				} else if (msg.type === "newMediaProducer") {
-					console.log(msg);
-					const { userId, avatarName, producerId } = msg.payload;
-					console.log(userId, producerId, avatarName);
-					const newmsg = {
-						type: "consumeMedia",
-						payload: {
-							producerId: producerId,
-							userId: userId,
-							avatarName: avatarName,
-							transportId: recvTransport?.id,
-							rtpCapabilities: device.rtpCapabilities,
-						},
-					};
-					ws.send(JSON.stringify(newmsg));
-				} else if (msg.type === "mediaConsumerCreated") {
-					console.log(msg);
-					await addMediaConsumer(msg);
-				} else {
-					console.log("new not configured mssg", msg);
-				}
-			};
-		})();
-	}, [ws]);
-
-	async function addMediaConsumer(msg: any) {
-		console.log("addMediaConsumer reached");
-		// eslint-disable-next-line @typescript-eslint/no-unused-vars
-		const {
-			id,
-			producerId,
-			rtpParameters,
-			appData,
-			kind,
-			userId /*,avatarName*/,
-		} = msg.payload;
-		const consumer = await recvTransport!.consume({
-			id: id,
-			producerId: producerId,
-			rtpParameters: rtpParameters,
-			appData: appData,
-			kind: kind,
-		});
-		consumer.resume();
-		const stream = new MediaStream([consumer.track]);
-		console.log(stream);
-		setConsumerStreams((old) => [...old, stream]);
-		streamMap.set(userId, stream.id);
-	}
 
 	useEffect(() => {
 		return () => {

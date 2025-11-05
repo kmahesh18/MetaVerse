@@ -92,20 +92,27 @@ export async function createWebRtcTransport(client: Client, msg: any) {
 	console.log(`✅ WebRTC transport created: ${transport.id.substr(0, 8)} for user ${client.userId}`);
 
 	// TURN server configuration to be sent to client
+	// Include both UDP and TCP for better connectivity
 	const iceServers = [
 		{
 			urls: ['stun:stun.l.google.com:19302'], // Google's free STUN server
 		},
 		{
 			urls: [
-				process.env.TURN_SERVER_URL || 'turn:global.turn.twilio.com:3478?transport=tcp',
 				'turn:global.turn.twilio.com:3478?transport=udp',
-				'turn:global.turn.twilio.com:443?transport=tcp', // Fallback for restrictive firewalls
+				'turn:global.turn.twilio.com:3478?transport=tcp',
+				'turn:global.turn.twilio.com:443?transport=tcp' // Fallback for restrictive networks
 			],
 			username: process.env.TURN_USERNAME || '',
 			credential: process.env.TURN_CREDENTIAL || '',
 		},
 	];
+
+	console.log(`🌐 Sending TURN config to ${client.userId}:`, {
+		hasUsername: !!process.env.TURN_USERNAME,
+		hasCredential: !!process.env.TURN_CREDENTIAL,
+		urls: iceServers[1].urls
+	});
 
 	const common = {
 		id: transport.id,
