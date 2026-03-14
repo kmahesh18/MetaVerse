@@ -1,7 +1,7 @@
-import { AssetCategory } from '../types/asset';
-import type { AssetCategoryType } from '../types/asset';
-import { InteractionType, RoomType } from '../types/room';
-import type { InteractionTypeValue, RoomTypeValue } from '../types/room';
+import { AssetCategory } from '../types/asset.js';
+import type { AssetCategoryType } from '../types/asset.js';
+import { InteractionType, RoomType } from '../types/room.js';
+import type { InteractionTypeValue, RoomTypeValue } from '../types/room.js';
 
 export const WorldSheetKey = {
   ROOM_BUILDER: 'room_builder',
