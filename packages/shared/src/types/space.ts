@@ -1,5 +1,5 @@
-import type { SpaceRoleType } from '../constants/roles.js';
-import type { PermissionType } from '../constants/permissions.js';
+import type { SpaceRoleType } from '../constants/roles';
+import type { PermissionType } from '../constants/permissions';
 
 export const SpaceVisibility = {
   PUBLIC: 'public',

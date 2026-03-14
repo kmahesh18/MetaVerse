@@ -1,7 +1,7 @@
 // Types
-export type { IUser, UserPublic, AvatarConfig, UserPreferences } from './types/user.js';
-export { UserStatus } from './types/user.js';
-export type { UserStatusType } from './types/user.js';
+export type { IUser, UserPublic, AvatarConfig, UserPreferences } from './types/user';
+export { UserStatus } from './types/user';
+export type { UserStatusType } from './types/user';
 
 export type {
   ISpace,
@@ -9,29 +9,29 @@ export type {
   SpaceSettings,
   SpacePermissions,
   RoomBlueprintInput,
-} from './types/space.js';
-export { SpaceVisibility } from './types/space.js';
-export type { SpaceVisibilityType } from './types/space.js';
+} from './types/space';
+export { SpaceVisibility } from './types/space';
+export type { SpaceVisibilityType } from './types/space';
 
-export type { IRoom, IRoomObject, MapConfig, InteractionData } from './types/room.js';
-export { RoomType, InteractionType } from './types/room.js';
-export type { RoomTypeValue, InteractionTypeValue } from './types/room.js';
+export type { IRoom, IRoomObject, MapConfig, InteractionData } from './types/room';
+export { RoomType, InteractionType } from './types/room';
+export type { RoomTypeValue, InteractionTypeValue } from './types/room';
 
-export type { IAsset, IAvatar, SpriteSheet, AvatarFrameConfig, AnimationFrames } from './types/asset.js';
-export { AssetCategory } from './types/asset.js';
-export type { AssetCategoryType } from './types/asset.js';
+export type { IAsset, IAvatar, SpriteSheet, AvatarFrameConfig, AnimationFrames } from './types/asset';
+export { AssetCategory } from './types/asset';
+export type { AssetCategoryType } from './types/asset';
 
-export type { IMessage, MessageAttachment } from './types/message.js';
-export { MessageType, AttachmentType } from './types/message.js';
-export type { MessageTypeValue } from './types/message.js';
+export type { IMessage, MessageAttachment } from './types/message';
+export { MessageType, AttachmentType } from './types/message';
+export type { MessageTypeValue } from './types/message';
 
-export type { ITask, TaskComment } from './types/task.js';
-export { TaskStatus, TaskPriority } from './types/task.js';
-export type { TaskStatusType, TaskPriorityType } from './types/task.js';
+export type { ITask, TaskComment } from './types/task';
+export { TaskStatus, TaskPriority } from './types/task';
+export type { TaskStatusType, TaskPriorityType } from './types/task';
 
-export type { IInvitation, InvitationNotificationPayload } from './types/invitation.js';
-export { InvitationStatus } from './types/invitation.js';
-export type { InvitationStatusType } from './types/invitation.js';
+export type { IInvitation, InvitationNotificationPayload } from './types/invitation';
+export { InvitationStatus } from './types/invitation';
+export type { InvitationStatusType } from './types/invitation';
 
 export type {
   ClientToServerEvents,
@@ -39,12 +39,12 @@ export type {
   PlayerState,
   ChatMessagePayload,
   MediaParticipant,
-} from './types/socket-events.js';
-export { Direction } from './types/socket-events.js';
-export type { DirectionType } from './types/socket-events.js';
+} from './types/socket-events';
+export { Direction } from './types/socket-events';
+export type { DirectionType } from './types/socket-events';
 
-export type { ICEServer, ICEConfig } from './types/webrtc.js';
-export type { RTCSessionDescriptionInit, RTCIceCandidateInit } from './types/socket-events.js';
+export type { ICEServer, ICEConfig } from './types/webrtc';
+export type { RTCSessionDescriptionInit, RTCIceCandidateInit } from './types/socket-events';
 
 export type {
   CuratedWorldAsset,
@@ -54,7 +54,7 @@ export type {
   AssetFootprint,
   RoomSummaryDefinition,
   RoomTemplateKeyType,
-} from './world/curated-world.js';
+} from './world/curated-world';
 export {
   CURATED_WORLD_ASSETS,
   CURATED_WORLD_ASSET_MAP,
@@ -62,7 +62,7 @@ export {
   RoomTemplateKey,
   WorldSheetKey,
   WorldAssetRenderKind,
-} from './world/curated-world.js';
+} from './world/curated-world';
 
 // Constants
-export * from './constants/index.js';
+export * from './constants/index';

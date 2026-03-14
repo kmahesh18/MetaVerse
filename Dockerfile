@@ -25,9 +25,10 @@ COPY packages/shared ./packages/shared
 COPY apps/server ./apps/server
 COPY pnpm-lock.yaml pnpm-workspace.yaml package.json ./
 
-# Build shared first, then server
-RUN pnpm --filter shared build
-RUN pnpm --filter server build
+# Build backend using esbuild to bundle local workspaces (shared package) natively into a single ESM file
+RUN cd apps/server && pnpm dlx esbuild src/index.ts --bundle --platform=node --format=esm --outfile=dist/index.js \
+    --external:bcryptjs --external:cors --external:dotenv --external:express --external:helmet \
+    --external:jsonwebtoken --external:mongoose --external:socket.io --external:zod --external:express-rate-limit
 
 # ── Stage 3: Production runtime ──
 FROM node:20-alpine AS runner
@@ -40,11 +41,6 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/package.json ./
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
-
-# Fix: Node.js cannot resolve .ts files in production. Point shared package exports to built JS files.
-RUN sed -i 's|"./src/index.ts"|"./dist/index.js"|g' ./packages/shared/package.json
-
-COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
 
