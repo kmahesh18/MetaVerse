@@ -1,4 +1,4 @@
-import type { InvitationNotificationPayload } from './invitation';
+import type { InvitationNotificationPayload } from './invitation.js';
 
 export const Direction = {
   UP: 'up',
