@@ -1,0 +1,9 @@
+node_modules
+.git
+.gitignore
+*.md
+.env
+.env.*
+apps/web
+.turbo
+dist

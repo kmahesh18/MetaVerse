@@ -1,0 +1,19 @@
+{
+  "name": "metaverse",
+  "version": "0.1.0",
+  "private": true,
+  "description": "2D virtual workspace platform — Gather.town-style metaverse",
+  "scripts": {
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "dev:server": "pnpm --filter server dev",
+    "dev:web": "pnpm --filter web dev"
+  },
+  "devDependencies": {
+    "turbo": "^2.4.0",
+    "typescript": "^5.7.0"
+  },
+  "packageManager": "pnpm@9.15.0"
+}

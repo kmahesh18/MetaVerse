@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: metaverse-server
+    env: docker
+    dockerfilePath: Dockerfile
+    plan: starter # Starter plan recommended to keep WebSockets alive (no cold starts)
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: "3001"
+      - key: MONGODB_URI
+        sync: false # Set this securely in the Render dashboard
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        sync: false # e.g. https://your-vercel.vercel.app,http://localhost:3000
+      - key: STUN_URL
+        value: stun:stun.l.google.com:19302
+      - key: TURN_URL
+        value: turn:98.70.28.87:3478
+      - key: TURN_SECRET
+        value: 9f7a4c93d0c1f0b9a0a83f0b1f6a3c1d
