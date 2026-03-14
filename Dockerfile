@@ -40,6 +40,10 @@ ENV NODE_ENV=production
 
 COPY --from=builder /app/pnpm-lock.yaml /app/pnpm-workspace.yaml /app/package.json ./
 COPY --from=builder /app/packages/shared/package.json ./packages/shared/
+
+# Fix: Node.js cannot resolve .ts files in production. Point shared package exports to built JS files.
+RUN sed -i 's|"./src/index.ts"|"./dist/index.js"|g' ./packages/shared/package.json
+
 COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
 COPY --from=builder /app/apps/server/package.json ./apps/server/
 COPY --from=builder /app/apps/server/dist ./apps/server/dist
