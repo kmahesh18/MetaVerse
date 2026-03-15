@@ -207,7 +207,7 @@ STUN_URL=stun:stun.l.google.com:19302
 ### Client (`apps/web/.env.local`)
 ```
 NEXT_PUBLIC_API_URL=http://localhost:3001/api
-NEXT_PUBLIC_WS_URL=http://localhost:3001
+NEXT_PUBLIC_SOCKET_URL=http://localhost:3001
 NEXT_PUBLIC_STUN_URL=stun:stun.l.google.com:19302
 ```
 
