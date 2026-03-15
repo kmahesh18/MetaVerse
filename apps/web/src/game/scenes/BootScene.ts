@@ -45,6 +45,10 @@ export class BootScene extends Phaser.Scene {
       frameHeight: 16,
     });
 
+    // New Objects
+    this.load.image('chair', '/assets/objects/chair.svg');
+    this.load.image('paper', '/assets/objects/paper.svg');
+
     const loadedImages = new Set<string>();
     for (const asset of CURATED_WORLD_ASSETS) {
       for (const renderable of asset.renderables) {

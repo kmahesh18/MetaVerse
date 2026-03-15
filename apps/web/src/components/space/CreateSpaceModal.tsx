@@ -4,6 +4,7 @@ import { useState, type FormEvent } from 'react';
 import { CURATED_ROOM_TEMPLATES } from '@metaverse/shared';
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api';
+import { RetroSelect } from '@/components/ui/Select';
 
 interface CreateSpaceModalProps {
   open: boolean;
@@ -192,12 +193,12 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4 py-6 backdrop-blur-md">
-      <div className="retro-panel w-full max-w-4xl rounded-[32px] p-6 text-white shadow-2xl">
+      <div className="retro-panel w-full max-w-4xl rounded-[32px] p-6 text-foreground shadow-2xl">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <p className="retro-display text-[11px] text-[#9ae6c1]/70">Builder</p>
+            <p className="retro-display text-[11px] text-foreground/50">Builder</p>
             <h2 className="mt-2 text-2xl font-semibold">Create a collaborative space</h2>
-            <p className="mt-2 max-w-2xl text-sm text-slate-300/80">
+            <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
               Start with a lobby and office, then shape the room mix your team actually needs.
             </p>
           </div>
@@ -206,7 +207,7 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
               onClose();
               resetForm();
             }}
-            className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-sm text-slate-200/80 transition-colors hover:bg-white/10"
+            className="rounded-full border border-border bg-secondary px-3 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted"
           >
             Close
           </button>
@@ -215,26 +216,26 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
         <form onSubmit={handleSubmit} className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(340px,420px)]">
           <div className="space-y-4">
             {error && (
-              <div className="rounded-2xl border border-rose-300/25 bg-rose-400/10 px-4 py-3 text-sm text-rose-100">
+              <div className="rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">
                 {error}
               </div>
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
               <label className="space-y-2">
-                <span className="retro-display text-[11px] text-slate-300/70">Space Name</span>
+                <span className="retro-display text-[11px] text-muted-foreground">Space Name</span>
                 <input
                   type="text"
                   value={name}
                   onChange={(event) => handleNameChange(event.target.value)}
                   required
                   maxLength={60}
-                  className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary"
+                  className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none"
                   placeholder="Open Source Lab"
                 />
               </label>
               <label className="space-y-2">
-                <span className="retro-display text-[11px] text-slate-300/70">Slug</span>
+                <span className="retro-display text-[11px] text-muted-foreground">Slug</span>
                 <input
                   type="text"
                   value={slug}
@@ -242,25 +243,25 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
                   required
                   maxLength={40}
                   pattern="^[a-z0-9](?:[a-z0-9-]*[a-z0-9])?$"
-                  className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary"
+                  className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none"
                   placeholder="open-source-lab"
                 />
               </label>
             </div>
 
             <label className="block space-y-2">
-              <span className="retro-display text-[11px] text-slate-300/70">Description</span>
+              <span className="retro-display text-[11px] text-muted-foreground">Description</span>
               <textarea
                 value={description}
                 onChange={(event) => setDescription(event.target.value)}
                 rows={3}
-                className="retro-input w-full resize-none rounded-2xl px-4 py-3 text-sm outline-none focus:border-primary"
+                className="retro-input w-full resize-none rounded-2xl px-4 py-3 text-sm outline-none"
                 placeholder="A friendly shared office for building and reviewing together."
               />
             </label>
 
             <div>
-              <p className="retro-display text-[11px] text-slate-300/70">Visibility</p>
+              <p className="retro-display text-[11px] text-muted-foreground">Visibility</p>
               <div className="mt-2 flex flex-wrap gap-2">
                 {(['private', 'invite-only', 'public'] as const).map((option) => (
                   <button
@@ -270,7 +271,7 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
                     className={`rounded-full px-4 py-2 text-sm capitalize transition-colors ${
                       visibility === option
                         ? 'retro-button'
-                        : 'retro-button-subtle text-slate-100/80 hover:bg-white/10'
+                        : 'retro-button-subtle text-foreground/80 hover:bg-muted'
                     }`}
                   >
                     {option.replace('-', ' ')}
@@ -280,10 +281,10 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
             </div>
           </div>
 
-          <div className="rounded-[28px] border border-white/10 bg-black/20 p-4">
+          <div className="rounded-[28px] border border-border bg-muted p-4">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="retro-display text-[11px] text-amber-200/70">Room Builder</p>
+                <p className="retro-display text-[11px] text-foreground/50">Room Builder</p>
                 <h3 className="mt-1 text-lg font-semibold">Choose 1 to 8 rooms</h3>
               </div>
               <button
@@ -298,7 +299,7 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
 
             <div className="space-y-3">
               {roomBlueprints.map((blueprint, index) => (
-                <div key={blueprint.id} className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                <div key={blueprint.id} className="rounded-[24px] border border-border bg-secondary p-4">
                   <div className="mb-3 flex items-center justify-between gap-3">
                     <div className="flex items-center gap-2">
                       <button
@@ -306,25 +307,25 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
                         onClick={() => setDefaultBlueprint(blueprint.id)}
                         className={`rounded-full px-3 py-1 text-[11px] retro-display ${
                           blueprint.isDefault
-                            ? 'bg-primary/20 text-primary-foreground'
-                            : 'bg-white/5 text-slate-300/80'
+                            ? 'bg-foreground/15 text-foreground'
+                            : 'bg-background text-muted-foreground'
                         }`}
                       >
                         {blueprint.isDefault ? 'Entry Room' : 'Set Entry'}
                       </button>
-                      <span className="text-xs text-slate-300/70">Room {index + 1}</span>
+                      <span className="text-xs text-muted-foreground">Room {index + 1}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => moveBlueprint(blueprint.id, -1)} className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-200/80 hover:bg-white/10">
+                      <button type="button" onClick={() => moveBlueprint(blueprint.id, -1)} className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted">
                         ↑
                       </button>
-                      <button type="button" onClick={() => moveBlueprint(blueprint.id, 1)} className="rounded-full border border-white/10 px-2.5 py-1 text-xs text-slate-200/80 hover:bg-white/10">
+                      <button type="button" onClick={() => moveBlueprint(blueprint.id, 1)} className="rounded-full border border-border px-2.5 py-1 text-xs text-muted-foreground hover:bg-muted">
                         ↓
                       </button>
-                      <button type="button" onClick={() => duplicateBlueprint(blueprint.id)} className="rounded-full border border-white/10 px-3 py-1 text-xs text-slate-200/80 hover:bg-white/10">
+                      <button type="button" onClick={() => duplicateBlueprint(blueprint.id)} className="rounded-full border border-border px-3 py-1 text-xs text-muted-foreground hover:bg-muted">
                         Duplicate
                       </button>
-                      <button type="button" onClick={() => removeBlueprint(blueprint.id)} disabled={roomBlueprints.length === 1} className="rounded-full border border-rose-300/20 px-3 py-1 text-xs text-rose-100/80 hover:bg-rose-400/10 disabled:opacity-45">
+                      <button type="button" onClick={() => removeBlueprint(blueprint.id)} disabled={roomBlueprints.length === 1} className="rounded-full border border-destructive/20 px-3 py-1 text-xs text-destructive hover:bg-destructive/10 disabled:opacity-45">
                         Remove
                       </button>
                     </div>
@@ -332,24 +333,16 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
 
                   <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
                     <label className="space-y-2">
-                      <span className="retro-display text-[10px] text-slate-300/70">Template</span>
-                      <select
+                      <span className="retro-display text-[10px] text-muted-foreground">Template</span>
+                      <RetroSelect
                         value={blueprint.templateKey}
-                        onChange={(event) =>
-                          updateBlueprint(blueprint.id, { templateKey: event.target.value })
-                        }
-                        className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                      >
-                        {CURATED_ROOM_TEMPLATES.map((template) => (
-                          <option key={template.key} value={template.key} className="text-black">
-                            {template.name}
-                          </option>
-                        ))}
-                      </select>
+                        onChange={(val) => updateBlueprint(blueprint.id, { templateKey: val })}
+                        options={CURATED_ROOM_TEMPLATES.map(t => ({ label: t.name, value: t.key }))}
+                      />
                     </label>
 
                     <label className="space-y-2">
-                      <span className="retro-display text-[10px] text-slate-300/70">Room Name</span>
+                      <span className="retro-display text-[10px] text-muted-foreground">Room Name</span>
                       <input
                         type="text"
                         value={blueprint.name}
@@ -364,7 +357,7 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
               ))}
             </div>
 
-            <div className="mt-4 flex items-center justify-between gap-4 border-t border-white/10 pt-4 text-xs text-slate-300/75">
+            <div className="mt-4 flex items-center justify-between gap-4 border-t border-border pt-4 text-xs text-muted-foreground">
               <span>{roomBlueprints.length} / 8 rooms selected</span>
               <span>Only one room can be the default entry point.</span>
             </div>
@@ -377,7 +370,7 @@ export function CreateSpaceModal({ open, onClose, onCreated }: CreateSpaceModalP
                 onClose();
                 resetForm();
               }}
-              className="rounded-full border border-white/10 bg-white/5 px-5 py-2.5 text-sm text-slate-200/80 transition-colors hover:bg-white/10"
+              className="rounded-full border border-border bg-secondary px-5 py-2.5 text-sm text-muted-foreground transition-colors hover:bg-muted"
             >
               Cancel
             </button>

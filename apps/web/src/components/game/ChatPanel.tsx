@@ -10,7 +10,10 @@ export function ChatPanel({ roomId }: { roomId: string }) {
   const user = useAuthStore((s) => s.user);
   const [input, setInput] = useState('');
   const [chatMode, setChatMode] = useState<'room' | 'proximity'>('room');
-  const [minimized, setMinimized] = useState(false);
+  const [minimized, setMinimized] = useState(() => {
+    if (typeof window !== 'undefined') return window.innerWidth < 640;
+    return false;
+  });
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -45,28 +48,28 @@ export function ChatPanel({ roomId }: { roomId: string }) {
     return (
       <button
         onClick={() => setMinimized(false)}
-        className="pointer-events-auto absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-white/10 bg-black/70 px-3 py-2 text-xs text-white/80 shadow-xl backdrop-blur-xl transition hover:bg-black/80"
+        className="pointer-events-auto absolute bottom-3 left-3 z-10 flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-[10px] sm:text-xs text-foreground shadow-xl backdrop-blur-xl transition hover:bg-card"
       >
-        💬 Chat {filteredMessages.length > 0 && <span className="rounded-full bg-emerald-500/30 px-1.5 text-[10px] text-emerald-50">{filteredMessages.length}</span>}
+        💬 Chat {filteredMessages.length > 0 && <span className="rounded-full bg-foreground/15 px-1.5 text-[10px] text-foreground">{filteredMessages.length}</span>}
       </button>
     );
   }
 
   return (
-    <div className="pointer-events-auto absolute bottom-3 left-3 z-10 flex w-80 flex-col rounded-2xl border border-white/10 bg-black/80 text-white shadow-2xl backdrop-blur-xl" style={{ maxHeight: '22rem' }}>
+    <div className="pointer-events-auto absolute bottom-3 left-2 right-2 sm:left-3 sm:right-auto z-10 flex w-auto sm:w-80 flex-col rounded-2xl border border-border bg-card/90 text-foreground shadow-2xl backdrop-blur-xl" style={{ maxHeight: 'min(22rem, calc(100dvh - 6rem))' }}>
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/8 px-3 py-2">
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
         <div className="flex items-center gap-2">
-          <h2 className="text-xs font-semibold text-white/90">{room?.name ?? 'Chat'}</h2>
-          <div className="flex rounded-full border border-white/10 bg-white/5">
+          <h2 className="text-xs font-semibold text-foreground">{room?.name ?? 'Chat'}</h2>
+          <div className="flex rounded-full border border-border bg-secondary">
             {(['room', 'proximity'] as const).map((mode) => (
               <button
                 key={mode}
                 onClick={() => setChatMode(mode)}
                 className={`rounded-full px-2 py-0.5 text-[10px] uppercase tracking-wide transition ${
                   chatMode === mode
-                    ? 'bg-emerald-500/25 text-emerald-50'
-                    : 'text-white/40 hover:text-white/65'
+                    ? 'bg-foreground/15 text-foreground font-medium'
+                    : 'text-muted-foreground hover:text-foreground'
                 }`}
               >
                 {mode}
@@ -76,7 +79,7 @@ export function ChatPanel({ roomId }: { roomId: string }) {
         </div>
         <button
           onClick={() => setMinimized(true)}
-          className="rounded-full bg-white/8 px-2 py-0.5 text-[10px] text-white/50 transition hover:bg-white/15"
+          className="rounded-full bg-secondary px-2 py-0.5 text-[10px] text-foreground transition hover:bg-muted"
         >
           ─
         </button>
@@ -89,32 +92,32 @@ export function ChatPanel({ roomId }: { roomId: string }) {
             key={`${msg.timestamp}-${i}`}
             className={`rounded-xl px-2.5 py-1.5 text-xs ${
               msg.senderId === user?._id
-                ? 'bg-emerald-500/15 text-emerald-50'
-                : 'bg-white/5 text-white/80'
+                ? 'bg-foreground/10 text-foreground'
+                : 'bg-secondary text-foreground'
             }`}
           >
             <div className="flex items-center justify-between gap-2">
-              <span className="text-[10px] font-semibold text-white/70">{msg.senderName}</span>
+              <span className="text-[10px] font-semibold text-foreground">{msg.senderName}</span>
             </div>
             <p className="mt-0.5 break-words leading-4">{msg.content}</p>
           </div>
         ))}
         {filteredMessages.length === 0 && (
-          <div className="py-4 text-center text-[10px] text-white/30">
+          <div className="py-4 text-center text-[10px] text-muted-foreground">
             {chatMode === 'room' ? 'Room is quiet…' : 'Walk closer to someone'}
           </div>
         )}
       </div>
 
       {/* Input */}
-      <form onSubmit={handleSend} className="border-t border-white/8 px-3 py-2">
+      <form onSubmit={handleSend} className="border-t border-border px-3 py-2">
         <input
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
           maxLength={2000}
           placeholder={`${chatMode} chat…`}
-          className="w-full rounded-full border border-white/10 bg-white/5 px-3 py-1.5 text-xs text-white outline-none placeholder:text-white/30 focus:border-emerald-300/30"
+          className="w-full rounded-full border border-border bg-secondary px-3 py-1.5 text-xs text-foreground outline-none placeholder:text-muted-foreground focus:border-foreground/30"
         />
       </form>
     </div>

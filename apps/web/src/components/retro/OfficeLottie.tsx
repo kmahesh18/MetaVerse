@@ -35,7 +35,7 @@ export function OfficeLottie({ className, loop = true }: OfficeLottieProps) {
   if (!animationData) {
     return (
       <div
-        className={`flex items-center justify-center rounded-[28px] border border-white/10 bg-[#11131c]/70 text-[11px] uppercase tracking-[0.28em] text-[#f4e6be]/55 ${className ?? ''}`}
+        className={`flex items-center justify-center rounded-[28px] border border-border bg-secondary/70 text-[11px] uppercase tracking-[0.28em] text-muted-foreground ${className ?? ''}`}
       >
         Loading scene
       </div>

@@ -4,17 +4,17 @@ import { useEffect, type ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 
-export function AuthGuard({ children }: { children: ReactNode }) {
+export function GuestGuard({ children }: { children: ReactNode }) {
   const router = useRouter();
   const { user, isLoading } = useAuthStore();
 
   useEffect(() => {
-    if (!isLoading && !user) {
-      router.replace('/login');
+    if (!isLoading && user) {
+      router.replace('/dashboard');
     }
   }, [user, isLoading, router]);
 
-  if (isLoading || !user) {
+  if (isLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
         <div className="flex flex-col items-center gap-3">
@@ -24,6 +24,8 @@ export function AuthGuard({ children }: { children: ReactNode }) {
       </div>
     );
   }
+
+  if (user) return null;
 
   return <>{children}</>;
 }

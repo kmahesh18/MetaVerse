@@ -32,12 +32,16 @@ export class GameScene extends Phaser.Scene {
   private remotePlayers = new Map<string, RemotePlayer>();
   private cursors!: Phaser.Types.Input.Keyboard.CursorKeys;
   private standKey?: Phaser.Input.Keyboard.Key;
+  private interactKey?: Phaser.Input.Keyboard.Key;
   private lastEmitTime = 0;
   private lastDirection: DirectionType = 'down';
   private wasMoving = false;
   private obstacleBodies?: Phaser.Physics.Arcade.StaticGroup;
   private room?: WorldRoom;
   private resizeHandler?: () => void;
+  /* ── tap-to-move state ── */
+  private moveTarget: { x: number; y: number } | null = null;
+  private tapMarker?: Phaser.GameObjects.Graphics;
 
   constructor() {
     super({ key: 'GameScene' });
@@ -92,7 +96,11 @@ export class GameScene extends Phaser.Scene {
     if (this.input.keyboard) {
       this.cursors = this.input.keyboard.createCursorKeys();
       this.standKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
+      this.interactKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.E);
     }
+
+    // Tap-to-move for all devices (especially mobile)
+    this.setupTapToMove();
 
     this.syncRemotePlayers();
   }
@@ -102,10 +110,46 @@ export class GameScene extends Phaser.Scene {
 
     const worldWidth = this.room.mapConfig.width * TILE_SIZE;
     const worldHeight = this.room.mapConfig.height * TILE_SIZE;
-    const zoom = Math.min(this.scale.width / worldWidth, this.scale.height / worldHeight);
+    // Cover the screen (fill both dimensions) — camera follows the player
+    const zoom = Math.max(this.scale.width / worldWidth, this.scale.height / worldHeight);
 
     this.cameras.main.setZoom(zoom);
-    this.cameras.main.centerOn(worldWidth / 2, worldHeight / 2);
+    // Prevent camera from showing area outside the world
+    this.cameras.main.setBounds(0, 0, worldWidth, worldHeight);
+    // Always follow the player to keep them centred
+    if (this.player) {
+      this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+    }
+  }
+
+  /* ─── Tap-to-Move ─── */
+  private setupTapToMove() {
+    // Draw a small ring at the tap target
+    this.tapMarker = this.add.graphics();
+    this.tapMarker.setDepth(999998);
+
+    this.input.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      // Ignore if the pointer was dragging (e.g. scrolling)
+      if (pointer.getDistance() > 10) return;
+      // Ignore if user is seated
+      if (useGameStore.getState().seatedObjectId) return;
+
+      // Convert screen coords to world coords via the camera
+      const worldPoint = this.cameras.main.getWorldPoint(pointer.x, pointer.y);
+
+      this.moveTarget = { x: worldPoint.x, y: worldPoint.y };
+
+      // Visual feedback — small pulse ring at the target
+      if (this.tapMarker) {
+        this.tapMarker.clear();
+        this.tapMarker.lineStyle(2, 0xffffff, 0.7);
+        this.tapMarker.strokeCircle(worldPoint.x, worldPoint.y, 8);
+        // Fade out after 600ms
+        this.time.delayedCall(600, () => {
+          this.tapMarker?.clear();
+        });
+      }
+    });
   }
 
   private getBackdropColor(room: WorldRoom): string {
@@ -315,6 +359,33 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
+  private checkProximityInteraction() {
+    const objects = useGameStore.getState().roomObjects;
+    let nearestObj: WorldObject | null = null;
+    let minDist = TILE_SIZE * 2; // threshold
+
+    for (const obj of objects) {
+      if (!obj.isInteractive) continue;
+      const dist = Phaser.Math.Distance.Between(
+        this.player.sprite.x,
+        this.player.sprite.y,
+        obj.position.x + (obj.asset?.dimensions?.widthTiles ?? 1) * TILE_SIZE / 2,
+        obj.position.y + (obj.asset?.dimensions?.heightTiles ?? 1) * TILE_SIZE / 2
+      );
+      if (dist < minDist) {
+        minDist = dist;
+        nearestObj = obj;
+      }
+    }
+
+    if (nearestObj && nearestObj.asset) {
+      const asset = CURATED_WORLD_ASSET_MAP[nearestObj.asset.slug];
+      if (asset) {
+        this.handleInteraction(nearestObj, asset);
+      }
+    }
+  }
+
   private syncRemotePlayers() {
     const checkInterval = this.time.addEvent({
       delay: 50,
@@ -359,7 +430,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   update(time: number) {
-    if (!this.cursors || !this.room) return;
+    if (!this.room) return;
 
     const seatedObjectId = useGameStore.getState().seatedObjectId;
     if (seatedObjectId) {
@@ -380,20 +451,49 @@ export class GameScene extends Phaser.Scene {
     let vy = 0;
     let direction: DirectionType = this.lastDirection;
 
-    if (this.cursors.left.isDown) {
+    // Keyboard input
+    const hasKeyboard = Boolean(this.cursors);
+    if (hasKeyboard && this.cursors.left.isDown) {
       vx = -speed;
       direction = 'left';
-    } else if (this.cursors.right.isDown) {
+    } else if (hasKeyboard && this.cursors.right.isDown) {
       vx = speed;
       direction = 'right';
     }
 
-    if (this.cursors.up.isDown) {
+    if (hasKeyboard && this.cursors.up.isDown) {
       vy = -speed;
       direction = 'up';
-    } else if (this.cursors.down.isDown) {
+    } else if (hasKeyboard && this.cursors.down.isDown) {
       vy = speed;
       direction = 'down';
+    }
+
+    // Tap-to-move: walk toward the tap target
+    if (this.moveTarget && vx === 0 && vy === 0) {
+      const dx = this.moveTarget.x - this.player.sprite.x;
+      const dy = this.moveTarget.y - this.player.sprite.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+
+      if (dist < 4) {
+        // Arrived
+        this.moveTarget = null;
+      } else {
+        // Determine dominant direction for animation
+        if (Math.abs(dx) > Math.abs(dy)) {
+          direction = dx > 0 ? 'right' : 'left';
+        } else {
+          direction = dy > 0 ? 'down' : 'up';
+        }
+        const moveVec = new Phaser.Math.Vector2(dx, dy).normalize().scale(speed);
+        vx = moveVec.x;
+        vy = moveVec.y;
+      }
+    }
+
+    // Keyboard input cancels tap-to-move
+    if ((hasKeyboard && (this.cursors.left.isDown || this.cursors.right.isDown || this.cursors.up.isDown || this.cursors.down.isDown))) {
+      this.moveTarget = null;
     }
 
     const isMoving = vx !== 0 || vy !== 0;
@@ -428,6 +528,11 @@ export class GameScene extends Phaser.Scene {
         y: Math.round(this.player.sprite.y),
         direction,
       });
+    }
+
+    // Check for "E" interaction
+    if (this.interactKey && Phaser.Input.Keyboard.JustDown(this.interactKey)) {
+      this.checkProximityInteraction();
     }
 
     this.lastDirection = direction;

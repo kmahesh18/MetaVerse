@@ -44,20 +44,20 @@ export function VideoOverlay({
 
   return (
     <div className={`absolute right-0 top-12 z-20 flex flex-col transition-all duration-300 ${
-      expanded ? 'w-80' : 'w-48'
+      expanded ? 'w-72 sm:w-80' : 'w-40 sm:w-48'
     }`}>
       {/* ─── Compact Header ─── */}
-      <div className="pointer-events-auto m-2 rounded-2xl border border-white/10 bg-black/80 p-2.5 shadow-2xl backdrop-blur-xl">
+      <div className="pointer-events-auto m-2 rounded-2xl border border-border bg-card/90 p-2.5 shadow-2xl backdrop-blur-xl">
         <div className="flex items-center justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-white/90">{roomName}</p>
-            <p className="text-[10px] text-white/40">
+            <p className="truncate text-xs font-medium text-foreground">{roomName}</p>
+            <p className="text-[10px] text-muted-foreground">
               {joinedRoomCall ? 'In call' : canJoinRoomCall ? 'Room call available' : 'Direct calls'}
             </p>
           </div>
           <button
             onClick={() => setExpanded((v) => !v)}
-            className="rounded-full bg-white/10 px-2 py-1 text-[10px] text-white/70 transition hover:bg-white/20"
+            className="rounded-full bg-secondary px-2 py-1 text-[10px] text-foreground transition hover:bg-muted"
           >
             {expanded ? '▸' : '◂'}
           </button>
@@ -68,10 +68,10 @@ export function VideoOverlay({
           {canJoinRoomCall && (
             <button
               onClick={onToggleRoomCall}
-              className={`flex-1 rounded-full px-2 py-1 text-[10px] transition ${
+              className={`flex-1 rounded-full px-2 py-1.5 text-[10px] transition ${
                 joinedRoomCall
-                  ? 'bg-rose-500/30 text-rose-50 hover:bg-rose-500/40'
-                  : 'bg-sky-500/25 text-sky-50 hover:bg-sky-500/35'
+                  ? 'bg-destructive/20 text-foreground hover:bg-destructive/30'
+                  : 'bg-foreground/10 text-foreground hover:bg-foreground/20'
               }`}
             >
               {joinedRoomCall ? 'Leave' : 'Join Call'}
@@ -79,10 +79,10 @@ export function VideoOverlay({
           )}
           <button
             onClick={onToggleAudioMute}
-            className={`rounded-full px-2 py-1 text-[10px] transition ${
+            className={`rounded-full px-2 py-1.5 text-[10px] transition ${
               isAudioMuted
-                ? 'bg-rose-500/25 text-rose-100'
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                ? 'bg-destructive/15 text-foreground'
+                : 'bg-secondary text-foreground hover:bg-muted'
             }`}
             title={isAudioMuted ? 'Unmute mic' : 'Mute mic'}
           >
@@ -90,10 +90,10 @@ export function VideoOverlay({
           </button>
           <button
             onClick={onToggleVideoMute}
-            className={`rounded-full px-2 py-1 text-[10px] transition ${
+            className={`rounded-full px-2 py-1.5 text-[10px] transition ${
               isVideoMuted
-                ? 'bg-rose-500/25 text-rose-100'
-                : 'bg-white/10 text-white/70 hover:bg-white/20'
+                ? 'bg-destructive/15 text-foreground'
+                : 'bg-secondary text-foreground hover:bg-muted'
             }`}
             title={isVideoMuted ? 'Enable camera' : 'Disable camera'}
           >
@@ -102,12 +102,12 @@ export function VideoOverlay({
         </div>
 
         {mediaError && (
-          <p className="mt-2 rounded-lg bg-rose-500/15 px-2 py-1.5 text-[10px] text-rose-200">
+          <p className="mt-2 rounded-lg bg-destructive/10 px-2 py-1.5 text-[10px] text-destructive">
             {mediaError}
           </p>
         )}
         {isPreparingMedia && (
-          <p className="mt-2 text-[10px] text-white/50">Requesting media access…</p>
+          <p className="mt-2 text-[10px] text-muted-foreground">Requesting media access…</p>
         )}
       </div>
 
@@ -132,7 +132,7 @@ export function VideoOverlay({
               tile.mode === 'direct' ? (
                 <button
                   onClick={() => onEndDirectCall(tile.userId)}
-                  className="rounded-full bg-rose-500/25 px-2 py-0.5 text-[9px] uppercase text-rose-100 transition hover:bg-rose-500/40"
+                  className="rounded-full bg-destructive/15 px-2 py-0.5 text-[9px] uppercase text-destructive transition hover:bg-destructive/25"
                 >
                   End
                 </button>
@@ -142,7 +142,7 @@ export function VideoOverlay({
         ))}
 
         {!hasStreams && !mediaError && !isPreparingMedia && (
-          <div className="rounded-2xl border border-dashed border-white/10 bg-black/50 px-3 py-4 text-center text-[10px] text-white/40">
+          <div className="rounded-2xl border border-dashed border-border bg-card/90 px-3 py-4 text-center text-[10px] text-muted-foreground">
             Join a call or start one from the people panel
           </div>
         )}
@@ -174,8 +174,8 @@ function VideoTile({
   }, [stream]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-black/80 shadow-xl backdrop-blur-xl">
-      <div className={`relative bg-black/60 ${compact ? 'aspect-[4/3]' : 'aspect-video'}`}>
+    <div className="overflow-hidden rounded-2xl border border-border bg-card/90 shadow-xl backdrop-blur-xl">
+      <div className={`relative bg-card ${compact ? 'aspect-[4/3]' : 'aspect-video'}`}>
         {stream ? (
           <video
             ref={videoRef}
@@ -185,16 +185,16 @@ function VideoTile({
             className="h-full w-full object-cover"
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-[10px] text-white/30">
+          <div className="flex h-full items-center justify-center text-[10px] text-muted-foreground">
             Waiting…
           </div>
         )}
       </div>
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5">
         <div className="min-w-0">
-          <p className="truncate text-xs font-medium text-white/85">{title}</p>
+          <p className="truncate text-xs font-medium text-foreground">{title}</p>
           {subtitle && (
-            <p className="text-[9px] uppercase tracking-wider text-white/40">{subtitle}</p>
+            <p className="text-[9px] uppercase tracking-wider text-muted-foreground">{subtitle}</p>
           )}
         </div>
         {action}

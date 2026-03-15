@@ -19,6 +19,29 @@ interface SpaceData {
   myRole?: string;
 }
 
+function SkeletonCard() {
+  return (
+    <div className="retro-panel rounded-[28px] p-5">
+      <div className="mb-4 flex items-start justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div className="skeleton h-12 w-12 rounded-2xl" />
+          <div>
+            <div className="skeleton h-3 w-16 rounded" />
+            <div className="skeleton mt-2 h-5 w-32 rounded" />
+          </div>
+        </div>
+        <div className="skeleton h-6 w-16 rounded-full" />
+      </div>
+      <div className="skeleton h-4 w-full rounded" />
+      <div className="skeleton mt-2 h-4 w-3/4 rounded" />
+      <div className="mt-5 flex items-center justify-between border-t border-border pt-4">
+        <div className="skeleton h-3 w-24 rounded" />
+        <div className="skeleton h-3 w-16 rounded" />
+      </div>
+    </div>
+  );
+}
+
 function DashboardContent() {
   const { user, accessToken, logout } = useAuthStore();
   const [spaces, setSpaces] = useState<SpaceData[]>([]);
@@ -102,20 +125,20 @@ function DashboardContent() {
   }
 
   return (
-    <div className="retro-shell min-h-screen text-white">
+    <div className="retro-shell min-h-screen text-foreground">
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6">
+      <main className="w-full px-6 pb-16 pt-24 sm:px-10">
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
           <div className="retro-panel relative overflow-hidden rounded-[36px] px-6 py-8">
-            <div className="ambient-orb left-8 top-10 h-28 w-28 bg-primary/20" />
-            <div className="ambient-orb bottom-6 right-8 h-24 w-24 bg-accent/20" />
+            <div className="ambient-orb left-8 top-10 h-28 w-28 bg-foreground/10" />
+            <div className="ambient-orb bottom-6 right-8 h-24 w-24 bg-foreground/10" />
             <div className="relative z-10">
-              <p className="retro-display text-[11px] text-[#9ae6c1]/70">Control Deck</p>
+              <p className="retro-display text-[11px] text-foreground/60">Control Deck</p>
               <h1 className="mt-3 max-w-2xl text-4xl font-semibold tracking-tight sm:text-5xl">
                 Build rooms, welcome people, and keep the office moving.
               </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300/80 sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                 Welcome back, {user?.displayName}. Your dashboard is now the planning layer for the
                 world: invitations, room blueprints, and space access all start here.
               </p>
@@ -129,7 +152,7 @@ function DashboardContent() {
                 </button>
                 <button
                   onClick={() => logout()}
-                  className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100/85 transition-colors hover:bg-white/10"
+                  className="retro-button-subtle px-5 py-3 text-sm font-medium transition-colors"
                 >
                   Logout
                 </button>
@@ -137,9 +160,9 @@ function DashboardContent() {
             </div>
           </div>
 
-          <div className="retro-panel rounded-[36px] p-5">
-            <p className="retro-display text-[11px] text-amber-200/70">Office Feed</p>
-            <OfficeLottie className="mt-3 h-56 w-full rounded-[28px] bg-black/10 p-4" />
+          <div className="retro-panel p-5">
+            <p className="retro-display text-[11px] text-foreground/60">Office Feed</p>
+            <OfficeLottie className="mt-3 h-56 w-full rounded-[var(--radius)] bg-background/50 p-4" />
           </div>
         </section>
 
@@ -147,23 +170,25 @@ function DashboardContent() {
           <div>
             <div className="mb-4 flex items-center justify-between gap-3">
               <div>
-                <p className="retro-display text-[11px] text-[#9ae6c1]/70">Joined Spaces</p>
+                <p className="retro-display text-[11px] text-foreground/60">Joined Spaces</p>
                 <h2 className="mt-1 text-2xl font-semibold">Your active environments</h2>
               </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300/75">
+              <span className="retro-chip">
                 {spaces.length} spaces
               </span>
             </div>
 
             {loading ? (
-              <div className="retro-panel flex min-h-64 items-center justify-center rounded-[32px]">
-                <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                <SkeletonCard />
+                <SkeletonCard />
+                <SkeletonCard />
               </div>
             ) : spaces.length === 0 ? (
-              <div className="retro-panel rounded-[32px] p-10 text-center">
+              <div className="retro-panel p-10 text-center">
                 <div className="text-5xl">🕹️</div>
                 <h3 className="mt-4 text-xl font-semibold">No spaces yet</h3>
-                <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-slate-300/75">
+                <p className="mx-auto mt-3 max-w-md text-sm leading-7 text-muted-foreground">
                   Start with a lobby and office, then add the extra rooms your community actually needs.
                 </p>
                 <button
@@ -182,26 +207,26 @@ function DashboardContent() {
             )}
           </div>
 
-          <aside className="retro-panel rounded-[32px] p-5">
-            <p className="retro-display text-[11px] text-amber-200/70">Invitation Inbox</p>
+          <aside className="retro-panel p-5">
+            <p className="retro-display text-[11px] text-foreground/60">Invitation Inbox</p>
             <h2 className="mt-2 text-xl font-semibold">Pending access requests</h2>
-            <p className="mt-2 text-sm leading-6 text-slate-300/75">
+            <p className="mt-2 text-sm leading-6 text-muted-foreground">
               Accept invitations from private or invite-only spaces, or clear out requests you do not need.
             </p>
 
             <div className="mt-5 space-y-3">
               {invitations.length === 0 ? (
-                <div className="rounded-[24px] border border-dashed border-white/12 bg-white/5 px-4 py-5 text-sm text-slate-300/70">
+                <div className="rounded-[var(--radius)] border border-dashed border-border bg-background px-4 py-5 text-sm text-muted-foreground">
                   No pending invitations right now.
                 </div>
               ) : (
                 invitations.map((invitation) => (
-                  <div key={invitation.token} className="rounded-[24px] border border-white/10 bg-white/5 p-4">
+                  <div key={invitation.token} className="rounded-[var(--radius)] border border-border bg-background p-4">
                     <div className="flex items-start justify-between gap-3">
                       <div>
-                        <p className="retro-display text-[10px] text-[#9ae6c1]/70">{invitation.role}</p>
+                        <p className="retro-display text-[10px] text-foreground/60">{invitation.role}</p>
                         <h3 className="mt-1 font-semibold">{invitation.spaceName}</h3>
-                        <p className="mt-2 text-sm text-slate-300/75">
+                        <p className="mt-2 text-sm text-muted-foreground">
                           Invited by {invitation.inviterName}
                         </p>
                       </div>
@@ -219,7 +244,7 @@ function DashboardContent() {
                       <button
                         onClick={() => handleInvitationAction(invitation.token, 'decline')}
                         disabled={inviteActionToken === invitation.token}
-                        className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100/85 transition-colors hover:bg-white/10 disabled:opacity-45"
+                        className="retro-button-subtle flex-1 px-4 py-2 text-sm disabled:opacity-45"
                       >
                         Decline
                       </button>
@@ -245,7 +270,7 @@ function LinkPill({ href }: { href: string }) {
   return (
     <a
       href={href}
-      className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-[11px] retro-display text-slate-200/75 transition-colors hover:bg-white/10"
+      className="retro-chip transition-colors hover:bg-foreground hover:text-background"
     >
       Preview
     </a>

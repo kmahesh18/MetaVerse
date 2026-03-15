@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { Navbar } from '@/components/layout/Navbar';
 import { OfficeLottie } from '@/components/retro/OfficeLottie';
+import { GuestGuard } from '@/components/GuestGuard';
 
 const CHARACTERS = [
   { name: 'Adam', file: 'adam_idle.png' },
@@ -39,8 +40,8 @@ function CharacterPreview({ file, selected, onClick }: { file: string; selected:
       onClick={onClick}
       className={`flex flex-col items-center gap-2 rounded-lg border-2 p-3 transition-all ${
         selected
-          ? 'border-primary bg-primary/10 shadow-lg scale-105'
-          : 'border-border hover:border-primary/50 hover:bg-muted'
+          ? 'border-foreground bg-foreground/10 shadow-lg scale-105'
+          : 'border-border hover:border-foreground/50 hover:bg-muted'
       }`}
     >
       <canvas
@@ -53,7 +54,7 @@ function CharacterPreview({ file, selected, onClick }: { file: string; selected:
   );
 }
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
   const register = useAuthStore((s) => s.register);
   const [displayName, setDisplayName] = useState('');
@@ -84,19 +85,19 @@ export default function RegisterPage() {
   }
 
   return (
-    <div className="retro-shell min-h-screen text-white">
+    <div className="retro-shell min-h-screen text-foreground">
       <Navbar />
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-4 pb-12 pt-24 lg:grid-cols-[minmax(0,1fr)_480px]">
-        <div className="retro-panel hidden rounded-[36px] p-6 lg:block">
-          <p className="retro-display text-[11px] text-amber-200/70">New Workspace</p>
-          <OfficeLottie className="mt-3 h-[34rem] w-full rounded-[30px] bg-black/10 p-4" />
+      <div className="mx-auto grid min-h-screen w-full items-center gap-8 px-6 pb-12 pt-24 sm:px-10 lg:grid-cols-[minmax(0,1fr)_480px]">
+        <div className="retro-panel hidden p-6 lg:block">
+          <p className="retro-display text-[11px] text-foreground/60">New Workspace</p>
+          <OfficeLottie className="mt-3 h-[34rem] w-full rounded-[var(--radius)] bg-background/50 p-4" />
         </div>
 
-        <div className="retro-panel w-full rounded-[36px] p-8">
+        <div className="retro-panel w-full p-8">
           <div className="mb-6">
-            <p className="retro-display text-[11px] text-[#9ae6c1]/70">Register</p>
+            <p className="retro-display text-[11px] text-foreground/60">Register</p>
             <h1 className="mt-3 text-3xl font-semibold">Create your account</h1>
-            <p className="mt-2 text-sm text-slate-300/75">Pick an avatar and step into the office.</p>
+            <p className="mt-2 text-sm text-muted-foreground">Pick an avatar and step into the office.</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -182,14 +183,22 @@ export default function RegisterPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-300/75">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Already have an account?{' '}
-            <Link href="/login" className="font-medium text-primary hover:underline">
+            <Link href="/login" className="font-medium text-foreground hover:underline">
               Sign in
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <GuestGuard>
+      <RegisterContent />
+    </GuestGuard>
   );
 }

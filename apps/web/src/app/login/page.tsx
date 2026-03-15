@@ -6,8 +6,9 @@ import { useRouter } from 'next/navigation';
 import { useAuthStore } from '@/lib/auth-store';
 import { Navbar } from '@/components/layout/Navbar';
 import { OfficeLottie } from '@/components/retro/OfficeLottie';
+import { GuestGuard } from '@/components/GuestGuard';
 
-export default function LoginPage() {
+function LoginContent() {
   const router = useRouter();
   const login = useAuthStore((s) => s.login);
   const [email, setEmail] = useState('');
@@ -30,19 +31,19 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="retro-shell min-h-screen text-white">
+    <div className="retro-shell min-h-screen text-foreground">
       <Navbar />
-      <div className="mx-auto grid min-h-screen max-w-6xl items-center gap-8 px-4 pb-12 pt-24 lg:grid-cols-[minmax(0,1fr)_440px]">
-        <div className="retro-panel hidden rounded-[36px] p-6 lg:block">
-          <p className="retro-display text-[11px] text-amber-200/70">Office Pulse</p>
-          <OfficeLottie className="mt-3 h-[32rem] w-full rounded-[30px] bg-black/10 p-4" />
+      <div className="mx-auto grid min-h-screen w-full items-center gap-8 px-6 pb-12 pt-24 sm:px-10 lg:grid-cols-[minmax(0,1fr)_440px]">
+        <div className="retro-panel hidden p-6 lg:block">
+          <p className="retro-display text-[11px] text-foreground/60">Office Pulse</p>
+          <OfficeLottie className="mt-3 h-[32rem] w-full rounded-[var(--radius)] bg-background/50 p-4" />
         </div>
 
-        <div className="retro-panel w-full rounded-[36px] p-8">
+        <div className="retro-panel w-full p-8">
           <div className="mb-6">
-            <p className="retro-display text-[11px] text-[#9ae6c1]/70">Welcome Back</p>
+            <p className="retro-display text-[11px] text-foreground/60">Welcome Back</p>
             <h1 className="mt-3 text-3xl font-semibold">Sign in to your workspace</h1>
-            <p className="mt-2 text-sm text-slate-300/75">
+            <p className="mt-2 text-sm text-muted-foreground">
               Jump back into your rooms, people, and active sessions.
             </p>
           </div>
@@ -95,14 +96,22 @@ export default function LoginPage() {
             </button>
           </form>
 
-          <p className="mt-6 text-center text-sm text-slate-300/75">
+          <p className="mt-6 text-center text-sm text-muted-foreground">
             Don&apos;t have an account?{' '}
-            <Link href="/register" className="font-medium text-primary hover:underline">
+            <Link href="/register" className="font-medium text-foreground hover:underline">
               Sign up
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <GuestGuard>
+      <LoginContent />
+    </GuestGuard>
   );
 }

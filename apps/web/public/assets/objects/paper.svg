@@ -1,0 +1,10 @@
+<svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect x="3" y="2" width="10" height="12" fill="#F8F3DD" />
+  <rect x="4" y="3" width="8" height="10" fill="white" />
+  <!-- Lines of text -->
+  <rect x="5" y="5" width="6" height="1" fill="#CBD5E0" />
+  <rect x="5" y="7" width="6" height="1" fill="#CBD5E0" />
+  <rect x="5" y="9" width="4" height="1" fill="#CBD5E0" />
+  <!-- Fold corner -->
+  <path d="M10 2L13 5H10V2Z" fill="#CBD5E0" />
+</svg>

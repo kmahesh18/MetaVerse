@@ -16,21 +16,21 @@ export interface CharacterAnimationManifest {
 // walk/sit = [left(0-5), up(6-11), right(12-17), down(18-23)]
 export const DEFAULT_CHARACTER_MANIFEST: CharacterAnimationManifest = {
   idle: {
-    left: 0,
+    left: 2,
     up: 1,
-    right: 2,
+    right: 0,
     down: 3,
   },
   walk: {
-    left: { start: 0, end: 5 },
+    left: { start: 12, end: 17 },
     up: { start: 6, end: 11 },
-    right: { start: 12, end: 17 },
+    right: { start: 0, end: 5 },
     down: { start: 18, end: 23 },
   },
   sit: {
-    left: { start: 0, end: 5 },
+    left: { start: 12, end: 17 },
     up: { start: 6, end: 11 },
-    right: { start: 12, end: 17 },
+    right: { start: 0, end: 5 },
     down: { start: 18, end: 23 },
   },
 };

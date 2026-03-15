@@ -3,7 +3,6 @@
 import { useEffect, useState, useCallback, use } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { CURATED_ROOM_TEMPLATES } from '@metaverse/shared';
 import { useAuthStore } from '@/lib/auth-store';
 import { api } from '@/lib/api';
 import { AuthGuard } from '@/components/AuthGuard';
@@ -41,46 +40,33 @@ interface RoomData {
   isDefault?: boolean;
 }
 
-interface MemberData {
-  _id: string;
-  role: string;
-  permissions: SpacePermissions;
-  userId: {
-    _id: string;
-    displayName: string;
-    email?: string;
-    status?: string;
-  };
+function SkeletonRoomCard() {
+  return (
+    <div className="retro-panel rounded-[28px] p-5">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <div className="skeleton h-3 w-20 rounded" />
+          <div className="skeleton mt-2 h-5 w-36 rounded" />
+        </div>
+      </div>
+      <div className="mt-4 flex gap-2">
+        <div className="skeleton h-6 w-16 rounded-full" />
+        <div className="skeleton h-6 w-20 rounded-full" />
+      </div>
+      <div className="mt-5">
+        <div className="skeleton h-9 w-20 rounded-full" />
+      </div>
+    </div>
+  );
 }
-
-interface SpaceInvitationData {
-  _id: string;
-  token: string;
-  inviteeEmail: string;
-  role: string;
-  inviterId?: {
-    displayName: string;
-  } | null;
-}
-
-const ROOM_TEMPLATE_OPTIONS = CURATED_ROOM_TEMPLATES.map((template) => ({
-  value: template.key,
-  label: template.name,
-}));
 
 function SpaceContent({ params }: { params: Promise<{ slug: string }> }) {
   const { slug } = use(params);
   const router = useRouter();
-  const { accessToken, user } = useAuthStore();
+  const { accessToken } = useAuthStore();
   const [space, setSpace] = useState<SpaceData | null>(null);
   const [rooms, setRooms] = useState<RoomData[]>([]);
-  const [members, setMembers] = useState<MemberData[]>([]);
-  const [invitations, setInvitations] = useState<SpaceInvitationData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [inviteEmail, setInviteEmail] = useState('');
-  const [inviteLoading, setInviteLoading] = useState(false);
-  const [roomDraft, setRoomDraft] = useState({ name: 'New Room', templateKey: 'meeting-studio' });
-  const [roomActionId, setRoomActionId] = useState<string | null>(null);
 
   const fetchSpace = useCallback(async () => {
     if (!accessToken) return;
@@ -91,20 +77,6 @@ function SpaceContent({ params }: { params: Promise<{ slug: string }> }) {
 
       const roomsData = await api<RoomData[]>(`/rooms/space/${data._id}`, { token: accessToken });
       setRooms(roomsData);
-
-      if (data.isMember) {
-        const [membersData, invitationsData] = await Promise.all([
-          api<MemberData[]>(`/spaces/${slug}/members`, { token: accessToken }),
-          data.myPermissions?.canInvite || data.myPermissions?.canManageMembers
-            ? api<SpaceInvitationData[]>(`/invitations/space/${data._id}`, { token: accessToken })
-            : Promise.resolve([]),
-        ]);
-        setMembers(membersData);
-        setInvitations(invitationsData);
-      } else {
-        setMembers([]);
-        setInvitations([]);
-      }
     } catch {
       router.push('/dashboard');
     } finally {
@@ -128,138 +100,71 @@ function SpaceContent({ params }: { params: Promise<{ slug: string }> }) {
     await fetchSpace();
   }
 
-  async function handleInvite() {
-    if (!accessToken || !space || !inviteEmail) return;
-    setInviteLoading(true);
-    try {
-      await api('/invitations', {
-        method: 'POST',
-        token: accessToken,
-        body: JSON.stringify({
-          spaceId: space._id,
-          inviteeEmail: inviteEmail,
-        }),
-      });
-      setInviteEmail('');
-      await fetchSpace();
-    } finally {
-      setInviteLoading(false);
-    }
-  }
-
-  async function updateMemberRole(memberUserId: string, role: string) {
-    if (!accessToken) return;
-    await api(`/spaces/${slug}/members/${memberUserId}`, {
-      method: 'PATCH',
-      token: accessToken,
-      body: JSON.stringify({ role }),
-    });
-    await fetchSpace();
-  }
-
-  async function removeMember(memberUserId: string) {
-    if (!accessToken) return;
-    await api(`/spaces/${slug}/members/${memberUserId}`, {
-      method: 'DELETE',
-      token: accessToken,
-    });
-    await fetchSpace();
-  }
-
-  async function createRoom() {
-    if (!accessToken || !space) return;
-    setRoomActionId('create');
-    try {
-      await api('/rooms', {
-        method: 'POST',
-        token: accessToken,
-        body: JSON.stringify({
-          spaceId: space._id,
-          name: roomDraft.name,
-          templateKey: roomDraft.templateKey,
-          isDefault: false,
-        }),
-      });
-      setRoomDraft({ name: 'New Room', templateKey: 'meeting-studio' });
-      await fetchSpace();
-    } finally {
-      setRoomActionId(null);
-    }
-  }
-
-  async function updateRoom(roomId: string, patch: Partial<RoomData> & { isDefault?: boolean }) {
-    if (!accessToken) return;
-    setRoomActionId(roomId);
-    try {
-      await api(`/rooms/${roomId}`, {
-        method: 'PATCH',
-        token: accessToken,
-        body: JSON.stringify(patch),
-      });
-      await fetchSpace();
-    } finally {
-      setRoomActionId(null);
-    }
-  }
-
-  async function deleteRoom(roomId: string) {
-    if (!accessToken) return;
-    setRoomActionId(roomId);
-    try {
-      await api(`/rooms/${roomId}`, {
-        method: 'DELETE',
-        token: accessToken,
-      });
-      await fetchSpace();
-    } finally {
-      setRoomActionId(null);
-    }
-  }
-
   if (loading || !space) {
     return (
       <div className="retro-shell min-h-screen">
         <Navbar />
-        <div className="flex min-h-screen items-center justify-center">
-          <div className="h-10 w-10 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-        </div>
+        <main className="w-full px-6 pb-16 pt-24 sm:px-10">
+          <div className="skeleton mb-4 h-4 w-40 rounded" />
+          <div className="retro-panel rounded-[36px] px-6 py-8">
+            <div className="skeleton h-8 w-64 rounded" />
+            <div className="skeleton mt-4 h-12 w-full max-w-xl rounded" />
+            <div className="skeleton mt-4 h-4 w-96 rounded" />
+          </div>
+          <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            <SkeletonRoomCard />
+            <SkeletonRoomCard />
+            <SkeletonRoomCard />
+          </div>
+        </main>
       </div>
     );
   }
 
   const canManageRooms = Boolean(space.myPermissions?.canManageRooms);
-  const canManageMembers = Boolean(space.myPermissions?.canManageMembers);
-  const canInvite = Boolean(space.myPermissions?.canInvite);
   const isOwner = space.myRole === 'owner';
+  const canAccessSettings = isOwner || canManageRooms;
 
   return (
-    <div className="retro-shell min-h-screen text-white">
+    <div className="retro-shell min-h-screen text-foreground">
       <Navbar />
 
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-24 sm:px-6">
-        <div className="mb-4">
-          <Link href="/dashboard" className="text-sm text-slate-300/80 hover:text-white">
+      <main className="w-full px-6 pb-16 pt-24 sm:px-10">
+        <div className="mb-4 flex items-center justify-between">
+          <Link href="/dashboard" className="text-sm text-muted-foreground hover:text-foreground">
             ← Back to Dashboard
           </Link>
+          {canAccessSettings && (
+            <Link
+              href={`/space/${slug}/settings`}
+              className="flex items-center gap-2 rounded-full border border-border bg-secondary px-4 py-2 text-sm text-foreground transition-colors hover:bg-muted"
+            >
+              <svg className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.066 2.573c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.573 1.066c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.066-2.573c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.8} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              Settings
+            </Link>
+          )}
         </div>
 
         <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
           <div className="retro-panel relative overflow-hidden rounded-[36px] px-6 py-8">
-            <div className="ambient-orb left-10 top-8 h-28 w-28 bg-primary/18" />
-            <div className="ambient-orb bottom-8 right-8 h-24 w-24 bg-accent/16" />
+            <div className="ambient-orb left-10 top-8 h-28 w-28 bg-foreground/8" />
+            <div className="ambient-orb bottom-8 right-8 h-24 w-24 bg-foreground/6" />
             <div className="relative z-10">
               <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs capitalize text-slate-200/80">
+                <span className="rounded-full border border-border bg-secondary px-3 py-1 text-xs capitalize text-muted-foreground">
                   {space.visibility}
                 </span>
                 {space.myRole && (
-                  <span className="rounded-full border border-white/10 bg-primary/15 px-3 py-1 text-xs capitalize text-emerald-50">
+                  <span className="rounded-full border border-border bg-foreground/10 px-3 py-1 text-xs capitalize text-foreground/80 font-medium">
                     {space.myRole}
                   </span>
                 )}
               </div>
               <h1 className="mt-4 text-4xl font-semibold tracking-tight sm:text-5xl">{space.name}</h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-slate-300/80 sm:text-base">
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-muted-foreground sm:text-base">
                 {space.description || 'Shape a collaborative office with curated rooms, live movement, and in-world conversations.'}
               </p>
 
@@ -277,7 +182,7 @@ function SpaceContent({ params }: { params: Promise<{ slug: string }> }) {
                     {!isOwner && (
                       <button
                         onClick={handleLeave}
-                        className="rounded-full border border-white/10 bg-white/5 px-5 py-3 text-sm font-medium text-slate-100/80 hover:bg-white/10"
+                        className="rounded-full border border-border bg-secondary px-5 py-3 text-sm font-medium text-foreground/80 hover:bg-muted"
                       >
                         Leave Space
                       </button>
@@ -296,288 +201,73 @@ function SpaceContent({ params }: { params: Promise<{ slug: string }> }) {
           </div>
 
           <div className="retro-panel rounded-[36px] p-5">
-            <p className="retro-display text-[11px] text-amber-200/70">Ambient Preview</p>
-            <OfficeLottie className="mt-3 h-64 w-full rounded-[28px] bg-black/10 p-4" />
+            <p className="retro-display text-[11px] text-foreground/50">Ambient Preview</p>
+            <OfficeLottie className="mt-3 h-64 w-full rounded-[28px] bg-muted p-4" />
           </div>
         </section>
 
-        <section className="mt-8 grid gap-8 xl:grid-cols-[minmax(0,1fr)_400px]">
-          <div>
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
-                <p className="retro-display text-[11px] text-[#9ae6c1]/70">Rooms</p>
-                <h2 className="mt-1 text-2xl font-semibold">Navigate the space</h2>
-              </div>
-              <span className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-xs text-slate-300/75">
-                {rooms.length} rooms
-              </span>
+        {/* Rooms — clean view, Enter/Leave only */}
+        <section className="mt-8">
+          <div className="mb-4 flex items-center justify-between gap-3">
+            <div>
+              <p className="retro-display text-[11px] text-foreground/50">Rooms</p>
+              <h2 className="mt-1 text-2xl font-semibold">Navigate the space</h2>
             </div>
-
-            <div className="grid gap-4 md:grid-cols-2">
-              {rooms.map((room, index) => (
-                <div key={room._id} className="retro-panel rounded-[28px] p-5">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="retro-display text-[10px] text-amber-200/70">
-                        {room.templateKey?.replace(/-/g, ' ')}
-                      </p>
-                      <h3 className="mt-1 text-lg font-semibold">{room.name}</h3>
-                    </div>
-                    {room.isDefault && (
-                      <span className="rounded-full border border-primary/25 bg-primary/15 px-3 py-1 text-xs text-emerald-50">
-                        Default
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-slate-300/75">
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                      {room.type}
-                    </span>
-                    <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                      max {room.maxOccupancy}
-                    </span>
-                    {room.isLocked && (
-                      <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1">
-                        locked
-                      </span>
-                    )}
-                  </div>
-
-                  <div className="mt-5 flex flex-wrap gap-2">
-                    {space.isMember ? (
-                      <Link
-                        href={`/game/${room._id}`}
-                        className="retro-button rounded-full px-4 py-2 text-sm font-medium"
-                      >
-                        Enter
-                      </Link>
-                    ) : (
-                      <button
-                        disabled
-                        className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-400"
-                      >
-                        Join space to enter
-                      </button>
-                    )}
-
-                    {canManageRooms && (
-                      <>
-                        <button
-                          onClick={() => updateRoom(room._id, { order: Math.max(0, index - 1) })}
-                          disabled={index === 0 || roomActionId === room._id}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-100/80 hover:bg-white/10 disabled:opacity-40"
-                        >
-                          Move Up
-                        </button>
-                        <button
-                          onClick={() => updateRoom(room._id, { order: Math.min(rooms.length - 1, index + 1) })}
-                          disabled={index === rooms.length - 1 || roomActionId === room._id}
-                          className="rounded-full border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-100/80 hover:bg-white/10 disabled:opacity-40"
-                        >
-                          Move Down
-                        </button>
-                      </>
-                    )}
-                  </div>
-
-                  {canManageRooms && (
-                    <div className="mt-5 grid gap-3 border-t border-white/10 pt-4">
-                      <input
-                        type="text"
-                        value={room.name}
-                        onChange={(event) =>
-                          setRooms((current) =>
-                            current.map((entry) =>
-                              entry._id === room._id ? { ...entry, name: event.target.value } : entry
-                            )
-                          )
-                        }
-                        className="retro-input rounded-2xl px-4 py-3 text-sm outline-none"
-                      />
-                      <select
-                        value={room.templateKey}
-                        onChange={(event) =>
-                          setRooms((current) =>
-                            current.map((entry) =>
-                              entry._id === room._id
-                                ? { ...entry, templateKey: event.target.value }
-                                : entry
-                            )
-                          )
-                        }
-                        className="retro-input rounded-2xl px-4 py-3 text-sm outline-none"
-                      >
-                        {ROOM_TEMPLATE_OPTIONS.map((option) => (
-                          <option key={option.value} value={option.value} className="text-black">
-                            {option.label}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="flex flex-wrap gap-2">
-                        <button
-                          onClick={() =>
-                            updateRoom(room._id, {
-                              name: room.name,
-                              templateKey: room.templateKey,
-                              isLocked: room.isLocked,
-                            })
-                          }
-                          disabled={roomActionId === room._id}
-                          className="retro-button rounded-full px-4 py-2 text-sm font-medium disabled:opacity-45"
-                        >
-                          Save
-                        </button>
-                        <button
-                          onClick={() => updateRoom(room._id, { isLocked: !room.isLocked })}
-                          disabled={roomActionId === room._id}
-                          className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100/85 hover:bg-white/10 disabled:opacity-45"
-                        >
-                          {room.isLocked ? 'Unlock' : 'Lock'}
-                        </button>
-                        {!room.isDefault && (
-                          <button
-                            onClick={() => updateRoom(room._id, { isDefault: true })}
-                            disabled={roomActionId === room._id}
-                            className="rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm text-slate-100/85 hover:bg-white/10 disabled:opacity-45"
-                          >
-                            Make Default
-                          </button>
-                        )}
-                        <button
-                          onClick={() => deleteRoom(room._id)}
-                          disabled={roomActionId === room._id}
-                          className="rounded-full border border-rose-300/20 bg-rose-400/10 px-4 py-2 text-sm text-rose-100/85 hover:bg-rose-400/20 disabled:opacity-45"
-                        >
-                          Delete
-                        </button>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
+            <span className="rounded-full border border-border bg-secondary px-4 py-2 text-xs text-muted-foreground">
+              {rooms.length} rooms
+            </span>
           </div>
 
-          <div className="space-y-6">
-            {canManageRooms && (
-              <div className="retro-panel rounded-[32px] p-5">
-                <p className="retro-display text-[11px] text-amber-200/70">Add Room</p>
-                <h3 className="mt-2 text-xl font-semibold">Extend the blueprint</h3>
-                <div className="mt-4 space-y-3">
-                  <input
-                    type="text"
-                    value={roomDraft.name}
-                    onChange={(event) => setRoomDraft((current) => ({ ...current, name: event.target.value }))}
-                    className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                    placeholder="Community Review"
-                  />
-                  <select
-                    value={roomDraft.templateKey}
-                    onChange={(event) => setRoomDraft((current) => ({ ...current, templateKey: event.target.value }))}
-                    className="retro-input w-full rounded-2xl px-4 py-3 text-sm outline-none"
-                  >
-                    {ROOM_TEMPLATE_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value} className="text-black">
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-                  <button
-                    onClick={createRoom}
-                    disabled={roomActionId === 'create' || rooms.length >= 8}
-                    className="retro-button w-full rounded-full px-4 py-3 text-sm font-medium disabled:opacity-45"
-                  >
-                    {rooms.length >= 8 ? 'Room limit reached' : 'Create Room'}
-                  </button>
-                </div>
-              </div>
-            )}
-
-            {space.isMember && (
-              <div className="retro-panel rounded-[32px] p-5">
-                <div className="flex items-center justify-between gap-3">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {rooms.map((room) => (
+              <div key={room._id} className="retro-panel overflow-hidden rounded-[28px] p-5">
+                <div className="flex items-start justify-between gap-3">
                   <div>
-                    <p className="retro-display text-[11px] text-[#9ae6c1]/70">People</p>
-                    <h3 className="mt-2 text-xl font-semibold">Members and invites</h3>
+                    <p className="retro-display text-[10px] text-foreground/50">
+                      {room.templateKey?.replace(/-/g, ' ')}
+                    </p>
+                    <h3 className="mt-1 text-lg font-semibold">{room.name}</h3>
                   </div>
-                  <span className="rounded-full border border-white/10 bg-white/5 px-3 py-1 text-xs text-slate-300/75">
-                    {members.length} members
+                  {room.isDefault && (
+                    <span className="rounded-full border border-border bg-foreground/10 px-3 py-1 text-xs text-foreground/80 font-medium">
+                      Default
+                    </span>
+                  )}
+                </div>
+
+                <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                  <span className="rounded-full border border-border bg-secondary px-3 py-1">
+                    {room.type}
                   </span>
+                  <span className="rounded-full border border-border bg-secondary px-3 py-1">
+                    max {room.maxOccupancy}
+                  </span>
+                  {room.isLocked && (
+                    <span className="rounded-full border border-border bg-secondary px-3 py-1">
+                      🔒 locked
+                    </span>
+                  )}
                 </div>
 
-                {canInvite && (
-                  <div className="mt-4 flex gap-2">
-                    <input
-                      type="email"
-                      value={inviteEmail}
-                      onChange={(event) => setInviteEmail(event.target.value)}
-                      placeholder="invite teammate@email.com"
-                      className="retro-input flex-1 rounded-full px-4 py-3 text-sm outline-none"
-                    />
-                    <button
-                      onClick={handleInvite}
-                      disabled={inviteLoading || !inviteEmail}
-                      className="retro-button rounded-full px-4 py-3 text-sm font-medium disabled:opacity-45"
+                <div className="mt-5">
+                  {space.isMember ? (
+                    <Link
+                      href={`/game/${room._id}`}
+                      className="retro-button inline-block rounded-full px-4 py-2 text-sm font-medium"
                     >
-                      Invite
+                      Enter
+                    </Link>
+                  ) : (
+                    <button
+                      disabled
+                      className="rounded-full border border-border bg-secondary px-4 py-2 text-sm text-muted-foreground"
+                    >
+                      Join space to enter
                     </button>
-                  </div>
-                )}
-
-                <div className="mt-5 space-y-3">
-                  {members.map((member) => (
-                    <div key={member._id} className="rounded-[24px] border border-white/10 bg-white/5 p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <h4 className="font-semibold">{member.userId.displayName}</h4>
-                          <p className="mt-1 text-sm text-slate-300/75">{member.userId.email}</p>
-                        </div>
-                        <span className="rounded-full border border-white/10 bg-white/6 px-3 py-1 text-xs capitalize text-slate-200/80">
-                          {member.role}
-                        </span>
-                      </div>
-                      {canManageMembers && member.userId._id !== user?._id && (
-                        <div className="mt-4 flex flex-wrap gap-2">
-                          <select
-                            value={member.role}
-                            onChange={(event) => updateMemberRole(member.userId._id, event.target.value)}
-                            className="retro-input rounded-full px-4 py-2 text-sm outline-none"
-                          >
-                            {['member', 'moderator', 'collaborator', 'admin'].map((role) => (
-                              <option key={role} value={role} className="text-black">
-                                {role}
-                              </option>
-                            ))}
-                          </select>
-                          {member.role !== 'owner' && (
-                            <button
-                              onClick={() => removeMember(member.userId._id)}
-                              className="rounded-full border border-rose-300/20 bg-rose-400/10 px-4 py-2 text-sm text-rose-100/85 hover:bg-rose-400/20"
-                            >
-                              Remove
-                            </button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                  ))}
+                  )}
                 </div>
-
-                {invitations.length > 0 && (
-                  <div className="mt-6 border-t border-white/10 pt-5">
-                    <p className="retro-display text-[11px] text-amber-200/70">Pending Invites</p>
-                    <div className="mt-3 space-y-3">
-                      {invitations.map((invitation) => (
-                        <div key={invitation._id} className="rounded-[24px] border border-white/10 bg-white/5 px-4 py-3 text-sm text-slate-200/85">
-                          {invitation.inviteeEmail} · {invitation.role}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
+            ))}
           </div>
         </section>
       </main>

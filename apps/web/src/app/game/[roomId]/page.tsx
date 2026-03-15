@@ -307,20 +307,22 @@ function GameContent({ params }: { params: Promise<{ roomId: string }> }) {
 
   if (worldLoading || !room) {
     return (
-      <div className="flex h-screen w-screen items-center justify-center bg-[#111827]">
-        <div className="rounded-3xl border border-white/10 bg-black/20 px-8 py-6 text-center text-white/80 shadow-2xl backdrop-blur">
-          <div className="mx-auto mb-4 h-10 w-10 animate-spin rounded-full border-4 border-emerald-300/80 border-t-transparent" />
-          <p className="text-sm uppercase tracking-[0.22em] text-emerald-200/70">Preparing Room</p>
-          <p className="mt-2 text-lg font-semibold text-white">Loading the office world</p>
+      <div className="flex items-center justify-center bg-background" style={{ width: '100vw', height: '100dvh' }}>
+        <div className="rounded-3xl border border-border bg-card px-8 py-6 text-center text-foreground shadow-2xl">
+          <div className="mx-auto mb-4 flex flex-col gap-3 items-center">
+            <div className="skeleton h-10 w-10 rounded-full" />
+            <div className="skeleton h-3 w-28 rounded" />
+            <div className="skeleton h-5 w-44 rounded" />
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="relative h-screen w-screen overflow-hidden bg-[#0b0d17]">
-      {/* Game Canvas */}
-      <div ref={canvasRef} className="h-full w-full" />
+    <div className="relative overflow-hidden bg-background" style={{ width: '100vw', height: '100dvh', touchAction: 'none' }}>
+      {/* Game Canvas — full screen */}
+      <div ref={canvasRef} className="absolute inset-0" style={{ width: '100%', height: '100%' }} />
 
       {/* HUD Overlay */}
       <GameHUD
