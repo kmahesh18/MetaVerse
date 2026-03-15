@@ -290,13 +290,9 @@ function GameContent({ params }: { params: Promise<{ roomId: string }> }) {
     router.push('/dashboard');
   }
 
-  const nearbyUsers = Array.from(proximityUsers)
-    .map((userId) => {
-      const player = players.get(userId);
-      if (!player) return null;
-      return { userId, displayName: player.displayName };
-    })
-    .filter((entry): entry is { userId: string; displayName: string } => Boolean(entry));
+  // All players in room (for People panel / video calls)
+  const allRoomUsers = Array.from(players.entries())
+    .map(([userId, player]) => ({ userId, displayName: player.displayName }));
 
   const roomMedia = useRoomMedia({
     roomId,
@@ -331,7 +327,7 @@ function GameContent({ params }: { params: Promise<{ roomId: string }> }) {
         connected={connected}
         roomName={room.name}
         roomType={room.type}
-        nearbyUsers={nearbyUsers}
+        allRoomUsers={allRoomUsers}
         canJoinRoomCall={roomMedia.canJoinRoomCall}
         joinedRoomCall={roomMedia.joinedRoomCall}
         onToggleRoomCall={() =>

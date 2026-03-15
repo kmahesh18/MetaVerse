@@ -32,13 +32,8 @@ async function getRtcConfig(): Promise<RTCConfiguration> {
 
   rtcConfigPromise = (async () => {
     const config: RTCConfiguration = {
-      iceServers: [
-        { urls: process.env.NEXT_PUBLIC_STUN_URL || 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-      ],
+      iceServers: [],
+      iceTransportPolicy: 'all', // allows direct (host) + TURN relay
       iceCandidatePoolSize: 10,
     };
 
@@ -46,10 +41,10 @@ async function getRtcConfig(): Promise<RTCConfiguration> {
       const turnCreds = await api<{ urls: string[], username: string, credential: string }>('/turn-credentials');
       if (turnCreds && turnCreds.urls) {
         config.iceServers!.push(turnCreds);
-        console.log('[webrtc] Fetched TURN credentials');
+        console.log('[webrtc] TURN credentials loaded — direct on LAN, TURN relay for cross-network');
       }
     } catch (err) {
-      console.warn('[webrtc] Failed to fetch TURN credentials, falling back to STUN only', err);
+      console.warn('[webrtc] Failed to fetch TURN credentials — only direct (LAN) connections will work', err);
     }
 
     return config;
@@ -93,7 +88,7 @@ export function useRoomMedia({
   const [isAudioMuted, setIsAudioMuted] = useState(false);
   const [isVideoMuted, setIsVideoMuted] = useState(false);
 
-  const canJoinRoomCall = roomType === 'meeting';
+  const canJoinRoomCall = true; // all rooms support calls
 
   const syncRemoteTiles = useCallback(() => {
     setRemoteTiles(Array.from(remoteStreamsRef.current.values()));

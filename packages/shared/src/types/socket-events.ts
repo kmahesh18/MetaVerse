@@ -23,7 +23,7 @@ export interface ClientToServerEvents {
   'chat:room': (data: { roomId: string; content: string }) => void;
   'chat:dm': (data: { recipientId: string; content: string }) => void;
   'chat:broadcast': (data: { spaceId: string; content: string }) => void;
-  'chat:proximity': (data: { content: string }) => void;
+  'chat:proximity': (data: { content: string; range?: number }) => void;
 
   'webrtc:offer': (data: { targetUserId: string; offer: RTCSessionDescriptionInit }) => void;
   'webrtc:answer': (data: { targetUserId: string; answer: RTCSessionDescriptionInit }) => void;

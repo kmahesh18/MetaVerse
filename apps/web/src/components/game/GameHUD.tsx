@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useGameStore } from '@/lib/game-store';
 import { getSocket } from '@/lib/socket';
 
-interface NearbyUser {
+interface RoomUser {
   userId: string;
   displayName: string;
 }
@@ -15,7 +15,7 @@ interface GameHUDProps {
   connected: boolean;
   roomName: string;
   roomType: string;
-  nearbyUsers: NearbyUser[];
+  allRoomUsers: RoomUser[];
   canJoinRoomCall: boolean;
   joinedRoomCall: boolean;
   onToggleRoomCall: () => void;
@@ -33,7 +33,7 @@ export function GameHUD({
   connected,
   roomName,
   roomType,
-  nearbyUsers,
+  allRoomUsers,
   canJoinRoomCall,
   joinedRoomCall,
   onToggleRoomCall,
@@ -69,6 +69,14 @@ export function GameHUD({
         isSitting: false,
         seatedObjectId: undefined,
       });
+    }
+  }
+
+  function handleCallAll() {
+    for (const user of allRoomUsers) {
+      if (!activeDirectCallUserIds.includes(user.userId)) {
+        onStartDirectCall(user.userId);
+      }
     }
   }
 
@@ -113,18 +121,16 @@ export function GameHUD({
           >
             📹
           </button>
-          {canJoinRoomCall && (
-            <button
-              onClick={onToggleRoomCall}
-              className={`rounded-full border p-2 sm:px-3 sm:py-1.5 text-xs backdrop-blur-md transition ${
-                joinedRoomCall
-                  ? 'border-destructive/30 bg-destructive/20 text-foreground hover:bg-destructive/30'
-                  : 'border-border bg-card/90 text-foreground hover:bg-secondary'
-              }`}
-            >
-              📞
-            </button>
-          )}
+          <button
+            onClick={onToggleRoomCall}
+            className={`rounded-full border p-2 sm:px-3 sm:py-1.5 text-xs backdrop-blur-md transition ${
+              joinedRoomCall
+                ? 'border-destructive/30 bg-destructive/20 text-foreground hover:bg-destructive/30'
+                : 'border-border bg-card/90 text-foreground hover:bg-secondary'
+            }`}
+          >
+            📞
+          </button>
           {seatedObjectId && (
             <button
               onClick={handleStand}
@@ -153,7 +159,7 @@ export function GameHUD({
                 : 'border-border bg-card/90 text-foreground hover:bg-secondary'
             }`}
           >
-            👥{nearbyUsers.length > 0 ? ` ${nearbyUsers.length}` : ''}
+            👥{allRoomUsers.length > 0 ? ` ${allRoomUsers.length}` : ''}
           </button>
           </div>
         </div>
@@ -177,15 +183,25 @@ export function GameHUD({
         )}
 
         {showPeoplePanel && (
-          <div className="pointer-events-auto ml-auto mr-2 z-30 w-56 sm:w-64 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur-xl">
-            <p className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">
-              {canJoinRoomCall ? 'Nearby' : 'Call Targets'}
-            </p>
-            <div className="space-y-1 max-h-48 overflow-y-auto">
-              {nearbyUsers.length === 0 ? (
-                <p className="py-3 text-center text-xs text-muted-foreground">No one nearby</p>
+          <div className="pointer-events-auto ml-auto mr-2 z-30 w-60 sm:w-72 rounded-2xl border border-border bg-card/95 p-3 shadow-2xl backdrop-blur-xl">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
+                People in Room
+              </p>
+              {allRoomUsers.length > 0 && (
+                <button
+                  onClick={handleCallAll}
+                  className="rounded-full bg-foreground/10 px-2.5 py-1 text-[10px] uppercase tracking-wide text-foreground transition hover:bg-foreground/20"
+                >
+                  📞 Call All
+                </button>
+              )}
+            </div>
+            <div className="space-y-1 max-h-52 overflow-y-auto">
+              {allRoomUsers.length === 0 ? (
+                <p className="py-3 text-center text-xs text-muted-foreground">No one else here</p>
               ) : (
-                nearbyUsers.map((player) => {
+                allRoomUsers.map((player) => {
                   const callLive = activeDirectCallUserIds.includes(player.userId);
                   return (
                     <div
@@ -193,18 +209,16 @@ export function GameHUD({
                       className="flex items-center justify-between rounded-xl border border-border bg-secondary px-3 py-2"
                     >
                       <span className="text-sm text-foreground truncate max-w-[120px]">{player.displayName}</span>
-                      {!canJoinRoomCall && (
-                        <button
-                          onClick={() => onStartDirectCall(player.userId)}
-                          className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide transition ${
-                            callLive
-                              ? 'bg-foreground/15 text-foreground'
-                              : 'bg-background text-muted-foreground hover:bg-foreground/10 hover:text-foreground'
-                          }`}
-                        >
-                          {callLive ? '● Live' : 'Call'}
-                        </button>
-                      )}
+                      <button
+                        onClick={() => onStartDirectCall(player.userId)}
+                        className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] uppercase tracking-wide transition ${
+                          callLive
+                            ? 'bg-foreground/15 text-foreground'
+                            : 'bg-background text-muted-foreground hover:bg-foreground/10 hover:text-foreground'
+                        }`}
+                      >
+                        {callLive ? '● Live' : 'Call'}
+                      </button>
                     </div>
                   );
                 })
@@ -215,7 +229,7 @@ export function GameHUD({
 
       {/* ─── Interaction Toast (bottom-left) ─── */}
       {activeInteraction && (
-        <div className="pointer-events-none absolute bottom-3 left-3 right-auto max-w-[min(calc(100%-6rem),16rem)] rounded-2xl border border-border bg-card/95 px-4 py-3 text-foreground shadow-2xl backdrop-blur-xl">
+        <div className="pointer-events-none absolute bottom-16 left-3 right-auto max-w-[min(calc(100%-6rem),16rem)] rounded-2xl border border-border bg-card/95 px-4 py-3 text-foreground shadow-2xl backdrop-blur-xl">
           <p className="text-[10px] uppercase tracking-widest text-muted-foreground">
             {activeInteraction.kind}
           </p>

@@ -1,7 +1,8 @@
 import type { TypedIO, TypedSocket } from './index.js';
+import { roomPlayers } from './index.js';
 import { Message } from '../models/Message.js';
 import { SpaceMember } from '../models/SpaceMember.js';
-import { CHAT_MAX_LENGTH } from '@metaverse/shared';
+import { CHAT_MAX_LENGTH, PROXIMITY_RADIUS, TILE_SIZE } from '@metaverse/shared';
 import type { ChatMessagePayload } from '@metaverse/shared';
 
 export function registerChatHandlers(io: TypedIO, socket: TypedSocket): void {
@@ -99,9 +100,17 @@ export function registerChatHandlers(io: TypedIO, socket: TypedSocket): void {
     io.emit('chat:message', payload);
   });
 
-  socket.on('chat:proximity', async ({ content }) => {
+  socket.on('chat:proximity', async ({ content, range }) => {
     if (!socket.userId || !socket.displayName || !socket.currentRoomId) return;
     const trimmed = content.slice(0, CHAT_MAX_LENGTH);
+
+    // Use sender-specified range (in tiles), clamped 1–10, default PROXIMITY_RADIUS
+    const rangeTiles = Math.min(10, Math.max(1, range ?? PROXIMITY_RADIUS));
+    const rangePx = rangeTiles * TILE_SIZE;
+
+    const players = roomPlayers.get(socket.currentRoomId);
+    const senderState = players?.get(socket.userId);
+    if (!senderState) return;
 
     const payload: ChatMessagePayload = {
       type: 'proximity',
@@ -112,8 +121,24 @@ export function registerChatHandlers(io: TypedIO, socket: TypedSocket): void {
       timestamp: new Date().toISOString(),
     };
 
-    // Proximity chat is handled on the client side (distance check)
-    // Server broadcasts to room, client filters by proximity
-    io.to(socket.currentRoomId).emit('chat:message', payload);
+    // Send to sender always
+    socket.emit('chat:message', payload);
+
+    // Send only to players within the specified proximity range
+    if (!players) return;
+    const allSockets = await io.fetchSockets();
+    for (const [otherId, otherState] of players) {
+      if (otherId === socket.userId) continue;
+      const dx = Math.abs(senderState.x - otherState.x);
+      const dy = Math.abs(senderState.y - otherState.y);
+      if (dx <= rangePx && dy <= rangePx) {
+        for (const s of allSockets) {
+          if ((s as unknown as TypedSocket).userId === otherId) {
+            s.emit('chat:message', payload);
+          }
+        }
+      }
+    }
   });
 }
+

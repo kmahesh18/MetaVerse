@@ -27,7 +27,7 @@ function generateTurnCredentials() {
     .digest('base64');
 
   return {
-    urls: env.TURN_URL ? [env.TURN_URL] : [`turn:98.70.28.87:3478`],
+    urls: env.TURN_URL ? env.TURN_URL.split(',') : ['turns:turn.maheshdev.tech:5349', 'turn:turn.maheshdev.tech:3478'],
     username,
     credential,
     ttl,

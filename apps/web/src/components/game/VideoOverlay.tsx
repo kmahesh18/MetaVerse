@@ -36,89 +36,106 @@ export function VideoOverlay({
   onEndDirectCall,
 }: VideoOverlayProps) {
   const isVideoOpen = useGameStore((s) => s.isVideoOpen);
-  const [expanded, setExpanded] = useState(false);
+  const [minimized, setMinimized] = useState(false);
 
   if (!isVideoOpen) return null;
 
   const hasStreams = localStream !== null || remoteTiles.length > 0;
+  const totalTiles = (localStream ? 1 : 0) + remoteTiles.length;
+
+  // Minimized pill
+  if (minimized) {
+    return (
+      <button
+        onClick={() => setMinimized(false)}
+        className="pointer-events-auto absolute bottom-3 right-3 z-20 flex items-center gap-2 rounded-full border border-border bg-card/90 px-3 py-2 text-[10px] sm:text-xs text-foreground shadow-xl backdrop-blur-xl transition hover:bg-card"
+      >
+        📹 Video {totalTiles > 0 && <span className="rounded-full bg-foreground/15 px-1.5 text-[10px] text-foreground">{totalTiles}</span>}
+      </button>
+    );
+  }
 
   return (
-    <div className={`absolute right-0 top-12 z-20 flex flex-col transition-all duration-300 ${
-      expanded ? 'w-72 sm:w-80' : 'w-40 sm:w-48'
-    }`}>
-      {/* ─── Compact Header ─── */}
-      <div className="pointer-events-auto m-2 rounded-2xl border border-border bg-card/90 p-2.5 shadow-2xl backdrop-blur-xl">
-        <div className="flex items-center justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-xs font-medium text-foreground">{roomName}</p>
-            <p className="text-[10px] text-muted-foreground">
-              {joinedRoomCall ? 'In call' : canJoinRoomCall ? 'Room call available' : 'Direct calls'}
-            </p>
-          </div>
-          <button
-            onClick={() => setExpanded((v) => !v)}
-            className="rounded-full bg-secondary px-2 py-1 text-[10px] text-foreground transition hover:bg-muted"
-          >
-            {expanded ? '▸' : '◂'}
-          </button>
-        </div>
-
-        {/* Control buttons */}
-        <div className="mt-2 flex flex-wrap gap-1">
-          {canJoinRoomCall && (
-            <button
-              onClick={onToggleRoomCall}
-              className={`flex-1 rounded-full px-2 py-1.5 text-[10px] transition ${
-                joinedRoomCall
-                  ? 'bg-destructive/20 text-foreground hover:bg-destructive/30'
-                  : 'bg-foreground/10 text-foreground hover:bg-foreground/20'
-              }`}
-            >
-              {joinedRoomCall ? 'Leave' : 'Join Call'}
-            </button>
-          )}
-          <button
-            onClick={onToggleAudioMute}
-            className={`rounded-full px-2 py-1.5 text-[10px] transition ${
-              isAudioMuted
-                ? 'bg-destructive/15 text-foreground'
-                : 'bg-secondary text-foreground hover:bg-muted'
-            }`}
-            title={isAudioMuted ? 'Unmute mic' : 'Mute mic'}
-          >
-            {isAudioMuted ? '🔇' : '🎤'}
-          </button>
-          <button
-            onClick={onToggleVideoMute}
-            className={`rounded-full px-2 py-1.5 text-[10px] transition ${
-              isVideoMuted
-                ? 'bg-destructive/15 text-foreground'
-                : 'bg-secondary text-foreground hover:bg-muted'
-            }`}
-            title={isVideoMuted ? 'Enable camera' : 'Disable camera'}
-          >
-            {isVideoMuted ? '📷' : '🎥'}
-          </button>
-        </div>
-
-        {mediaError && (
-          <p className="mt-2 rounded-lg bg-destructive/10 px-2 py-1.5 text-[10px] text-destructive">
-            {mediaError}
+    <div
+      className="pointer-events-auto absolute bottom-3 right-2 sm:right-3 z-20 flex flex-col rounded-2xl border border-border bg-card/90 text-foreground shadow-2xl backdrop-blur-xl"
+      style={{
+        width: 'min(20rem, calc(100vw - 1rem))',
+        maxHeight: 'min(28rem, calc(100dvh - 6rem))',
+      }}
+    >
+      {/* Header */}
+      <div className="flex items-center justify-between border-b border-border px-3 py-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-xs font-medium text-foreground">{roomName}</p>
+          <p className="text-[10px] text-muted-foreground">
+            {joinedRoomCall ? `In call · ${totalTiles} stream${totalTiles !== 1 ? 's' : ''}` : 'Video calls'}
           </p>
-        )}
-        {isPreparingMedia && (
-          <p className="mt-2 text-[10px] text-muted-foreground">Requesting media access…</p>
-        )}
+        </div>
+        <button
+          onClick={() => setMinimized(true)}
+          className="shrink-0 rounded-full bg-secondary px-2 py-0.5 text-[10px] text-foreground transition hover:bg-muted"
+        >
+          ─
+        </button>
       </div>
 
-      {/* ─── Video Tiles ─── */}
-      <div className="pointer-events-auto mx-2 space-y-1.5 overflow-y-auto" style={{ maxHeight: 'calc(100vh - 200px)' }}>
+      {/* Control bar */}
+      <div className="flex items-center gap-1 border-b border-border px-3 py-2">
+        <button
+          onClick={onToggleRoomCall}
+          className={`flex-1 rounded-full px-2 py-1.5 text-[10px] font-medium transition ${
+            joinedRoomCall
+              ? 'bg-destructive/20 text-foreground hover:bg-destructive/30'
+              : 'bg-foreground/10 text-foreground hover:bg-foreground/20'
+          }`}
+        >
+          {joinedRoomCall ? '📞 Leave Call' : '📞 Join Call'}
+        </button>
+        <button
+          onClick={onToggleAudioMute}
+          className={`rounded-full p-2 text-xs transition ${
+            isAudioMuted
+              ? 'bg-destructive/15 text-foreground'
+              : 'bg-secondary text-foreground hover:bg-muted'
+          }`}
+          title={isAudioMuted ? 'Unmute mic' : 'Mute mic'}
+        >
+          {isAudioMuted ? '🔇' : '🎤'}
+        </button>
+        <button
+          onClick={onToggleVideoMute}
+          className={`rounded-full p-2 text-xs transition ${
+            isVideoMuted
+              ? 'bg-destructive/15 text-foreground'
+              : 'bg-secondary text-foreground hover:bg-muted'
+          }`}
+          title={isVideoMuted ? 'Enable camera' : 'Disable camera'}
+        >
+          {isVideoMuted ? '📷' : '🎥'}
+        </button>
+      </div>
+
+      {/* Status messages */}
+      {mediaError && (
+        <div className="px-3 py-2">
+          <p className="rounded-lg bg-destructive/10 px-2 py-1.5 text-[10px] text-destructive">
+            {mediaError}
+          </p>
+        </div>
+      )}
+      {isPreparingMedia && (
+        <div className="px-3 py-2">
+          <p className="text-[10px] text-muted-foreground">Requesting media access…</p>
+        </div>
+      )}
+
+      {/* Video Tiles — scrollable grid */}
+      <div className="overflow-y-auto px-2 py-2 space-y-2" style={{ maxHeight: 'calc(100% - 120px)' }}>
         {localStream && (
           <VideoTile
             title="You"
             stream={localStream}
             muted
-            compact={!expanded}
           />
         )}
         {remoteTiles.map((tile) => (
@@ -127,7 +144,6 @@ export function VideoOverlay({
             title={tile.displayName}
             subtitle={tile.mode === 'room' ? 'room' : 'direct'}
             stream={tile.stream}
-            compact={!expanded}
             action={
               tile.mode === 'direct' ? (
                 <button
@@ -143,7 +159,7 @@ export function VideoOverlay({
 
         {!hasStreams && !mediaError && !isPreparingMedia && (
           <div className="rounded-2xl border border-dashed border-border bg-card/90 px-3 py-4 text-center text-[10px] text-muted-foreground">
-            Join a call or start one from the people panel
+            Join a call or start one from the 👥 People panel
           </div>
         )}
       </div>
@@ -156,14 +172,12 @@ function VideoTile({
   stream,
   subtitle,
   muted = false,
-  compact = false,
   action,
 }: {
   title: string;
   stream: MediaStream | null;
   subtitle?: string;
   muted?: boolean;
-  compact?: boolean;
   action?: ReactNode;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -174,8 +188,8 @@ function VideoTile({
   }, [stream]);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border bg-card/90 shadow-xl backdrop-blur-xl">
-      <div className={`relative bg-card ${compact ? 'aspect-[4/3]' : 'aspect-video'}`}>
+    <div className="overflow-hidden rounded-xl border border-border bg-card/90 shadow-lg backdrop-blur-xl">
+      <div className="relative bg-card aspect-video">
         {stream ? (
           <video
             ref={videoRef}
